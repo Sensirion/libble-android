@@ -16,8 +16,6 @@
 
 package com.sensirion.libble;
 
-import java.util.List;
-
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -32,8 +30,10 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
-import com.sensirion.libble.peripheral.sensor.AbstractSensor;
-import com.sensirion.libble.peripheral.sensor.TiSensors;
+import com.sensirion.libble.old.peripheral.sensor.AbstractSensor;
+import com.sensirion.libble.old.peripheral.sensor.TiSensors;
+
+import java.util.List;
 
 /**
  * Service for managing connection and data communication with a GATT server
@@ -41,30 +41,15 @@ import com.sensirion.libble.peripheral.sensor.TiSensors;
  */
 public class BleService extends Service {
     private final static String TAG = BleService.class.getSimpleName();
-
-    private BluetoothManager mBluetoothManager;
-    private BluetoothAdapter mBluetoothAdapter;
-    private BluetoothGatt mBluetoothGatt;
-    private String mDeviceAddress;
-    private int mConnectionState = STATE_DISCONNECTED;
-
     private static final int STATE_DISCONNECTED = 0;
+    private int mConnectionState = STATE_DISCONNECTED;
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
-
     private final static String INTENT_PREFIX = BleService.class.getPackage().getName();
     public final static String ACTION_GATT_CONNECTED = INTENT_PREFIX + ".ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED = INTENT_PREFIX
-            + ".ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED = INTENT_PREFIX
-            + ".ACTION_GATT_SERVICES_DISCOVERED";
+    public final static String ACTION_GATT_DISCONNECTED = INTENT_PREFIX + ".ACTION_GATT_DISCONNECTED";
+    public final static String ACTION_GATT_SERVICES_DISCOVERED = INTENT_PREFIX + ".ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE = INTENT_PREFIX + ".ACTION_DATA_AVAILABLE";
-    public final static String EXTRA_SERVICE_UUID = INTENT_PREFIX + ".EXTRA_SERVICE_UUID";
-    public final static String EXTRA_CHARACTERISTIC_UUID = INTENT_PREFIX
-            + ".EXTRA_CHARACTERISTIC_UUI";
-    public final static String EXTRA_DATA = INTENT_PREFIX + ".EXTRA_DATA";
-    public final static String EXTRA_TEXT = INTENT_PREFIX + ".EXTRA_TEXT";
-
     // Implements callback methods for GATT events that the app cares about.
     // For example, connection change and services discovered.
     private final BluetoothGattExecutor mExecutor = new BluetoothGattExecutor() {
@@ -80,8 +65,7 @@ public class BleService extends Service {
                 broadcastUpdate(intentAction);
                 Log.i(TAG, "Connected to GATT server.");
                 // Attempts to discover services after successful connection.
-                Log.i(TAG, "Attempting to start service discovery:" +
-                        BleService.this.mBluetoothGatt.discoverServices());
+                Log.i(TAG, "Attempting to start service discovery:" + BleService.this.mBluetoothGatt.discoverServices());
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
@@ -91,20 +75,9 @@ public class BleService extends Service {
         }
 
         @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-            super.onServicesDiscovered(gatt, status);
-
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
-            } else {
-                Log.w(TAG, "onServicesDiscovered received: " + status);
-            }
-        }
-
-        @Override
         public void onCharacteristicRead(BluetoothGatt gatt,
-                BluetoothGattCharacteristic characteristic,
-                int status) {
+                                         BluetoothGattCharacteristic characteristic,
+                                         int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -121,21 +94,41 @@ public class BleService extends Service {
         }
 
         @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            super.onServicesDiscovered(gatt, status);
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+            } else {
+                Log.w(TAG, "onServicesDiscovered received: " + status);
+            }
+        }
+
+        @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
-                BluetoothGattCharacteristic characteristic) {
+                                            BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
 
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
     };
 
+    public final static String EXTRA_SERVICE_UUID = INTENT_PREFIX + ".EXTRA_SERVICE_UUID";
+    public final static String EXTRA_CHARACTERISTIC_UUID = INTENT_PREFIX + ".EXTRA_CHARACTERISTIC_UUI";
+    public final static String EXTRA_DATA = INTENT_PREFIX + ".EXTRA_DATA";
+    public final static String EXTRA_TEXT = INTENT_PREFIX + ".EXTRA_TEXT";
+    private final IBinder mBinder = new LocalBinder();
+    private BluetoothManager mBluetoothManager;
+    private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothGatt mBluetoothGatt;
+    private String mDeviceAddress;
+
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
         sendBroadcast(intent);
     }
 
-    private void broadcastUpdate(final String action,
-            final BluetoothGattCharacteristic characteristic) {
+    private void broadcastUpdate(final String action, final BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
         intent.putExtra(EXTRA_SERVICE_UUID, characteristic.getService().getUuid().toString());
         intent.putExtra(EXTRA_CHARACTERISTIC_UUID, characteristic.getUuid().toString());
@@ -160,12 +153,6 @@ public class BleService extends Service {
         sendBroadcast(intent);
     }
 
-    public class LocalBinder extends Binder {
-        public BleService getService() {
-            return BleService.this;
-        }
-    }
-
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
@@ -182,11 +169,21 @@ public class BleService extends Service {
         return super.onUnbind(intent);
     }
 
-    private final IBinder mBinder = new LocalBinder();
+    /**
+     * After using a given BLE device, the app must call this method to ensure
+     * resources are released properly.
+     */
+    public void close() {
+        if (mBluetoothGatt == null) {
+            return;
+        }
+        mBluetoothGatt.close();
+        mBluetoothGatt = null;
+    }
 
     /**
      * Initializes a reference to the local Bluetooth mBluetoothAdapter.
-     * 
+     *
      * @return Return true if the initialization is successful.
      */
     public boolean initialize() {
@@ -212,12 +209,12 @@ public class BleService extends Service {
 
     /**
      * Connects to the GATT server hosted on the Bluetooth LE device.
-     * 
+     *
      * @param address The device address of the destination device.
      * @return Return true if the connection is initiated successfully. The
-     *         connection result is reported asynchronously through the
-     *         {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
-     *         callback.
+     * connection result is reported asynchronously through the
+     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
+     * callback.
      */
     public boolean connect(final String address) {
         if (mBluetoothAdapter == null || address == null) {
@@ -267,23 +264,11 @@ public class BleService extends Service {
     }
 
     /**
-     * After using a given BLE device, the app must call this method to ensure
-     * resources are released properly.
-     */
-    public void close() {
-        if (mBluetoothGatt == null) {
-            return;
-        }
-        mBluetoothGatt.close();
-        mBluetoothGatt = null;
-    }
-
-    /**
      * Request a read on a given {@code BluetoothGattCharacteristic}. The read
      * result is reported asynchronously through the
      * {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)}
      * callback.
-     * 
+     *
      * @param characteristic The characteristic to read from.
      */
     public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
@@ -309,7 +294,7 @@ public class BleService extends Service {
 
     /**
      * Enables or disables notification on a give characteristic.
-     * 
+     *
      * @param sensor
      * @param enabled If true, enable notification. False otherwise.
      */
@@ -330,7 +315,7 @@ public class BleService extends Service {
      * Retrieves a list of supported GATT services on the connected device. This
      * should be invoked only after {@code BluetoothGatt#discoverServices()}
      * completes successfully.
-     * 
+     *
      * @return A {@code List} of supported services.
      */
     public List<BluetoothGattService> getSupportedGattServices() {
@@ -338,5 +323,11 @@ public class BleService extends Service {
             return null;
 
         return mBluetoothGatt.getServices();
+    }
+
+    public class LocalBinder extends Binder {
+        public BleService getService() {
+            return BleService.this;
+        }
     }
 }

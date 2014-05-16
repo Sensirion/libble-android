@@ -1,14 +1,13 @@
-
-package com.sensirion.libble.peripheral.sensor;
+package com.sensirion.libble.old.peripheral.sensor;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 
-import java.util.UUID;
-
 import com.sensirion.libble.BluetoothGattExecutor;
+
+import java.util.UUID;
 
 public abstract class AbstractSensor<T> {
 
@@ -19,8 +18,6 @@ public abstract class AbstractSensor<T> {
     protected AbstractSensor() {
     }
 
-    public abstract String getName();
-
     public String getCharacteristicName(String uuid) {
         if (getDataUUID().equals(uuid))
             return getName() + " Data";
@@ -29,9 +26,9 @@ public abstract class AbstractSensor<T> {
         return "Unknown";
     }
 
-    public abstract String getServiceUUID();
-
     public abstract String getDataUUID();
+
+    public abstract String getName();
 
     public abstract String getConfigUUID();
 
@@ -49,20 +46,20 @@ public abstract class AbstractSensor<T> {
         data = parse(c);
     }
 
+    protected abstract T parse(BluetoothGattCharacteristic c);
+
     public boolean onCharacteristicRead(BluetoothGattCharacteristic c) {
         return false;
     }
 
     protected byte[] getConfigValues(boolean enable) {
-        return new byte[] {
-            (byte) (enable ? 1 : 0)
+        return new byte[]{
+                (byte) (enable ? 1 : 0)
         };
     }
 
-    protected abstract T parse(BluetoothGattCharacteristic c);
-
     public BluetoothGattExecutor.ServiceAction[] enable(final boolean enable) {
-        return new BluetoothGattExecutor.ServiceAction[] {
+        return new BluetoothGattExecutor.ServiceAction[]{
                 write(getConfigUUID(), getConfigValues(enable)),
                 notify(enable)
         };
@@ -83,6 +80,16 @@ public abstract class AbstractSensor<T> {
             }
         };
     }
+
+    private BluetoothGattCharacteristic getCharacteristic(BluetoothGatt bluetoothGatt, String uuid) {
+        final UUID serviceUuid = UUID.fromString(getServiceUUID());
+        final UUID characteristicUuid = UUID.fromString(uuid);
+
+        final BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
+        return service.getCharacteristic(characteristicUuid);
+    }
+
+    public abstract String getServiceUUID();
 
     public BluetoothGattExecutor.ServiceAction write(final String uuid, final byte[] value) {
         return new BluetoothGattExecutor.ServiceAction() {
@@ -118,13 +125,5 @@ public abstract class AbstractSensor<T> {
                 return false;
             }
         };
-    }
-
-    private BluetoothGattCharacteristic getCharacteristic(BluetoothGatt bluetoothGatt, String uuid) {
-        final UUID serviceUuid = UUID.fromString(getServiceUUID());
-        final UUID characteristicUuid = UUID.fromString(uuid);
-
-        final BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
-        return service.getCharacteristic(characteristicUuid);
     }
 }

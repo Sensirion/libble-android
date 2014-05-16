@@ -1,10 +1,9 @@
-
-package com.sensirion.libble.peripheral.sensor;
+package com.sensirion.libble.old.peripheral.sensor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 
 public class TiHumiditySensor extends AbstractSensor<Float> {
-    
+
     private static final String TAG = TiHumiditySensor.class.getSimpleName();
 
     TiHumiditySensor() {

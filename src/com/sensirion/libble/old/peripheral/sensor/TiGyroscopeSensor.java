@@ -1,12 +1,11 @@
-
-package com.sensirion.libble.peripheral.sensor;
+package com.sensirion.libble.old.peripheral.sensor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 
 public class TiGyroscopeSensor extends AbstractSensor<float[]> {
 
     private static final String TAG = TiGyroscopeSensor.class.getSimpleName();
-    
+
     TiGyroscopeSensor() {
         super();
     }
@@ -34,16 +33,16 @@ public class TiGyroscopeSensor extends AbstractSensor<float[]> {
     // TODO: there is period service
 
     @Override
-    protected byte[] getConfigValues(boolean enable) {
-        return new byte[] {
-            (byte) (enable ? 7 : 0)
-        };
-    }
-
-    @Override
     public String getDataString() {
         final float[] data = getData();
         return "x=" + data[0] + "\ny=" + data[1] + "\nz=" + data[2];
+    }
+
+    @Override
+    protected byte[] getConfigValues(boolean enable) {
+        return new byte[]{
+                (byte) (enable ? 7 : 0)
+        };
     }
 
     @Override
@@ -53,7 +52,7 @@ public class TiGyroscopeSensor extends AbstractSensor<float[]> {
         float x = TiSensorUtils.shortSignedAtOffset(c, 2) * (500f / 65536f);
         float z = TiSensorUtils.shortSignedAtOffset(c, 4) * (500f / 65536f);
 
-        return new float[] {
+        return new float[]{
                 x, y, z
         };
     }

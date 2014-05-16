@@ -1,0 +1,32 @@
+apply plugin: 'android-library'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:0.9+'
+    }
+}
+
+
+dependencies {
+    //needed for LocalBroadCastManager
+    compile 'com.android.support:support-v4:+'
+}
+
+
+android {
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            res.srcDirs = ['res']
+        }
+    }
+}
+
+apply from: '../gradle-helpers/library-utils.gradle'
+
+setupBuildTypes()

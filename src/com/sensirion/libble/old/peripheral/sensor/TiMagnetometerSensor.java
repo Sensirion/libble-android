@@ -1,9 +1,8 @@
-
-package com.sensirion.libble.peripheral.sensor;
-
-import com.sensirion.libble.BluetoothGattExecutor;
+package com.sensirion.libble.old.peripheral.sensor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
+
+import com.sensirion.libble.BluetoothGattExecutor;
 
 public class TiMagnetometerSensor extends AbstractSensor<float[]> implements PeriodicalSensorI {
 
@@ -24,11 +23,17 @@ public class TiMagnetometerSensor extends AbstractSensor<float[]> implements Per
     }
 
     @Override
+    public int getMinPeriod() {
+        return PERIOD_MIN;
+    }    @Override
     public String getName() {
         return TAG;
     }
 
     @Override
+    public int getMaxPeriod() {
+        return PERIOD_MAX;
+    }    @Override
     public String getServiceUUID() {
         return UUID_SERVICE;
     }
@@ -63,15 +68,9 @@ public class TiMagnetometerSensor extends AbstractSensor<float[]> implements Per
         return "x=" + data[0] + "\ny=" + data[1] + "\nz=" + data[2];
     }
 
-    @Override
-    public int getMinPeriod() {
-        return PERIOD_MIN;
-    }
 
-    @Override
-    public int getMaxPeriod() {
-        return PERIOD_MAX;
-    }
+
+
 
     @Override
     public void setPeriod(int period) {
@@ -85,8 +84,8 @@ public class TiMagnetometerSensor extends AbstractSensor<float[]> implements Per
 
     @Override
     public BluetoothGattExecutor.ServiceAction update() {
-        return write(UUID_PERIOD, new byte[] {
-            (byte) period
+        return write(UUID_PERIOD, new byte[]{
+                (byte) period
         });
     }
 
@@ -98,7 +97,7 @@ public class TiMagnetometerSensor extends AbstractSensor<float[]> implements Per
         float y = TiSensorUtils.shortSignedAtOffset(c, 2) * (2000f / 65536f) * -1;
         float z = TiSensorUtils.shortSignedAtOffset(c, 4) * (2000f / 65536f);
 
-        return new float[] {
+        return new float[]{
                 x, y, z
         };
     }

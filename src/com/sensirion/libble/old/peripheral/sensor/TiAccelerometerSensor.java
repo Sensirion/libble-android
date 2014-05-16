@@ -1,13 +1,13 @@
+package com.sensirion.libble.old.peripheral.sensor;
 
-package com.sensirion.libble.peripheral.sensor;
+import android.bluetooth.BluetoothGattCharacteristic;
 
 import com.sensirion.libble.BluetoothGattExecutor;
 
-import android.bluetooth.BluetoothGattCharacteristic;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_SINT8;
 
 public class TiAccelerometerSensor extends AbstractSensor<float[]> implements PeriodicalSensorI {
-    
+
     private static final String TAG = TiAccelerometerSensor.class.getSimpleName();
 
     private static final String UUID_SERVICE = "f000aa10-0451-4000-b000-000000000000";
@@ -25,11 +25,17 @@ public class TiAccelerometerSensor extends AbstractSensor<float[]> implements Pe
     }
 
     @Override
+    public int getMinPeriod() {
+        return PERIOD_MIN;
+    }    @Override
     public String getName() {
         return TAG;
     }
 
     @Override
+    public int getMaxPeriod() {
+        return PERIOD_MAX;
+    }    @Override
     public String getServiceUUID() {
         return UUID_SERVICE;
     }
@@ -64,15 +70,9 @@ public class TiAccelerometerSensor extends AbstractSensor<float[]> implements Pe
         return "x=" + data[0] + "\ny=" + data[1] + "\nz=" + data[2];
     }
 
-    @Override
-    public int getMinPeriod() {
-        return PERIOD_MIN;
-    }
 
-    @Override
-    public int getMaxPeriod() {
-        return PERIOD_MAX;
-    }
+
+
 
     @Override
     public void setPeriod(int period) {
@@ -86,8 +86,8 @@ public class TiAccelerometerSensor extends AbstractSensor<float[]> implements Pe
 
     @Override
     public BluetoothGattExecutor.ServiceAction update() {
-        return write(UUID_PERIOD, new byte[] {
-            (byte) mPeriod
+        return write(UUID_PERIOD, new byte[]{
+                (byte) mPeriod
         });
     }
 
@@ -120,7 +120,7 @@ public class TiAccelerometerSensor extends AbstractSensor<float[]> implements Pe
         double scaledY = y / 64.0;
         double scaledZ = z / 64.0;
 
-        return new float[] {
+        return new float[]{
                 (float) scaledX, (float) scaledY, (float) scaledZ
         };
     }

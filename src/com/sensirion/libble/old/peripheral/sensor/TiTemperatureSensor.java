@@ -1,7 +1,7 @@
-
-package com.sensirion.libble.peripheral.sensor;
+package com.sensirion.libble.old.peripheral.sensor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
+
 import static java.lang.Math.pow;
 
 public class TiTemperatureSensor extends AbstractSensor<float[]> {
@@ -53,7 +53,7 @@ public class TiTemperatureSensor extends AbstractSensor<float[]> {
         double ambient = extractAmbientTemperature(c);
         double target = extractTargetTemperature(c, ambient);
 
-        return new float[] {
+        return new float[]{
                 (float) ambient, (float) target
         };
     }

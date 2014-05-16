@@ -1,5 +1,4 @@
-
-package com.sensirion.libble.peripheral.info;
+package com.sensirion.libble.old.peripheral.info;
 
 import java.util.HashMap;
 

@@ -1,11 +1,10 @@
+package com.sensirion.libble.old.peripheral.sensor;
 
-package com.sensirion.libble.peripheral.sensor;
-
-import static java.lang.Math.pow;
+import android.bluetooth.BluetoothGattCharacteristic;
 
 import com.sensirion.libble.BluetoothGattExecutor;
 
-import android.bluetooth.BluetoothGattCharacteristic;
+import static java.lang.Math.pow;
 
 public class TiPressureSensor extends AbstractSensor<Double> {
 
@@ -16,7 +15,7 @@ public class TiPressureSensor extends AbstractSensor<Double> {
     private static final String UUID_CONFIG = "f000aa42-0451-4000-b000-000000000000";
     private static final String UUID_CALIBRATION = "f000aa43-0451-4000-b000-000000000000";
 
-    private static final byte[] CALIBRATION_DATA = new byte[] {
+    private static final byte[] CALIBRATION_DATA = new byte[]{
             2
     };
 
@@ -77,7 +76,7 @@ public class TiPressureSensor extends AbstractSensor<Double> {
     @Override
     public BluetoothGattExecutor.ServiceAction[] enable(boolean enable) {
         if (enable) {
-            return new BluetoothGattExecutor.ServiceAction[] {
+            return new BluetoothGattExecutor.ServiceAction[]{
                     write(UUID_CONFIG, CALIBRATION_DATA),
                     read(UUID_CALIBRATION),
                     write(getConfigUUID(), getConfigValues(enable)),

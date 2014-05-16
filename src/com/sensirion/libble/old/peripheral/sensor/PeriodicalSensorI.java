@@ -1,5 +1,4 @@
-
-package com.sensirion.libble.peripheral.sensor;
+package com.sensirion.libble.old.peripheral.sensor;
 
 public interface PeriodicalSensorI {
 
@@ -7,7 +6,7 @@ public interface PeriodicalSensorI {
 
     public int getMaxPeriod();
 
-    public void setPeriod(int period);
-
     public int getPeriod();
+
+    public void setPeriod(int period);
 }

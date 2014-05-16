@@ -2,4 +2,17 @@
 
     <string name="app_name">libble</string>
 
+    <string name="desc_imgview_generic">generic contentDescription</string>
+
+    <!-- PeripheralScanFragment-->
+    <string name="label_connected">Connected</string>
+    <string name="label_discovered">Discovered</string>
+    <string name="label_scan_started">Scan started</string>
+    <string name="label_scan_stopped">Start scanning</string>
+    <string name="label_listitem_rssi">RSSI\u003A\u0020</string>
+    <string name="label_address">Address\u003A\u0020</string>
+
+
+    <!-- PeripheralDetailsFragment-->
+    <string name="label_battery_level">Battery level\u003A\u0020</string>
 </resources>

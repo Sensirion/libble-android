@@ -1,9 +1,8 @@
-
-package com.sensirion.libble.peripheral.sensor;
-
-import com.sensirion.libble.BluetoothGattExecutor;
+package com.sensirion.libble.old.peripheral.sensor;
 
 import android.bluetooth.BluetoothGattCharacteristic;
+
+import com.sensirion.libble.BluetoothGattExecutor;
 
 public class TiTestSensor extends AbstractSensor<Void> {
 
@@ -14,18 +13,13 @@ public class TiTestSensor extends AbstractSensor<Void> {
     }
 
     @Override
-    public String getName() {
-        return TAG;
-    }
-
-    @Override
-    public String getServiceUUID() {
-        return "f000aa60-0451-4000-b000-000000000000";
-    }
-
-    @Override
     public String getDataUUID() {
         return "f000aa61-0451-4000-b000-000000000000";
+    }
+
+    @Override
+    public String getName() {
+        return TAG;
     }
 
     @Override
@@ -39,17 +33,22 @@ public class TiTestSensor extends AbstractSensor<Void> {
     }
 
     @Override
+    public Void parse(BluetoothGattCharacteristic c) {
+        return null;
+    }
+
+    @Override
     public BluetoothGattExecutor.ServiceAction[] enable(boolean enable) {
         return new BluetoothGattExecutor.ServiceAction[0];
     }
 
     @Override
-    public BluetoothGattExecutor.ServiceAction notify(boolean start) {
-        return BluetoothGattExecutor.ServiceAction.NULL;
+    public String getServiceUUID() {
+        return "f000aa60-0451-4000-b000-000000000000";
     }
 
     @Override
-    public Void parse(BluetoothGattCharacteristic c) {
-        return null;
+    public BluetoothGattExecutor.ServiceAction notify(boolean start) {
+        return BluetoothGattExecutor.ServiceAction.NULL;
     }
 }
