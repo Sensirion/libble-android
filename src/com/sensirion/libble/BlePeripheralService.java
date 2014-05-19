@@ -75,7 +75,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     @Override
-    public synchronized void onPeripheralConnectionStateChanged(Peripheral peripheral) {
+    public synchronized void onPeripheralConnectionChanged(Peripheral peripheral) {
         final String address = peripheral.getAddress();
 
         if (peripheral.isConnected()) {

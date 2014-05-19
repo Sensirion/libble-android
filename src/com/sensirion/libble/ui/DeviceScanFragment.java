@@ -21,14 +21,14 @@ import com.sensirion.libble.BlePeripheralService;
 import com.sensirion.libble.R;
 
 /**
- * Holds all the UI elements needed for showing the peripherals in range in a list
+ * Holds all the UI elements needed for showing the devices in range in a list
  */
-public class PeripheralScanFragment extends ListFragment {
-    private static final String TAG = PeripheralScanFragment.class.getSimpleName();
+public class DeviceScanFragment extends ListFragment {
+    private static final String TAG = DeviceScanFragment.class.getSimpleName();
 
     private SectionedAdapter mSectionedAdapter;
-    private ListItemAdapter mConnectedPeripheralsAdapter;
-    private ListItemAdapter mDiscoveredPeripheralsAdapter;
+    private ListItemAdapter mConnectedDevicesAdapter;
+    private ListItemAdapter mDiscoveredDevicesAdapter;
 
     private BroadcastReceiver mScanStateReceiver = new BroadcastReceiver() {
         @Override
@@ -45,25 +45,25 @@ public class PeripheralScanFragment extends ListFragment {
         }
     };
 
-    private BroadcastReceiver mPeripheralsChangedReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver mDeviceConnectionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.i(TAG, "mPeripheralsChangedReceiver.onReceive() -> refreshing discovered and connected list!");
-            //FIXME: for future optimizations we might want to only change the updated peripherals, to make the UI more static for the user
+            Log.i(TAG, "mDeviceConnectionReceiver.onReceive() -> refreshing discovered and connected list!");
+            //TODO: for future optimizations we might want to only change the updated devices, to make the UI more static for the user
             updateList();
         }
     };
 
     private void updateList() {
-        //TODO: find a generic way for all activities that want to use this fragment
-        Iterable<? extends BleDevice> connectedPeripherals = ((BleActivity) getActivity()).getConnectedBleDevices();
-        Iterable<? extends BleDevice> discoveredPeripherals = ((BleActivity) getActivity()).getDiscoveredBleDevices();
+        //FIXME: find a generic way for all activities that want to use this fragment
+        Iterable<? extends BleDevice> connectedDevices = ((BleActivity) getActivity()).getConnectedBleDevices();
+        Iterable<? extends BleDevice> discoveredDevices = ((BleActivity) getActivity()).getDiscoveredBleDevices();
 
-        mConnectedPeripheralsAdapter.clear();
-        mConnectedPeripheralsAdapter.addAll(connectedPeripherals);
+        mConnectedDevicesAdapter.clear();
+        mConnectedDevicesAdapter.addAll(connectedDevices);
 
-        mDiscoveredPeripheralsAdapter.clear();
-        mDiscoveredPeripheralsAdapter.addAll(discoveredPeripherals);
+        mDiscoveredDevicesAdapter.clear();
+        mDiscoveredDevicesAdapter.addAll(discoveredDevices);
 
         setListAdapter(mSectionedAdapter);
     }
@@ -71,7 +71,7 @@ public class PeripheralScanFragment extends ListFragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         Log.i(TAG, "onCreateView()");
-        View rootView = inflater.inflate(R.layout.fragment_peripheralscan, container, false);
+        View rootView = inflater.inflate(R.layout.fragment_device_scan, container, false);
 
         initListAdapter();
         initToggleButton(rootView);
@@ -94,11 +94,11 @@ public class PeripheralScanFragment extends ListFragment {
             }
         };
 
-        mConnectedPeripheralsAdapter = new ListItemAdapter();
-        mDiscoveredPeripheralsAdapter = new ListItemAdapter();
+        mConnectedDevicesAdapter = new ListItemAdapter();
+        mDiscoveredDevicesAdapter = new ListItemAdapter();
 
-        mSectionedAdapter.addSection(getActivity().getString(R.string.label_connected), mConnectedPeripheralsAdapter);
-        mSectionedAdapter.addSection(getActivity().getString(R.string.label_discovered), mDiscoveredPeripheralsAdapter);
+        mSectionedAdapter.addSection(getActivity().getString(R.string.label_connected), mConnectedDevicesAdapter);
+        mSectionedAdapter.addSection(getActivity().getString(R.string.label_discovered), mDiscoveredDevicesAdapter);
 
         setListAdapter(mSectionedAdapter);
     }
@@ -109,11 +109,11 @@ public class PeripheralScanFragment extends ListFragment {
         toggleButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    //TODO: find a generic way for all activities that want to use this fragment
+                    //FIXME: find a generic way for all activities that want to use this fragment
                     ((BleActivity) getActivity()).startScanning();
                     rootView.findViewById(R.id.progressbar_scanning).setVisibility(View.VISIBLE);
                 } else {
-                    //TODO: find a generic way for all activities that want to use this fragment
+                    //FIXME: find a generic way for all activities that want to use this fragment
                     ((BleActivity) getActivity()).stopScanning();
                     rootView.findViewById(R.id.progressbar_scanning).setVisibility(View.INVISIBLE);
                 }
@@ -131,10 +131,10 @@ public class PeripheralScanFragment extends ListFragment {
         BleDevice device = (BleDevice) mSectionedAdapter.getItem(position);
 
         if (device.isConnected()) {
-            //TODO: find a generic way for all activities that want to use this fragment
+            //FIXME: find a generic way for all activities that want to use this fragment
             ((BleActivity) getActivity()).onConnectedPeripheralSelected(device.getAddress());
         } else {
-            //TODO: find a generic way for all activities that want to use this fragment
+            //FIXME: find a generic way for all activities that want to use this fragment
             ((BleActivity) getActivity()).onDiscoveredPeripheralSelected(device.getAddress());
         }
     }
@@ -151,11 +151,11 @@ public class PeripheralScanFragment extends ListFragment {
         LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mScanStateReceiver,
                 filterScanState);
 
-        IntentFilter filterPeripherals = new IntentFilter();
-        filterPeripherals.addAction(BlePeripheralService.ACTION_PERIPHERAL_DISCOVERY);
-        filterPeripherals.addAction(BlePeripheralService.ACTION_PERIPHERAL_CONNECTION_CHANGED);
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mPeripheralsChangedReceiver,
-                filterPeripherals);
+        IntentFilter filterDeviceState = new IntentFilter();
+        filterDeviceState.addAction(BlePeripheralService.ACTION_PERIPHERAL_DISCOVERY);
+        filterDeviceState.addAction(BlePeripheralService.ACTION_PERIPHERAL_CONNECTION_CHANGED);
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mDeviceConnectionReceiver,
+                filterDeviceState);
     }
 
     @Override
@@ -164,7 +164,7 @@ public class PeripheralScanFragment extends ListFragment {
         Log.i(TAG, "onPause() -> UNREGISTERING receivers from LocalBroadCastManager");
 
         LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(mScanStateReceiver);
-        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(mPeripheralsChangedReceiver);
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(mDeviceConnectionReceiver);
     }
 
 }

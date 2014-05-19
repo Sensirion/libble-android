@@ -21,23 +21,23 @@ import com.sensirion.libble.BlePeripheralService;
 import com.sensirion.libble.PeripheralServiceBattery;
 import com.sensirion.libble.R;
 
-public class PeripheralDetailsFragment extends Fragment {
-    private static final String TAG = PeripheralDetailsFragment.class.getSimpleName();
-    private static final String PREFIX = PeripheralDetailsFragment.class.getName();
+public class DeviceDetailsFragment extends Fragment {
+    private static final String TAG = DeviceDetailsFragment.class.getSimpleName();
+    private static final String PREFIX = DeviceDetailsFragment.class.getName();
 
-    public static final String ARGUMENT_PERIPHERAL_ADDRESS = PREFIX + "/ARGUMENT_PERIPHERAL_ADDRESS";
+    public static final String ARGUMENT_DEVICE_ADDRESS = PREFIX + "/ARGUMENT_DEVICE_ADDRESS";
 
-    private String mShownDeviceAddress;
+    private String mSelectedDeviceAddress;
 
-    private BroadcastReceiver mPeripheralsChangedReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver mDeviceConnectionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.i(TAG, "mPeripheralsChangedReceiver.onReceive() -> updating details.");
             final String changedDeviceAddress = intent.getStringExtra(BlePeripheralService.EXTRA_PERIPHERAL_ADDRESS);
 
-            if (changedDeviceAddress.equals(mShownDeviceAddress)) {
-                //TODO: find a generic way for all activities that want to use this fragment
-                if (((BleActivity) getActivity()).getConnectedDevice(mShownDeviceAddress) == null) {
+            if (changedDeviceAddress.equals(mSelectedDeviceAddress)) {
+                Log.i(TAG, "mDeviceConnectionReceiver.onReceive() for selected device: " + changedDeviceAddress);
+                //FIXME: find a generic way for all activities that want to use this fragment
+                if (((BleActivity) getActivity()).getConnectedDevice(mSelectedDeviceAddress) == null) {
                     Toast.makeText(context, context.getString(R.string.text_disconnected) + changedDeviceAddress, Toast.LENGTH_SHORT).show();
                     getFragmentManager().popBackStack();
                 } else {
@@ -49,8 +49,8 @@ public class PeripheralDetailsFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        Log.i(TAG, "onCreateView()");
-        View rootView = inflater.inflate(R.layout.fragment_peripheraldetails, container, false);
+        Log.i(TAG, "onCreateView() -> inflate layout");
+        View rootView = inflater.inflate(R.layout.fragment_device_details, container, false);
 
         return rootView;
     }
@@ -58,25 +58,25 @@ public class PeripheralDetailsFragment extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        Log.i(TAG, "onViewCreated() -> init view");
 
-        mShownDeviceAddress = getArguments().getString(ARGUMENT_PERIPHERAL_ADDRESS);
-        Toast.makeText(getActivity(), "showing peripheral details for: " + mShownDeviceAddress, Toast.LENGTH_SHORT).show();
+        mSelectedDeviceAddress = getArguments().getString(ARGUMENT_DEVICE_ADDRESS);
 
-        //TODO: find a generic way for all activities that want to use this fragment
-        BleDevice device = ((BleActivity) getActivity()).getConnectedDevice(mShownDeviceAddress);
+        //FIXME: find a generic way for all activities that want to use this fragment
+        BleDevice device = ((BleActivity) getActivity()).getConnectedDevice(mSelectedDeviceAddress);
 
-        if(device == null) {
-            throw new IllegalArgumentException("No connected peripheral for address: " + mShownDeviceAddress);
+        if (device == null) {
+            throw new IllegalArgumentException("No connected device for address: " + mSelectedDeviceAddress);
         }
 
-        initPeripheralInfo(view, device);
+        initDeviceInfo(view, device);
         initBatteryLevelView(view, device);
         initDisconnectButton(view, device);
     }
 
-    private void initPeripheralInfo(View view, BleDevice device) {
-        ((TextView) view.findViewById(R.id.tv_peripheral_advertised_name)).setText(device.getAdvertisedName());
-        ((TextView) view.findViewById(R.id.tv_peripheral_address)).setText(device.getAddress());
+    private void initDeviceInfo(View view, BleDevice device) {
+        ((TextView) view.findViewById(R.id.tv_device_advertised_name)).setText(device.getAdvertisedName());
+        ((TextView) view.findViewById(R.id.tv_device_address)).setText(device.getAddress());
     }
 
     private void initBatteryLevelView(View view, BleDevice device) {
@@ -95,7 +95,7 @@ public class PeripheralDetailsFragment extends Fragment {
         disconnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //TODO: find a generic way for all activities that want to use this fragment
+                //FIXME: find a generic way for all activities that want to use this fragment
                 ((BleActivity) getActivity()).disconnectPeripheral(device.getAddress());
             }
         });
@@ -106,10 +106,9 @@ public class PeripheralDetailsFragment extends Fragment {
         super.onResume();
         Log.i(TAG, "onResume() -> REGISTERING receivers to LocalBroadCastManager");
 
-        IntentFilter filterPeripherals = new IntentFilter();
-        filterPeripherals.addAction(BlePeripheralService.ACTION_PERIPHERAL_CONNECTION_CHANGED);
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mPeripheralsChangedReceiver,
-                filterPeripherals);
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BlePeripheralService.ACTION_PERIPHERAL_CONNECTION_CHANGED);
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(mDeviceConnectionReceiver, filter);
     }
 
     @Override
@@ -117,6 +116,6 @@ public class PeripheralDetailsFragment extends Fragment {
         super.onPause();
         Log.i(TAG, "onPause() -> UNREGISTERING receivers from LocalBroadCastManager");
 
-        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(mPeripheralsChangedReceiver);
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(mDeviceConnectionReceiver);
     }
 }

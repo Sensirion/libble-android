@@ -44,7 +44,7 @@ public class Peripheral implements BleDevice {
                     mIsConnected = true;
                     mBluetoothGatt = gatt;
                     Log.d(TAG, "onConnectionStateChange() -> mBluetoothGatt.discoverServices(): " + mBluetoothGatt.discoverServices());
-                    mParent.onPeripheralConnectionStateChanged(Peripheral.this);
+                    mParent.onPeripheralConnectionChanged(Peripheral.this);
                     break;
                 case BluetoothProfile.STATE_DISCONNECTING:
                     Log.d(TAG, "onConnectionStateChange() -> BluetoothProfile.STATE_DISCONNECTING: " + address);
@@ -52,7 +52,7 @@ public class Peripheral implements BleDevice {
                 case BluetoothProfile.STATE_DISCONNECTED:
                     Log.i(TAG, "onConnectionStateChange() -> disconnected from GATT server: " + address);
                     mIsConnected = false;
-                    mParent.onPeripheralConnectionStateChanged(Peripheral.this);
+                    mParent.onPeripheralConnectionChanged(Peripheral.this);
                     break;
                 default:
                     throw new IllegalStateException("onConnectionStateChange() -> state not implemented: " + newState);
@@ -95,6 +95,7 @@ public class Peripheral implements BleDevice {
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
+            //TODO: implement for notifications
 
 //            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
