@@ -40,6 +40,8 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     public static final String ACTION_SCANNING_STARTED = PREFIX + "/ACTION_SCANNING_STARTED";
     public static final String ACTION_SCANNING_STOPPED = PREFIX + "/ACTION_SCANNING_STOPPED";
 
+    public static final String EXTRA_PERIPHERAL_ADDRESS = PREFIX + ".EXTRA_PERIPHERAL_ADDRESS";
+
     private static final long DEFAULT_SCAN_DURATION_MS = 10 * 1000;
 
     private Timer mScanTimer;
@@ -62,17 +64,18 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
             mDiscoveredPeripherals.put(address, new Peripheral(this, device, rssi));
         }
 
-        onPeripheralCollectionChanged(ACTION_PERIPHERAL_DISCOVERY);
+        onPeripheralChanged(ACTION_PERIPHERAL_DISCOVERY, address);
     }
 
-    private void onPeripheralCollectionChanged(String action) {
-        Log.i(TAG, "onPeripheralCollectionChanged() for action: " + action);
+    private void onPeripheralChanged(String action, String address) {
+        Log.i(TAG, "onPeripheralChanged() for action: " + action);
         Intent intent = new Intent(action);
+        intent.putExtra(EXTRA_PERIPHERAL_ADDRESS, address);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
     @Override
-    public void onPeripheralConnectionStateChanged(Peripheral peripheral) {
+    public synchronized void onPeripheralConnectionStateChanged(Peripheral peripheral) {
         final String address = peripheral.getAddress();
 
         if (peripheral.isConnected()) {
@@ -85,7 +88,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
             mConnectedPeripherals.remove(address);
         }
 
-        onPeripheralCollectionChanged(ACTION_PERIPHERAL_CONNECTION_CHANGED);
+        onPeripheralChanged(ACTION_PERIPHERAL_CONNECTION_CHANGED, address);
     }
 
     @Override
@@ -127,7 +130,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * After using a given BLE device, the app must call this method to ensure
      * resources are released properly.
      */
-    private synchronized void closeAll() {
+    private void closeAll() {
         Log.i(TAG, "closeAll() -> closing all connections.");
 
         //After using a given device, you should make sure that BluetoothGatt.close()
@@ -249,12 +252,10 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param address MAC-Address of the desired {@link com.sensirion.libble.BleDevice}
      * @return Connected device as {@link com.sensirion.libble.BleDevice}
+     * or NULL if the device is not connected
      */
     public BleDevice getConnectedDevice(String address) {
-        if (mConnectedPeripherals.containsKey(address)) {
-            return mConnectedPeripherals.get(address);
-        }
-        throw new IllegalArgumentException("No connected peripheral found with address: " + address);
+        return mConnectedPeripherals.get(address);
     }
 
     /**

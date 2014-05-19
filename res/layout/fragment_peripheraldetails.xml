@@ -6,17 +6,59 @@
                 android:background="@android:color/transparent">
 
     <TextView
+        android:id="@+id/tv_title_peripheral_advertised_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/label_peripheral_advertised_name"
+        />
+
+    <TextView
+        android:id="@+id/tv_peripheral_advertised_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@id/tv_title_peripheral_advertised_name"
+        android:layout_toRightOf="@id/tv_title_peripheral_advertised_name"
+        />
+
+    <TextView
+        android:id="@+id/tv_title_peripheral_address"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tv_title_peripheral_advertised_name"
+        android:text="@string/label_peripheral_address"
+        />
+
+    <TextView
+        android:id="@+id/tv_peripheral_address"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@id/tv_title_peripheral_address"
+        android:layout_toRightOf="@id/tv_title_peripheral_address"
+        />
+
+
+    <TextView
         android:id="@+id/tv_title_batterylevel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/label_battery_level"
+        android:layout_below="@id/tv_title_peripheral_address"
+        android:text="@string/label_peripheral_battery_level"
         />
 
     <TextView
         android:id="@+id/tv_batterylevel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignBaseline="@id/tv_title_batterylevel"
         android:layout_toRightOf="@id/tv_title_batterylevel"
+        />
+
+    <Button
+        android:id="@+id/button_disconnect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:text="@string/label_disconnect"
         />
 
 </RelativeLayout>

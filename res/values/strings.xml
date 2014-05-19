@@ -14,5 +14,10 @@
 
 
     <!-- PeripheralDetailsFragment-->
-    <string name="label_battery_level">Battery level\u003A\u0020</string>
+    <string name="label_peripheral_advertised_name">Advertised name\u003A\u0020</string>
+    <string name="label_peripheral_address">MAC-Address\u003A\u0020</string>
+    <string name="label_peripheral_battery_level">Battery level\u003A\u0020</string>
+    <string name="label_disconnect">Disconnect</string>
+    <string name="text_connected">Peripheral connected\u003A\u0020</string>
+    <string name="text_disconnected">Peripheral disconnected\u003A\u0020</string>
 </resources>
