@@ -16,7 +16,7 @@ import java.util.List;
 /**
  * Represents a discovered or connected peripheral in a ListView
  */
-public class ListItemAdapter extends BaseAdapter {
+public class PeripheralListItemAdapter extends BaseAdapter {
 
     private List<BleDevice> mBleDevices;
 
@@ -26,7 +26,7 @@ public class ListItemAdapter extends BaseAdapter {
         }
     };
 
-    public ListItemAdapter() {
+    public PeripheralListItemAdapter() {
         mBleDevices = Collections.synchronizedList(new ArrayList<BleDevice>());
     }
 

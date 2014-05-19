@@ -1,4 +1,4 @@
-package com.sensirion.libble.ui;
+package com.sensirion.libble;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -8,9 +8,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
-
-import com.sensirion.libble.BleDevice;
-import com.sensirion.libble.BlePeripheralService;
 
 import java.util.ArrayList;
 
@@ -163,13 +160,13 @@ public abstract class BleActivity extends Activity {
      *
      * @param address MAC-Address of the selected peripheral
      */
-    protected abstract void onConnectedPeripheralSelected(String address);
+    public abstract void onConnectedPeripheralSelected(String address);
 
     /**
      * Method invoked as soon as a discovered peripheral is selected
      *
      * @param address MAC-Address of the selected peripheral
      */
-    protected abstract void onDiscoveredPeripheralSelected(String address);
+    public abstract void onDiscoveredPeripheralSelected(String address);
 
 }

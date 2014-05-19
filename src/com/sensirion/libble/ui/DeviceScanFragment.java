@@ -16,6 +16,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import com.sensirion.libble.BleActivity;
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BlePeripheralService;
 import com.sensirion.libble.R;
@@ -27,8 +28,8 @@ public class DeviceScanFragment extends ListFragment {
     private static final String TAG = DeviceScanFragment.class.getSimpleName();
 
     private SectionedAdapter mSectionedAdapter;
-    private ListItemAdapter mConnectedDevicesAdapter;
-    private ListItemAdapter mDiscoveredDevicesAdapter;
+    private PeripheralListItemAdapter mConnectedDevicesAdapter;
+    private PeripheralListItemAdapter mDiscoveredDevicesAdapter;
 
     private BroadcastReceiver mScanStateReceiver = new BroadcastReceiver() {
         @Override
@@ -94,8 +95,8 @@ public class DeviceScanFragment extends ListFragment {
             }
         };
 
-        mConnectedDevicesAdapter = new ListItemAdapter();
-        mDiscoveredDevicesAdapter = new ListItemAdapter();
+        mConnectedDevicesAdapter = new PeripheralListItemAdapter();
+        mDiscoveredDevicesAdapter = new PeripheralListItemAdapter();
 
         mSectionedAdapter.addSection(getActivity().getString(R.string.label_connected), mConnectedDevicesAdapter);
         mSectionedAdapter.addSection(getActivity().getString(R.string.label_discovered), mDiscoveredDevicesAdapter);

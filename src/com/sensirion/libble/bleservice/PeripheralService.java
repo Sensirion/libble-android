@@ -1,7 +1,9 @@
-package com.sensirion.libble;
+package com.sensirion.libble.bleservice;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+
+import com.sensirion.libble.Peripheral;
 
 import java.util.UUID;
 
@@ -26,5 +28,9 @@ public class PeripheralService {
 
     public boolean onCharacteristicRead(BluetoothGattCharacteristic characteristic) {
         return mBluetoothGattService.getCharacteristics().contains(characteristic);
+    }
+
+    public String getUUIDString() {
+        return mBluetoothGattService.getUuid().toString();
     }
 }

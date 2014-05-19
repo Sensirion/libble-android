@@ -8,11 +8,14 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.util.Log;
 
+import com.sensirion.libble.bleservice.PeripheralService;
+import com.sensirion.libble.bleservice.PeripheralServiceFactory;
+
 import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Represents a remote piece of HW (SmartGadget) that can have 1-N {@link com.sensirion.libble.PeripheralService}
+ * Represents a remote piece of HW (SmartGadget) that can have 1-N {@link com.sensirion.libble.bleservice.PeripheralService}
  */
 public class Peripheral implements BleDevice {
 
@@ -144,6 +147,19 @@ public class Peripheral implements BleDevice {
         return null;
     }
 
+    @Override
+    public Iterable<String> getDiscoveredPeripheralServices() {
+        HashSet<String> discoveredServices = new HashSet<String>();
+
+        for (PeripheralService service : mServices) {
+            discoveredServices.add(service.getClass().getSimpleName()
+                    + " "
+                    + service.getUUIDString());
+        }
+
+        return discoveredServices;
+    }
+
     public void connect(Context context) {
         // We want to directly connect to the device, so we are setting the
         // autoConnect parameter to false.
@@ -171,7 +187,38 @@ public class Peripheral implements BleDevice {
         mBluetoothGatt.close();
     }
 
+    /**
+     * Request a read on a given {@code BluetoothGattCharacteristic}. The read
+     * result is reported asynchronously through the
+     * {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt,
+     *android.bluetooth.BluetoothGattCharacteristic, int)} callback.
+     *
+     * @param characteristic The characteristic to read from.
+     */
     public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
         mBluetoothGatt.readCharacteristic(characteristic);
+    }
+
+    /**
+     * Request a write to a given {@code BluetoothGattCharacteristic}. The write
+     * operation is done asynchronously through the
+     * {@code BluetoothGattCallback#onCharacteristicWrite(android.bluetooth.BluetoothGatt,
+     *android.bluetooth.BluetoothGattCharacteristic, int)} callback.
+     *
+     * @param characteristic The characteristic to overwrite.
+     */
+    protected void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+        mBluetoothGatt.writeCharacteristic(characteristic);
+    }
+
+    /**
+     * Enables or disables notification on a given characteristic.
+     *
+     * @param characteristic Characteristic to act on.
+     * @param enabled        If true, enable notification. False otherwise.
+     */
+    protected void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
+                                                 boolean enabled) {
+        mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
     }
 }

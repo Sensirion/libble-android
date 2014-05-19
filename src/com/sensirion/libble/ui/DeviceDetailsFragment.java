@@ -1,7 +1,7 @@
 package com.sensirion.libble.ui;
 
 
-import android.app.Fragment;
+import android.app.ListFragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,16 +12,20 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.sensirion.libble.BleActivity;
+import com.sensirion.libble.bleservice.impl.BatteryPeripheralService;
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BlePeripheralService;
-import com.sensirion.libble.PeripheralServiceBattery;
 import com.sensirion.libble.R;
 
-public class DeviceDetailsFragment extends Fragment {
+import java.util.ArrayList;
+
+public class DeviceDetailsFragment extends ListFragment {
     private static final String TAG = DeviceDetailsFragment.class.getSimpleName();
     private static final String PREFIX = DeviceDetailsFragment.class.getName();
 
@@ -71,6 +75,7 @@ public class DeviceDetailsFragment extends Fragment {
 
         initDeviceInfo(view, device);
         initBatteryLevelView(view, device);
+        initServiceList(view, device);
         initDisconnectButton(view, device);
     }
 
@@ -80,7 +85,7 @@ public class DeviceDetailsFragment extends Fragment {
     }
 
     private void initBatteryLevelView(View view, BleDevice device) {
-        PeripheralServiceBattery batteryService = device.getPeripheralService(PeripheralServiceBattery.class);
+        BatteryPeripheralService batteryService = device.getPeripheralService(BatteryPeripheralService.class);
 
         int batteryLevel = -42;
         if (batteryService != null) {
@@ -88,6 +93,19 @@ public class DeviceDetailsFragment extends Fragment {
         }
 
         ((TextView) view.findViewById(R.id.tv_batterylevel)).setText(batteryLevel + "%");
+    }
+
+    private void initServiceList(View view, BleDevice device) {
+        ArrayList<String> services = new ArrayList<String>();
+        for(String s : device.getDiscoveredPeripheralServices()) {
+            services.add(s);
+        }
+
+        ArrayAdapter<String> serviceAdapter = new ArrayAdapter<String>(view.getContext(),
+                android.R.layout.simple_list_item_1,
+                services);
+
+        setListAdapter(serviceAdapter);
     }
 
     private void initDisconnectButton(View view, final BleDevice device) {

@@ -1,7 +1,10 @@
-package com.sensirion.libble;
+package com.sensirion.libble.bleservice;
 
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
+
+import com.sensirion.libble.Peripheral;
+import com.sensirion.libble.bleservice.impl.BatteryPeripheralService;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -20,15 +23,15 @@ public class PeripheralServiceFactory {
 
     private PeripheralServiceFactory() {
         mServiceLookUp = new HashMap<String, Class<? extends PeripheralService>>();
-        mServiceLookUp.put(PeripheralServiceBattery.UUID_SERVICE, PeripheralServiceBattery.class);
+        mServiceLookUp.put(BatteryPeripheralService.UUID_SERVICE, BatteryPeripheralService.class);
     }
 
     /**
      * Wraps a given {@link android.bluetooth.BluetoothGattService} to
-     * a {@link com.sensirion.libble.PeripheralService}
+     * a {@link PeripheralService}
      *
      * @param service {@link android.bluetooth.BluetoothGattService} that should be wrapped
-     * @return {@link com.sensirion.libble.PeripheralService}
+     * @return {@link PeripheralService}
      */
     public PeripheralService createServiceFor(Peripheral parent, BluetoothGattService service) {
         String uuid = service.getUuid().toString();

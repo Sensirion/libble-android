@@ -3,12 +3,14 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:layout_margin="@dimen/fragment_horizontal_margin"
                 android:background="@android:color/transparent">
 
     <TextView
         android:id="@+id/tv_title_peripheral_advertised_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textStyle="bold"
         android:text="@string/label_peripheral_advertised_name"
         />
 
@@ -25,6 +27,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/tv_title_peripheral_advertised_name"
+        android:layout_marginTop="@dimen/fragment_vertical_margin"
+        android:textStyle="bold"
         android:text="@string/label_peripheral_address"
         />
 
@@ -42,6 +46,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/tv_title_peripheral_address"
+        android:layout_marginTop="@dimen/fragment_vertical_margin"
+        android:textStyle="bold"
         android:text="@string/label_peripheral_battery_level"
         />
 
@@ -53,12 +59,31 @@
         android:layout_toRightOf="@id/tv_title_batterylevel"
         />
 
+    <View
+        android:id="@+id/separator_horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@id/tv_title_batterylevel"
+        android:layout_marginTop="@dimen/fragment_vertical_margin"
+        android:background="@android:color/darker_gray"
+        />
+
     <Button
         android:id="@+id/button_disconnect"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:text="@string/label_disconnect"
+        />
+
+    <ListView
+        android:id="@android:id/list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/separator_horizontal"
+        android:layout_above="@id/button_disconnect"
+        android:scrollbarStyle="insideOverlay"
+        android:cacheColorHint="@android:color/transparent"
         />
 
 </RelativeLayout>
