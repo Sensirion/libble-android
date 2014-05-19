@@ -17,7 +17,7 @@ import java.util.List;
 abstract public class SectionedAdapter extends BaseAdapter {
 
     private static final String TAG = SectionedAdapter.class.getSimpleName();
-    private static final int TYPE_SECTION_HEADER = 1;
+    private static final int TYPE_SECTION_HEADER = 0;
 
     private class Section extends DataSetObserver {
         String caption;
