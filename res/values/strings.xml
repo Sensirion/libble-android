@@ -22,4 +22,7 @@
     <string name="label_disconnect">Disconnect</string>
     <string name="text_connected">Peripheral connected\u003A\u0020</string>
     <string name="text_disconnected">Peripheral disconnected\u003A\u0020</string>
+    <string name="char_percent">\u0025</string>
+
+    <string name="peripheralservice_not_available">service not available</string>
 </resources>

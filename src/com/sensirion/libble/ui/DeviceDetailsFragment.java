@@ -87,12 +87,12 @@ public class DeviceDetailsFragment extends ListFragment {
     private void initBatteryLevelView(View view, BleDevice device) {
         BatteryPeripheralService batteryService = device.getPeripheralService(BatteryPeripheralService.class);
 
-        int batteryLevel = -42;
-        if (batteryService != null) {
-            batteryLevel = batteryService.getBatteryLevel();
+        if (batteryService == null) {
+            ((TextView) view.findViewById(R.id.tv_batterylevel)).setText(getString(R.string.peripheralservice_not_available));
+        } else {
+            int batteryLevel = batteryService.getBatteryLevel();
+            ((TextView) view.findViewById(R.id.tv_batterylevel)).setText(batteryLevel + getString(R.string.char_percent));
         }
-
-        ((TextView) view.findViewById(R.id.tv_batterylevel)).setText(batteryLevel + "%");
     }
 
     private void initServiceList(View view, BleDevice device) {
