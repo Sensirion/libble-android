@@ -156,6 +156,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         checkBt();
         mDiscoveredPeripherals.clear();
 
+        //TODO: scan for specified UUIDs only
         if (mBluetoothAdapter.startLeScan(this)) {
             mIsScanning = true;
             onStartLeScan();
@@ -177,7 +178,6 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         Log.i(TAG, "onStartLeScan()");
 
         mScanTimer = new Timer();
-        //TODO: scan for a specified UUID(s) only
         mScanTimer.schedule(new TimerTask() {
             @Override
             public void run() {

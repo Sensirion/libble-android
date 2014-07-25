@@ -64,7 +64,8 @@ public abstract class BleActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(TAG, "onPause()");
+        Log.d(TAG, "onPause() -> stopScanning()");
+        stopScanning();
     }
 
     @Override
@@ -134,10 +135,12 @@ public abstract class BleActivity extends Activity {
      * @param address MAC-Address of the peripheral that should be connected
      */
     public boolean connectPeripheral(String address) {
-        if (mBlePeripheralService != null) {
-            return mBlePeripheralService.connect(address);
+        if (mBlePeripheralService == null) {
+            Log.e(TAG, mBlePeripheralService.getClass().getSimpleName() + " is null -> could not connect peripheral!");
         } else {
-            Log.e(TAG, "Device not connected since service not ready");
+            Log.d(TAG,"connectPeripheral() -> stopScanning()");
+            stopScanning();
+            return mBlePeripheralService.connect(address);
         }
         return false;
     }

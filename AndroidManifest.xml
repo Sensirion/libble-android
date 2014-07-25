@@ -25,9 +25,6 @@
         <service
             android:name="com.sensirion.libble.BlePeripheralService"
             android:enabled="true"/>
-        <service
-            android:name="com.sensirion.libble.BleService"
-            android:enabled="true"/>
     </application>
 
 </manifest>

@@ -2,6 +2,7 @@ package com.sensirion.libble.bleservice.impl;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+import android.util.Log;
 
 import com.sensirion.libble.Peripheral;
 import com.sensirion.libble.bleservice.PeripheralService;
@@ -37,6 +38,8 @@ public class BatteryPeripheralService extends PeripheralService {
         if (mBatteryLevelCharacteristic.equals(characteristic)) {
             mBatteryLevel = mBatteryLevelCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
         }
+        Log.d(TAG, "onCharacteristicRead() -> mBatteryLevel = " + mBatteryLevel);
         return super.onCharacteristicRead(characteristic);
     }
+
 }

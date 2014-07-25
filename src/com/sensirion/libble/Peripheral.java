@@ -71,7 +71,7 @@ public class Peripheral implements BleDevice {
                     mServices.add(PeripheralServiceFactory.getInstance().createServiceFor(Peripheral.this, service));
                 }
             } else {
-                Log.w(TAG, "onServicesDiscovered received: " + status);
+                Log.w(TAG, "onServicesDiscovered failed with status: " + status);
             }
         }
 
@@ -90,7 +90,7 @@ public class Peripheral implements BleDevice {
                 }
 
             } else {
-                Log.w(TAG, "onCharacteristicRead received: " + status);
+                Log.w(TAG, "onCharacteristicRead failed with status: " + status);
             }
         }
 
@@ -101,6 +101,14 @@ public class Peripheral implements BleDevice {
             //TODO: implement for notifications
 
 //            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt,
+                                          BluetoothGattCharacteristic characteristic,
+                                          int status) {
+            super.onCharacteristicWrite(gatt, characteristic, status);
+            //TODO: implement
         }
     };
 

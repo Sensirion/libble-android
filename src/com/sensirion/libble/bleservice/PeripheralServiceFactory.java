@@ -23,6 +23,7 @@ public class PeripheralServiceFactory {
 
     private PeripheralServiceFactory() {
         mServiceLookUp = new HashMap<String, Class<? extends PeripheralService>>();
+        //TODO: add bleservice.impl explicit services to mServiceLookUp here:
         mServiceLookUp.put(BatteryPeripheralService.UUID_SERVICE, BatteryPeripheralService.class);
     }
 
@@ -59,6 +60,7 @@ public class PeripheralServiceFactory {
 
     /**
      * Let's you add your own specific service implementations that are created on app-level.
+     * Make sure that these classes extend {@link com.sensirion.libble.bleservice.PeripheralService}.
      *
      * @param newService
      */
