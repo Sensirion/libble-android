@@ -2,6 +2,7 @@ package com.sensirion.libble;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
@@ -31,7 +32,9 @@ public class Peripheral implements BleDevice {
 
     private Set<PeripheralService> mServices = new HashSet<PeripheralService>();
 
-    private final BluetoothGattExecutor mExecutor = new BluetoothGattExecutor() {
+    //TODO: implement a queue to protect the BT-Stack from multiple read/write/notification requests in parallel since this is not supported (Android 4.4)
+    //maybe BluetoothGattExecutor shows a working mechanism - check that and apply here (ev. delegate to new Executor-class)
+    private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -171,7 +174,7 @@ public class Peripheral implements BleDevice {
     public void connect(Context context) {
         // We want to directly connect to the device, so we are setting the
         // autoConnect parameter to false.
-        mBluetoothDevice.connectGatt(context, false, mExecutor);
+        mBluetoothDevice.connectGatt(context, false, mGattCallback);
     }
 
     public boolean reconnect() {
