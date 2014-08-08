@@ -13,9 +13,13 @@ import android.util.Log;
 
 import junit.framework.Assert;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -153,7 +157,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
             return mIsScanning;
         }
         Log.d(TAG, "startLeScan() -> clear discovered peripherals and add new scan results");
-        checkBt();
+        checkBluetooth();
         mDiscoveredPeripherals.clear();
 
         //TODO: scan for specified UUIDs only
@@ -167,7 +171,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         return mIsScanning;
     }
 
-    private void checkBt() {
+    private void checkBluetooth() {
         if (isBluetoothAvailable()) {
             return;
         }
@@ -208,7 +212,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      */
     public synchronized void stopLeScan() {
         if (mIsScanning) {
-            checkBt();
+            checkBluetooth();
             Log.d(TAG, "stopLeScan() -> mBluetoothAdapter.stopLeScan");
             mBluetoothAdapter.stopLeScan(this);
             mIsScanning = false;
@@ -235,7 +239,39 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @return Iterable
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals() {
-        return new HashSet<BleDevice>(mDiscoveredPeripherals.values());
+        return getDiscoveredPeripherals((List) null);
+    }
+
+    /**
+     * Get all discovered {@link com.sensirion.libble.BleDevice} with only one name in particular.
+     *
+     * @param validDeviceName device name needed by the application.
+     * @return Iterable
+     */
+    public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(String validDeviceName) {
+        return getDiscoveredPeripherals(new LinkedList<String>(Arrays.asList(validDeviceName)));
+    }
+
+    /**
+     * Get all discovered {@link com.sensirion.libble.BleDevice} with valid names for the application.
+     *
+     * @param validDeviceNames List of devices names.
+     * @return Iterable
+     */
+    public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(List<String> validDeviceNames) {
+        HashSet<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
+        if (validDeviceNames == null) { // returns all the devices.
+            return discoveredPeripherals;
+        }
+        final Iterator<? extends BleDevice> iterator = discoveredPeripherals.iterator();
+        while (iterator.hasNext()) {
+            final BleDevice device = iterator.next();
+            if (device == null || validDeviceNames.contains(device.getAdvertisedName())) {
+                continue;
+            }
+            discoveredPeripherals.remove(device);
+        }
+        return discoveredPeripherals;
     }
 
     /**
@@ -268,7 +304,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * callback.
      */
     public synchronized boolean connect(String address) {
-        checkBt();
+        checkBluetooth();
         if (address == null || address.equals("")) {
             Log.e(TAG, "connect() -> unspecified address.");
             return false;
@@ -298,7 +334,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * callback.
      */
     public synchronized void disconnect(String address) {
-        checkBt();
+        checkBluetooth();
         if (address == null || address.equals("")) {
             Log.w(TAG, "disconnect() -> unspecified address.");
             return;
