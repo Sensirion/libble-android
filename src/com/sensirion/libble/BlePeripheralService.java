@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 
 /**
  * This class offers the main functionality of the library to the user (app)
@@ -31,7 +32,6 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     private static final String TAG = BlePeripheralService.class.getSimpleName();
     private static final String PREFIX = BlePeripheralService.class.getName();
-
 
     public class LocalBinder extends Binder {
         public BlePeripheralService getService() {
@@ -152,6 +152,18 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @return true if scan has been started. False otherwise.
      */
     public synchronized boolean startLeScan() {
+        return startLeScan(null);
+    }
+
+    /**
+     * Requests scanning process for BLE devices in range. If the connection to the {@link com.sensirion.libble.BlePeripheralService}
+     * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
+     *
+     * @param UUIDs List of UUID that the scan can use. NULL in case the user is able to use any device.
+     *
+     * @return true if scan has been started. False otherwise.
+     */
+    public synchronized boolean startLeScan(UUID [] UUIDs){
         if (mIsScanning) {
             Log.w(TAG, "startLeScan() -> scan already in progress");
             return mIsScanning;
@@ -160,17 +172,18 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         checkBluetooth();
         mDiscoveredPeripherals.clear();
 
-        //TODO: scan for specified UUIDs only
-        if (mBluetoothAdapter.startLeScan(this)) {
+        if ((UUIDs == null) ? mBluetoothAdapter.startLeScan(this) : mBluetoothAdapter.startLeScan(UUIDs, this)) {
             mIsScanning = true;
             onStartLeScan();
         } else {
             throw new IllegalStateException("onStartLeScan() -> could not startLeScan on BluetoothAdapter!");
         }
-
         return mIsScanning;
     }
 
+    /**
+     * Checks if the bluetooth connection is available.
+     */
     private void checkBluetooth() {
         if (isBluetoothAvailable()) {
             return;
@@ -239,7 +252,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @return Iterable
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals() {
-        return getDiscoveredPeripherals((List) null);
+        return new HashSet<BleDevice>(mDiscoveredPeripherals.values());
     }
 
     /**
@@ -305,7 +318,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      */
     public synchronized boolean connect(String address) {
         checkBluetooth();
-        if (address == null || address.equals("")) {
+        if (address == null || address.trim().isEmpty()) {
             Log.e(TAG, "connect() -> unspecified address.");
             return false;
         }
@@ -351,5 +364,4 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     public synchronized boolean isScanning() {
         return mIsScanning;
     }
-
 }
