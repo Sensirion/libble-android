@@ -17,7 +17,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.sensirion.libble.BleActivity;
+import com.sensirion.libble.ui.BleActivity;
 import com.sensirion.libble.bleservice.impl.BatteryPeripheralService;
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BlePeripheralService;
@@ -133,7 +133,6 @@ public class DeviceDetailsFragment extends ListFragment {
     public void onPause() {
         super.onPause();
         Log.i(TAG, "onPause() -> UNREGISTERING receivers from LocalBroadCastManager");
-
         LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(mDeviceConnectionReceiver);
     }
 }

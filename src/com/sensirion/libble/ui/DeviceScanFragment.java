@@ -16,7 +16,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
-import com.sensirion.libble.BleActivity;
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BlePeripheralService;
 import com.sensirion.libble.R;
