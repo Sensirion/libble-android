@@ -25,7 +25,9 @@ public class TiMagnetometerSensor extends AbstractSensor<float[]> implements Per
     @Override
     public int getMinPeriod() {
         return PERIOD_MIN;
-    }    @Override
+    }
+
+    @Override
     public String getName() {
         return TAG;
     }
@@ -33,7 +35,9 @@ public class TiMagnetometerSensor extends AbstractSensor<float[]> implements Per
     @Override
     public int getMaxPeriod() {
         return PERIOD_MAX;
-    }    @Override
+    }
+
+    @Override
     public String getServiceUUID() {
         return UUID_SERVICE;
     }
@@ -68,18 +72,14 @@ public class TiMagnetometerSensor extends AbstractSensor<float[]> implements Per
         return "x=" + data[0] + "\ny=" + data[1] + "\nz=" + data[2];
     }
 
-
-
-
+    @Override
+    public int getPeriod() {
+        return period;
+    }
 
     @Override
     public void setPeriod(int period) {
         this.period = period;
-    }
-
-    @Override
-    public int getPeriod() {
-        return period;
     }
 
     @Override

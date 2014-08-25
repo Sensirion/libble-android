@@ -4,7 +4,8 @@ import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 
 import com.sensirion.libble.Peripheral;
-import com.sensirion.libble.bleservice.impl.BatteryPeripheralService;
+import com.sensirion.libble.bleservice.implementations.generic_services.BatteryPeripheralService;
+import com.sensirion.libble.bleservice.implementations.notification_services.HumigadgetPeripheralService;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -17,14 +18,15 @@ public class PeripheralServiceFactory {
 
     private Map<String, Class<? extends PeripheralService>> mServiceLookUp;
 
-    public static PeripheralServiceFactory getInstance() {
-        return mInstance;
-    }
-
     private PeripheralServiceFactory() {
         mServiceLookUp = new HashMap<String, Class<? extends PeripheralService>>();
         //TODO: add bleservice.impl explicit services to mServiceLookUp here:
-        mServiceLookUp.put(BatteryPeripheralService.UUID_SERVICE, BatteryPeripheralService.class);
+        registerServiceImplementation(BatteryPeripheralService.UUID_SERVICE, BatteryPeripheralService.class);
+        registerServiceImplementation(HumigadgetPeripheralService.RHT_SERVICE_UUID, HumigadgetPeripheralService.class);
+    }
+
+    public static PeripheralServiceFactory getInstance() {
+        return mInstance;
     }
 
     /**
@@ -43,13 +45,13 @@ public class PeripheralServiceFactory {
                 Constructor<? extends PeripheralService> constructor = c.getDeclaredConstructor(Peripheral.class, BluetoothGattService.class);
                 return constructor.newInstance(parent, service);
             } catch (NoSuchMethodException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, "Exception when creating a new service", e);
             } catch (InvocationTargetException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, "Exception when creating a new service", e);
             } catch (InstantiationException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, "Exception when creating a new service", e);
             } catch (IllegalAccessException e) {
-                Log.e(TAG, e.getMessage());
+                Log.e(TAG, "Exception when creating a new service", e);
             }
             throw new IllegalArgumentException("Unable to instantiate class type: " + c.toString());
         } else {
@@ -64,8 +66,11 @@ public class PeripheralServiceFactory {
      *
      * @param newService
      */
-    public void configureCustomServiceImplementation(String uuid, Class<? extends PeripheralService> newService) {
+    public void registerServiceImplementation(String uuid, Class<? extends PeripheralService> newService) {
+        if (mServiceLookUp.containsKey(uuid)) {
+            Log.w(TAG, "The service " + uuid + " was replaced by another service version.");
+            mServiceLookUp.remove(uuid);
+        }
         mServiceLookUp.put(uuid, newService);
     }
-
 }

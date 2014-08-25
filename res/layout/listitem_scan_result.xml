@@ -1,25 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:id="@+id/listitem_content"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:layout_marginLeft="5dp"
-              android:orientation="vertical">
+    android:id="@+id/listitem_content"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginLeft="5dp"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/listitem_advertised_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="20sp"
-        />
+        android:textSize="20sp" />
 
     <RelativeLayout
         android:id="@+id/listitem_content_lower"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        >
+        android:layout_weight="1">
 
         <TextView
             android:id="@+id/listitem_label_rssi"
@@ -27,8 +25,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:text="@string/label_listitem_rssi"
-            android:textSize="12sp"
-            />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/listitem_value_rssi"
@@ -36,8 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="10dp"
             android:layout_toRightOf="@id/listitem_label_rssi"
-            android:textSize="12sp"
-            />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/device_address"
@@ -45,8 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
             android:layout_marginLeft="10dp"
-            android:textSize="12sp"
-            />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/listitem_address_label"
@@ -54,8 +49,7 @@
             android:layout_height="wrap_content"
             android:layout_toLeftOf="@id/device_address"
             android:text="@string/label_address"
-            android:textSize="12sp"
-            />
+            android:textSize="12sp" />
 
     </RelativeLayout>
 </LinearLayout>

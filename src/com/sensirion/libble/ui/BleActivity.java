@@ -1,11 +1,13 @@
 package com.sensirion.libble.ui;
 
 import android.app.Activity;
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BleManager;
+import com.sensirion.libble.NotificationListener;
 
 import java.util.List;
 import java.util.UUID;
@@ -13,7 +15,7 @@ import java.util.UUID;
 /**
  * This is the Activity all apps using the library can extend
  * instead of extending standard Activity
- *
+ * <p/>
  * This is a convenience class and simplifies use of the library.
  */
 
@@ -48,6 +50,7 @@ public abstract class BleActivity extends Activity {
         } else {
             mBleManager.release(getApplicationContext());
         }
+        super.onStop();
     }
 
     /**
@@ -63,8 +66,7 @@ public abstract class BleActivity extends Activity {
      * Start scanning devices in range using provided UUIDs.
      *
      * @param deviceUUIDs deviceUUIDs that we want want to use,
-     * null if all devices have to be retrieved.
-     *
+     *                    null if all devices have to be retrieved.
      * @return true if it's scanning, false otherwise.
      */
     protected boolean startScanning(UUID[] deviceUUIDs) {
@@ -143,6 +145,61 @@ public abstract class BleActivity extends Activity {
      */
     protected void disconnectPeripheral(String address) {
         mBleManager.disconnectPeripheral(address);
+    }
+
+    /**
+     * Register a listener in all connected peripherals.
+     *
+     * @param listener pretending to listen for notifications in all peripherals.
+     */
+    public void registerPeripheralListenerToAllConnected(NotificationListener listener) {
+        mBleManager.registerPeripheralListenerToAllConnected(listener);
+    }
+
+    /**
+     * Registers a listener in a connected peripheral.
+     *
+     * @param address  address of the peripheral we want to listen to,
+     *                 null if we want to register a listener to all connected devices.
+     * @param listener pretending to listen for notifications of a peripheral.
+     */
+    public void registerPeripheralListener(String address, NotificationListener listener) {
+        mBleManager.registerPeripheralListener(address, listener);
+    }
+
+    /**
+     * Unregister a listener from all connected peripherals.
+     *
+     * @param listener that does not want to get notifications any more.
+     */
+    public void unregisterPeripheralListenerFromAllConnected(NotificationListener listener) {
+        mBleManager.unregisterPeripheralListenerFromAllConnected(listener);
+    }
+
+    /**
+     * Unregister a listener from a connected peripheral.
+     *
+     * @param address  of the peripheral you don't want to get notifications from anymore.
+     * @param listener that wants to unregister from the notifications of a peripheral.
+     */
+    public void unregisterPeripheralListener(String address, NotificationListener listener) {
+        mBleManager.unregisterPeripheralListener(address, listener);
+    }
+
+    /**
+     * Checks if bluetooth connection is enabled on the device.
+     */
+    public boolean isBluetoothEnabled() {
+        return mBleManager.isBluetoothEnabled();
+    }
+
+    /**
+     * Request the user to enable bluetooth in case it's disabled.
+     *
+     * @param context of the requesting activity.
+     */
+    public void requestEnableBluetooth(Context context) {
+        mBleManager.requestEnableBluetooth(context);
     }
 
     abstract public void onConnectedPeripheralSelected(String address);

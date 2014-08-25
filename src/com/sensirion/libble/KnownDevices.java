@@ -5,11 +5,19 @@ import java.util.List;
 import java.util.UUID;
 
 public enum KnownDevices {
+
+    /**
+     * Humigadget device.
+     *
+     * Has notifications: YES
+     *
+     * Notification interface: {@link com.sensirion.libble.listeners.HumigadgetListener}
+     */
     HUMIGADGET {
         @Override
-        public UUID [] getDescriptorUUIDs (){
-            final UUID descriptorUUID = UUID.fromString("0000aa20-0000-1000-8000-00805f9b34fb");
-            return new UUID[] {descriptorUUID};
+        public UUID[] getDescriptorUUIDs() {
+            final UUID descriptorUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+            return new UUID[]{descriptorUUID};
         }
 
         @Override
@@ -21,7 +29,7 @@ public enum KnownDevices {
         }
 
         @Override
-        public String toString (){
+        public String toString() {
             return "HUMIGADGET";
         }
     };
@@ -30,11 +38,11 @@ public enum KnownDevices {
      * Returns the descriptor UUIDs from the gadget.
      *
      * @return {@link java.util.UUID} array.
-     *
+     * <p/>
      * In spite of we usually we only need one descriptor UUID, the method LeScan
      * in Android Bluetooth library ask for an array.
      */
-    public abstract UUID [] getDescriptorUUIDs ();
+    public abstract UUID[] getDescriptorUUIDs();
 
     /**
      * Returns a list of string of the valid advertised names of the gadget.
@@ -42,6 +50,7 @@ public enum KnownDevices {
      * @return {@link java.util.List}
      */
     public abstract List<String> getAdvertisedNames();
+
     @Override
     public abstract String toString();
 }

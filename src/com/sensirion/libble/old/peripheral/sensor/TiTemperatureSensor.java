@@ -12,6 +12,35 @@ public class TiTemperatureSensor extends AbstractSensor<float[]> {
         super();
     }
 
+    private static double extractAmbientTemperature(BluetoothGattCharacteristic c) {
+        int offset = 2;
+        return TiSensorUtils.shortUnsignedAtOffset(c, offset) / 128.0;
+    }
+
+    private static double extractTargetTemperature(BluetoothGattCharacteristic c, double ambient) {
+        Integer twoByteValue = TiSensorUtils.shortSignedAtOffset(c, 0);
+
+        double Vobj2 = twoByteValue.doubleValue();
+        Vobj2 *= 0.00000015625;
+
+        double Tdie = ambient + 273.15;
+
+        double S0 = 5.593E-14; // Calibration factor
+        double a1 = 1.75E-3;
+        double a2 = -1.678E-5;
+        double b0 = -2.94E-5;
+        double b1 = -5.7E-7;
+        double b2 = 4.63E-9;
+        double c2 = 13.4;
+        double Tref = 298.15;
+        double S = S0 * (1 + a1 * (Tdie - Tref) + a2 * pow((Tdie - Tref), 2));
+        double Vos = b0 + b1 * (Tdie - Tref) + b2 * pow((Tdie - Tref), 2);
+        double fObj = (Vobj2 - Vos) + c2 * pow((Vobj2 - Vos), 2);
+        double tObj = pow(pow(Tdie, 4) + (fObj / S), .25);
+
+        return tObj - 273.15;
+    }
+
     @Override
     public String getName() {
         return TAG;
@@ -56,34 +85,5 @@ public class TiTemperatureSensor extends AbstractSensor<float[]> {
         return new float[]{
                 (float) ambient, (float) target
         };
-    }
-
-    private static double extractAmbientTemperature(BluetoothGattCharacteristic c) {
-        int offset = 2;
-        return TiSensorUtils.shortUnsignedAtOffset(c, offset) / 128.0;
-    }
-
-    private static double extractTargetTemperature(BluetoothGattCharacteristic c, double ambient) {
-        Integer twoByteValue = TiSensorUtils.shortSignedAtOffset(c, 0);
-
-        double Vobj2 = twoByteValue.doubleValue();
-        Vobj2 *= 0.00000015625;
-
-        double Tdie = ambient + 273.15;
-
-        double S0 = 5.593E-14; // Calibration factor
-        double a1 = 1.75E-3;
-        double a2 = -1.678E-5;
-        double b0 = -2.94E-5;
-        double b1 = -5.7E-7;
-        double b2 = 4.63E-9;
-        double c2 = 13.4;
-        double Tref = 298.15;
-        double S = S0 * (1 + a1 * (Tdie - Tref) + a2 * pow((Tdie - Tref), 2));
-        double Vos = b0 + b1 * (Tdie - Tref) + b2 * pow((Tdie - Tref), 2);
-        double fObj = (Vobj2 - Vos) + c2 * pow((Vobj2 - Vos), 2);
-        double tObj = pow(pow(Tdie, 4) + (fObj / S), .25);
-
-        return tObj - 273.15;
     }
 }

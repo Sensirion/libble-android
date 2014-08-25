@@ -1,5 +1,7 @@
 package com.sensirion.libble;
 
+import android.app.Application;
+import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -8,12 +10,14 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
 public class BleManager {
 
     private static final String TAG = BleManager.class.getSimpleName();
+    private static BleManager mInstance;
     private boolean mShouldStartScanning;
     private BlePeripheralService mBlePeripheralService;
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -35,34 +39,48 @@ public class BleManager {
         }
     };
 
-    private static BleManager mInstance;
-    private BleManager (){}
-    public synchronized static BleManager getInstance(){
-        if (mInstance == null){
+    private BleManager() {
+    }
+
+    public synchronized static BleManager getInstance() {
+        if (mInstance == null) {
             mInstance = new BleManager();
         }
         return mInstance;
     }
 
     /**
-     * This method have should be called at the beginning of
-     * the application that wants to implement the library.
+     * This method have should be called just after the first getInstance() call
+     * in the application that wants to implement the library.
      *
      * @param context application context of the implementing application.
      */
     public void init(Context context) {
-        Log.i(TAG, "init() -> binding to BlePeripheralService");
-        Intent intent = new Intent(context, BlePeripheralService.class);
-        if (context.bindService(intent, mServiceConnection, context.BIND_AUTO_CREATE)) {
-            Log.i(TAG, "init() -> successfully bound to BlePeripheralService!");
+        if (context instanceof Application) {
+            Log.i(TAG, "init() -> binding to BlePeripheralService");
+            Intent intent = new Intent(context, BlePeripheralService.class);
+            if (context.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
+                Log.i(TAG, "init() -> successfully bound to BlePeripheralService!");
+            } else {
+                throw new IllegalStateException("init() -> unable to bind to BlePeripheralService!");
+            }
         } else {
-            throw new IllegalStateException("init() -> unable to bind to BlePeripheralService!");
+            throw new IllegalArgumentException("init() -> BleManager has to be initialized with an application context");
         }
     }
 
+    /**
+     * This method should be called at the end of the execution of the implementing application.
+     *
+     * @param context application context of the implementing application.
+     */
     public void release(Context context) {
-        Log.w(TAG, "onDestroy() -> isFinishing() -> unbinding mServiceConnection");
-        context.unbindService(mServiceConnection);
+        try {
+            Log.w(TAG, "onDestroy() -> isFinishing() -> unbinding mServiceConnection");
+            context.unbindService(mServiceConnection);
+        } catch (Exception e) {
+            Log.e(TAG, "The service produced an exception when trying to unbind from it.", e);
+        }
     }
 
     /**
@@ -112,6 +130,19 @@ public class BleManager {
             Log.d(TAG, "stopScanning() -> mBlePeripheralService.stopLeScan()");
             mBlePeripheralService.stopLeScan();
         }
+    }
+
+    /**
+     * Ask if the peripheral service is scanning.
+     *
+     * @return true if it's scanning - false otherwise.
+     */
+    public boolean isScanning() {
+        if (mBlePeripheralService == null) {
+            Log.w(TAG, "isScanning() -> not connected to BlePeripheralService");
+            return false;
+        }
+        return mBlePeripheralService.isScanning();
     }
 
     /**
@@ -175,7 +206,6 @@ public class BleManager {
         if (mBlePeripheralService == null) {
             return null;
         }
-
         return mBlePeripheralService.getConnectedDevice(address);
     }
 
@@ -205,6 +235,93 @@ public class BleManager {
             mBlePeripheralService.disconnect(address);
         } else {
             Log.e(TAG, "Service not ready!");
+        }
+    }
+
+    /**
+     * Register a listener in all connected peripherals.
+     *
+     * @param listener pretending to listen for notifications in all peripherals.
+     */
+    public void registerPeripheralListenerToAllConnected(NotificationListener listener) {
+        registerPeripheralListener(null, listener);
+    }
+
+
+    /**
+     * Registers a listener in a connected peripheral.
+     *
+     * @param address  address of the peripheral we want to listen to,
+     *                 null if we want to register a listener to all connected devices.
+     * @param listener pretending to listen for notifications of a peripheral.
+     *
+     */
+    public void registerPeripheralListener(String address, NotificationListener listener) {
+        final Iterator<? extends BleDevice> iterator = getConnectedBleDevices().iterator();
+        while (iterator.hasNext()) {
+            BleDevice device = iterator.next();
+            if (address == null || device.getAddress().equals(address)) {
+                ((Peripheral) device).registerPeripheralListener(listener);
+                if (address == null) {
+                    continue;
+                }
+                return;
+            }
+        }
+    }
+
+    /**
+     * Unregister a listener from all connected peripherals.
+     *
+     * @param listener that does not want to get notifications any more.
+     */
+    public void unregisterPeripheralListenerFromAllConnected(NotificationListener listener) {
+        unregisterPeripheralListener(null, listener);
+    }
+
+    /**
+     * Unregister a listener from a connected peripheral.
+     *
+     * @param address  of the peripheral you don't want to get notifications from anymore.
+     * @param listener that wants to unregister from the notifications of a peripheral.
+     */
+    public void unregisterPeripheralListener(String address, NotificationListener listener) {
+        final Iterator<? extends BleDevice> iterator = getConnectedBleDevices().iterator();
+        while (iterator.hasNext()) {
+            BleDevice device = iterator.next();
+            if (address == null || device.getAddress().equals(address)) {
+                ((Peripheral) device).unregisterPeripheralListener(listener);
+                if (address == null) {
+                    continue;
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Checks if bluetooth connection is enabled on the device.
+     */
+    public boolean isBluetoothEnabled() {
+        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (bluetoothAdapter == null) {
+            return false;
+        }
+        return bluetoothAdapter.isEnabled();
+    }
+
+    /**
+     * Request the user to enable bluetooth in case it's disabled.
+     *
+     * @param context of the requesting activity.
+     */
+    public void requestEnableBluetooth(Context context) {
+        if (isBluetoothEnabled()) {
+            Log.d(TAG, "Bluetooth is enabled");
+        } else {
+            Log.d(TAG, "Bluetooth is disabled");
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            context.startActivity(enableBtIntent);
         }
     }
 }

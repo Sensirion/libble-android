@@ -11,8 +11,6 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import junit.framework.Assert;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,30 +30,19 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     private static final String TAG = BlePeripheralService.class.getSimpleName();
     private static final String PREFIX = BlePeripheralService.class.getName();
-
-    public class LocalBinder extends Binder {
-        public BlePeripheralService getService() {
-            return BlePeripheralService.this;
-        }
-    }
-
     public static final String ACTION_PERIPHERAL_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_DISCOVERY";
     public static final String ACTION_PERIPHERAL_CONNECTION_CHANGED = PREFIX + "/ACTION_PERIPHERAL_CONNECTION_CHANGED";
     public static final String ACTION_SCANNING_STARTED = PREFIX + "/ACTION_SCANNING_STARTED";
     public static final String ACTION_SCANNING_STOPPED = PREFIX + "/ACTION_SCANNING_STOPPED";
-
     public static final String EXTRA_PERIPHERAL_ADDRESS = PREFIX + ".EXTRA_PERIPHERAL_ADDRESS";
-
     private static final long DEFAULT_SCAN_DURATION_MS = 10 * 1000;
-
+    private final IBinder mBinder = new LocalBinder();
     private Timer mScanTimer;
     private boolean mIsScanning;
     private BluetoothAdapter mBluetoothAdapter;
 
     private Map<String, Peripheral> mDiscoveredPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
     private Map<String, Peripheral> mConnectedPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
-
-    private final IBinder mBinder = new LocalBinder();
 
     @Override
     public synchronized void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
@@ -83,15 +70,19 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         final String address = peripheral.getAddress();
 
         if (peripheral.isConnected()) {
-            Assert.assertTrue(mDiscoveredPeripherals.containsKey(address));
-            Assert.assertFalse(mConnectedPeripherals.containsKey(address));
-            mDiscoveredPeripherals.remove(address);
-            mConnectedPeripherals.put(address, peripheral);
+            if (mDiscoveredPeripherals.containsKey(address)) {
+                if (mConnectedPeripherals.containsKey(address)) {
+                    //Do nothing
+                } else {
+                    mDiscoveredPeripherals.remove(address);
+                    mConnectedPeripherals.put(address, peripheral);
+                }
+            }
         } else {
-            Assert.assertTrue(mConnectedPeripherals.containsKey(address));
-            mConnectedPeripherals.remove(address);
+            if (mConnectedPeripherals.containsKey(address)) {
+                mConnectedPeripherals.remove(address);
+            }
         }
-
         onPeripheralChanged(ACTION_PERIPHERAL_CONNECTION_CHANGED, address);
     }
 
@@ -156,14 +147,15 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     /**
+     * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
+     * <p/>
      * Requests scanning process for BLE devices in range. If the connection to the {@link com.sensirion.libble.BlePeripheralService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
      * @param UUIDs List of UUID that the scan can use. NULL in case the user is able to use any device.
-     *
      * @return true if scan has been started. False otherwise.
      */
-    public synchronized boolean startLeScan(UUID [] UUIDs){
+    public synchronized boolean startLeScan(UUID[] UUIDs) {
         if (mIsScanning) {
             Log.w(TAG, "startLeScan() -> scan already in progress");
             return mIsScanning;
@@ -176,7 +168,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
             mIsScanning = true;
             onStartLeScan();
         } else {
-            throw new IllegalStateException("onStartLeScan() -> could not startLeScan on BluetoothAdapter!");
+            mIsScanning = false;
         }
         return mIsScanning;
     }
@@ -261,7 +253,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @param validDeviceName device name needed by the application.
      * @return Iterable
      */
-    public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(String validDeviceName) {
+    public Iterable<? extends BleDevice> getDiscoveredPeripherals(String validDeviceName) {
         return getDiscoveredPeripherals(new LinkedList<String>(Arrays.asList(validDeviceName)));
     }
 
@@ -269,7 +261,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * Get all discovered {@link com.sensirion.libble.BleDevice} with valid names for the application.
      *
      * @param validDeviceNames List of devices names.
-     * @return Iterable
+     * @return Iterable.
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(List<String> validDeviceNames) {
         HashSet<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
@@ -282,7 +274,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
             if (device == null || validDeviceNames.contains(device.getAdvertisedName())) {
                 continue;
             }
-            discoveredPeripherals.remove(device);
+            iterator.remove();
         }
         return discoveredPeripherals;
     }
@@ -358,10 +350,15 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         } else {
             Log.w(TAG, "disconnect() -> no connected device known with address: " + address);
         }
-
     }
 
     public synchronized boolean isScanning() {
         return mIsScanning;
+    }
+
+    public class LocalBinder extends Binder {
+        public BlePeripheralService getService() {
+            return BlePeripheralService.this;
+        }
     }
 }

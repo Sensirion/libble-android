@@ -12,7 +12,6 @@ import java.util.UUID;
  * or a proprietary implementation.
  */
 public class PeripheralService {
-    private static final String TAG = PeripheralService.class.getSimpleName();
 
     protected final Peripheral mParent;
     protected final BluetoothGattService mBluetoothGattService;

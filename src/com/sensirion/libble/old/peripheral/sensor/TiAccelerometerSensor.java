@@ -27,7 +27,9 @@ public class TiAccelerometerSensor extends AbstractSensor<float[]> implements Pe
     @Override
     public int getMinPeriod() {
         return PERIOD_MIN;
-    }    @Override
+    }
+
+    @Override
     public String getName() {
         return TAG;
     }
@@ -35,7 +37,9 @@ public class TiAccelerometerSensor extends AbstractSensor<float[]> implements Pe
     @Override
     public int getMaxPeriod() {
         return PERIOD_MAX;
-    }    @Override
+    }
+
+    @Override
     public String getServiceUUID() {
         return UUID_SERVICE;
     }
@@ -70,18 +74,14 @@ public class TiAccelerometerSensor extends AbstractSensor<float[]> implements Pe
         return "x=" + data[0] + "\ny=" + data[1] + "\nz=" + data[2];
     }
 
-
-
-
+    @Override
+    public int getPeriod() {
+        return mPeriod;
+    }
 
     @Override
     public void setPeriod(int period) {
         this.mPeriod = period;
-    }
-
-    @Override
-    public int getPeriod() {
-        return mPeriod;
     }
 
     @Override

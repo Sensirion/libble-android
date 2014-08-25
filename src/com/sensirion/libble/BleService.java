@@ -88,7 +88,6 @@ public class BleService extends Service {
                         return;
                     }
                 }
-
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
         }

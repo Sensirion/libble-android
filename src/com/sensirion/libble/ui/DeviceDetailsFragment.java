@@ -17,11 +17,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.sensirion.libble.ui.BleActivity;
-import com.sensirion.libble.bleservice.impl.BatteryPeripheralService;
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BlePeripheralService;
 import com.sensirion.libble.R;
+import com.sensirion.libble.bleservice.implementations.generic_services.BatteryPeripheralService;
 
 import java.util.ArrayList;
 
@@ -97,7 +96,7 @@ public class DeviceDetailsFragment extends ListFragment {
 
     private void initServiceList(View view, BleDevice device) {
         ArrayList<String> services = new ArrayList<String>();
-        for(String s : device.getDiscoveredPeripheralServices()) {
+        for (String s : device.getDiscoveredPeripheralServices()) {
             services.add(s);
         }
 

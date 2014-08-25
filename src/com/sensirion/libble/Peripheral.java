@@ -4,11 +4,13 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.util.Log;
 
+import com.sensirion.libble.bleservice.NotificationService;
 import com.sensirion.libble.bleservice.PeripheralService;
 import com.sensirion.libble.bleservice.PeripheralServiceFactory;
 
@@ -79,37 +81,31 @@ public class Peripheral implements BleDevice {
         }
 
         @Override
-        public void onCharacteristicRead(BluetoothGatt gatt,
-                                         BluetoothGattCharacteristic characteristic,
-                                         int status) {
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
-
             if (status == BluetoothGatt.GATT_SUCCESS) {
-
                 for (PeripheralService service : mServices) {
                     if (service.onCharacteristicRead(characteristic)) {
                         break;
                     }
                 }
-
             } else {
                 Log.w(TAG, "onCharacteristicRead failed with status: " + status);
             }
         }
 
         @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt,
-                                            BluetoothGattCharacteristic characteristic) {
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            //TODO: implement for notifications
-
-//            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            for (PeripheralService service : mServices) {
+                if (service instanceof NotificationService) {
+                    ((NotificationService) service).onChangeNotification(characteristic);
+                }
+            }
         }
 
         @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt,
-                                          BluetoothGattCharacteristic characteristic,
-                                          int status) {
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicWrite(gatt, characteristic, status);
             //TODO: implement
         }
@@ -154,7 +150,6 @@ public class Peripheral implements BleDevice {
                 return (T) service;
             }
         }
-
         return null;
     }
 
@@ -218,7 +213,7 @@ public class Peripheral implements BleDevice {
      *
      * @param characteristic The characteristic to overwrite.
      */
-    protected void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+    public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
         mBluetoothGatt.writeCharacteristic(characteristic);
     }
 
@@ -228,8 +223,54 @@ public class Peripheral implements BleDevice {
      * @param characteristic Characteristic to act on.
      * @param enabled        If true, enable notification. False otherwise.
      */
-    protected void setCharacteristicNotification(BluetoothGattCharacteristic characteristic,
-                                                 boolean enabled) {
+    public void setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enabled) {
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+    }
+
+    /**
+     * Writes a {@link android.bluetooth.BluetoothGattDescriptor} in the bluetooth gatherer.
+     *
+     * @param descriptor the descriptor we want to store.
+     */
+    public void writeDescriptor(BluetoothGattDescriptor descriptor) {
+        mBluetoothGatt.writeDescriptor(descriptor);
+    }
+
+    /**
+     * Ask every service for being listened.
+     * Each service with notifications checks if the listener
+     * is able to read it's data with interfaces.
+     *
+     * @param listener Activity from outside the library that
+     *                 wants to listen for notifications.
+     * @return true if a valid service was found, false otherwise.
+     */
+    public boolean registerPeripheralListener(NotificationListener listener) {
+        boolean interestedServiceFound = false;
+        for (PeripheralService service : mServices) {
+            if (service instanceof NotificationService) {
+                if (((NotificationService) service).registerNotificationListener(listener)) {
+                    interestedServiceFound = true;
+                }
+            }
+        }
+        return interestedServiceFound;
+    }
+
+    /**
+     * Ask every service for not being listened by a listener.
+     * <p/>
+     * Each service with notifications removes it from
+     * from it's list, in case the listener was listening it.
+     *
+     * @param listener from outside the library that doesn't
+     *                 want to listen for notifications anymore.
+     */
+    public void unregisterPeripheralListener(NotificationListener listener) {
+        for (PeripheralService service : mServices) {
+            if (service instanceof NotificationService) {
+                ((NotificationService) service).unregisterNotificationListener(listener);
+            }
+        }
     }
 }

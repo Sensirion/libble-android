@@ -18,24 +18,6 @@ abstract public class SectionedAdapter extends BaseAdapter {
 
     private static final String TAG = SectionedAdapter.class.getSimpleName();
     private static final int TYPE_SECTION_HEADER = 0;
-
-    private class Section extends DataSetObserver {
-        String caption;
-        Adapter adapter;
-
-        Section(String caption, Adapter adapter) {
-            this.caption = caption;
-            this.adapter = adapter;
-            adapter.registerDataSetObserver(this);
-        }
-
-        @Override
-        public void onChanged() {
-            Log.v(Section.class.getSimpleName(), "onChanged() -> SectionedAdapter.this.notifyDataSetChanged()");
-            SectionedAdapter.this.notifyDataSetChanged();
-        }
-    }
-
     private List<Section> mSectionsList = Collections.synchronizedList(new ArrayList<Section>());
 
     abstract protected View getHeaderView(String caption, int index, View convertView, ViewGroup parent);
@@ -148,6 +130,23 @@ abstract public class SectionedAdapter extends BaseAdapter {
     public long getItemId(int position) {
         Log.v(TAG, "getItemId() for position: " + position);
         return position;
+    }
+
+    private class Section extends DataSetObserver {
+        String caption;
+        Adapter adapter;
+
+        Section(String caption, Adapter adapter) {
+            this.caption = caption;
+            this.adapter = adapter;
+            adapter.registerDataSetObserver(this);
+        }
+
+        @Override
+        public void onChanged() {
+            Log.v(Section.class.getSimpleName(), "onChanged() -> SectionedAdapter.this.notifyDataSetChanged()");
+            SectionedAdapter.this.notifyDataSetChanged();
+        }
     }
 
 }

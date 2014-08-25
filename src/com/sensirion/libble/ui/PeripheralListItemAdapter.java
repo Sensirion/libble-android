@@ -81,9 +81,7 @@ public class PeripheralListItemAdapter extends BaseAdapter {
             }
             mBleDevices.add(device);
         }
-
         Collections.sort(mBleDevices, mRssiComparator);
         notifyDataSetChanged();
     }
-
 }

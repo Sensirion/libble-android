@@ -25,11 +25,6 @@ import com.sensirion.libble.R;
  */
 public class DeviceScanFragment extends ListFragment {
     private static final String TAG = DeviceScanFragment.class.getSimpleName();
-
-    private SectionedAdapter mSectionedAdapter;
-    private PeripheralListItemAdapter mConnectedDevicesAdapter;
-    private PeripheralListItemAdapter mDiscoveredDevicesAdapter;
-
     private BroadcastReceiver mScanStateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -44,7 +39,6 @@ public class DeviceScanFragment extends ListFragment {
             }
         }
     };
-
     private BroadcastReceiver mDeviceConnectionReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -53,6 +47,9 @@ public class DeviceScanFragment extends ListFragment {
             updateList();
         }
     };
+    private SectionedAdapter mSectionedAdapter;
+    private PeripheralListItemAdapter mConnectedDevicesAdapter;
+    private PeripheralListItemAdapter mDiscoveredDevicesAdapter;
 
     private void updateList() {
         //FIXME: find a generic way for all activities that want to use this fragment

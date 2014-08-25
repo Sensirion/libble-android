@@ -1,4 +1,4 @@
-package com.sensirion.libble.bleservice.impl;
+package com.sensirion.libble.bleservice.implementations.generic_services;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -9,9 +9,8 @@ import com.sensirion.libble.bleservice.PeripheralService;
 
 public class BatteryPeripheralService extends PeripheralService {
 
-    private static final String TAG = BatteryPeripheralService.class.getSimpleName();
-
     public static final String UUID_SERVICE = "0000180f-0000-1000-8000-00805f9b34fb";
+    private static final String TAG = BatteryPeripheralService.class.getSimpleName();
     private static final String UUID_BATTERY_LEVEL_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb";
 
     private final BluetoothGattCharacteristic mBatteryLevelCharacteristic;
@@ -41,5 +40,4 @@ public class BatteryPeripheralService extends PeripheralService {
         Log.d(TAG, "onCharacteristicRead() -> mBatteryLevel = " + mBatteryLevel);
         return super.onCharacteristicRead(characteristic);
     }
-
 }
