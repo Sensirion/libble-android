@@ -50,16 +50,16 @@ public class BleManager {
     }
 
     /**
-     * This method have should be called just after the first getInstance() call
-     * in the application that wants to implement the library.
+     * This method should be called immediately just after the first getInstance()
+     * call in the application that wants to use the library.
      *
-     * @param context application context of the implementing application.
+     * @param appContext application context of the implementing application.
      */
-    public void init(Context context) {
-        if (context instanceof Application) {
+    public void init(Context appContext) {
+        if (appContext instanceof Application) {
             Log.i(TAG, "init() -> binding to BlePeripheralService");
-            Intent intent = new Intent(context, BlePeripheralService.class);
-            if (context.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
+            Intent intent = new Intent(appContext, BlePeripheralService.class);
+            if (appContext.bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
                 Log.i(TAG, "init() -> successfully bound to BlePeripheralService!");
             } else {
                 throw new IllegalStateException("init() -> unable to bind to BlePeripheralService!");
@@ -72,14 +72,18 @@ public class BleManager {
     /**
      * This method should be called at the end of the execution of the implementing application.
      *
-     * @param context application context of the implementing application.
+     * @param appContext application context of the implementing application.
      */
-    public void release(Context context) {
-        try {
-            Log.w(TAG, "onDestroy() -> isFinishing() -> unbinding mServiceConnection");
-            context.unbindService(mServiceConnection);
-        } catch (Exception e) {
-            Log.e(TAG, "The service produced an exception when trying to unbind from it.", e);
+    public void release(Context appContext) {
+        if (appContext instanceof Application) {
+            try {
+                Log.w(TAG, "release() -> unbinding mServiceConnection");
+                appContext.unbindService(mServiceConnection);
+            } catch (Exception e) {
+                Log.e(TAG, "An exception was produced when when trying to unbind from it.", e);
+            }
+        } else {
+            throw new IllegalArgumentException("release() -> BleManager only can be released with the application context.");
         }
     }
 
