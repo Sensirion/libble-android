@@ -220,7 +220,7 @@ public class BleManager {
      */
     public boolean connectPeripheral(String address) {
         if (mBlePeripheralService == null) {
-            Log.e(TAG, mBlePeripheralService.getClass().getSimpleName() + " is null -> could not connect peripheral!");
+            Log.e(TAG, BlePeripheralService.class.getSimpleName() + " is null -> could not connect peripheral!");
         } else {
             Log.d(TAG, "connectPeripheral() -> stopScanning()");
             stopScanning();
