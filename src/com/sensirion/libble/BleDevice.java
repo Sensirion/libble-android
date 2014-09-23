@@ -18,5 +18,4 @@ public interface BleDevice {
     <T extends PeripheralService> T getPeripheralService(Class<T> type);
 
     Iterable<String> getDiscoveredPeripheralServices();
-
 }

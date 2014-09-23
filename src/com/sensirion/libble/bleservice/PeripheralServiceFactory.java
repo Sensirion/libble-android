@@ -5,7 +5,9 @@ import android.util.Log;
 
 import com.sensirion.libble.Peripheral;
 import com.sensirion.libble.bleservice.implementations.generic_services.BatteryPeripheralService;
-import com.sensirion.libble.bleservice.implementations.notification_services.HumigadgetPeripheralService;
+import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetConnectionSpeedService;
+import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetLoggingService;
+import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetRHTService;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -20,9 +22,10 @@ public class PeripheralServiceFactory {
 
     private PeripheralServiceFactory() {
         mServiceLookUp = new HashMap<String, Class<? extends PeripheralService>>();
-        //TODO: add bleservice.impl explicit services to mServiceLookUp here:
-        registerServiceImplementation(BatteryPeripheralService.UUID_SERVICE, BatteryPeripheralService.class);
-        registerServiceImplementation(HumigadgetPeripheralService.RHT_SERVICE_UUID, HumigadgetPeripheralService.class);
+        registerServiceImplementation(BatteryPeripheralService.SERVICE_UUID, BatteryPeripheralService.class);
+        registerServiceImplementation(HumigadgetRHTService.SERVICE_UUID, HumigadgetRHTService.class);
+        registerServiceImplementation(HumigadgetLoggingService.SERVICE_UUID, HumigadgetLoggingService.class);
+        registerServiceImplementation(HumigadgetConnectionSpeedService.SERVICE_UUID, HumigadgetConnectionSpeedService.class);
     }
 
     public static PeripheralServiceFactory getInstance() {
@@ -64,7 +67,7 @@ public class PeripheralServiceFactory {
      * Let's you add your own specific service implementations that are created on app-level.
      * Make sure that these classes extend {@link com.sensirion.libble.bleservice.PeripheralService}.
      *
-     * @param newService
+     * @param newService for being checked.
      */
     public void registerServiceImplementation(String uuid, Class<? extends PeripheralService> newService) {
         if (mServiceLookUp.containsKey(uuid)) {

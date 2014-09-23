@@ -59,13 +59,13 @@ abstract public class SectionedAdapter extends BaseAdapter {
     }
 
     public synchronized int getViewTypeCount() {
-        Log.v(TAG, "getViewTypeCount()");
         // one for the header, plus those from mSectionsList
         int total = 1;
 
         for (Section section : mSectionsList) {
             total += section.adapter.getViewTypeCount();
         }
+        Log.v(TAG, "getViewTypeCount() -> " + total);
 
         return total;
     }

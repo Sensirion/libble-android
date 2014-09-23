@@ -87,7 +87,7 @@ public class DeviceDetailsFragment extends ListFragment {
         BatteryPeripheralService batteryService = device.getPeripheralService(BatteryPeripheralService.class);
 
         if (batteryService == null) {
-            ((TextView) view.findViewById(R.id.tv_batterylevel)).setText(getString(R.string.peripheralservice_not_available));
+            ((TextView) view.findViewById(R.id.tv_batterylevel)).setText(getString(R.string.peripheral_service_not_available));
         } else {
             int batteryLevel = batteryService.getBatteryLevel();
             ((TextView) view.findViewById(R.id.tv_batterylevel)).setText(batteryLevel + getString(R.string.char_percent));

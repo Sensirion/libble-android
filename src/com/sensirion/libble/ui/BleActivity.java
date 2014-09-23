@@ -8,6 +8,8 @@ import android.util.Log;
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BleManager;
 import com.sensirion.libble.NotificationListener;
+import com.sensirion.libble.Peripheral;
+import com.sensirion.libble.bleservice.PeripheralService;
 
 import java.util.List;
 import java.util.UUID;
@@ -46,7 +48,7 @@ public abstract class BleActivity extends Activity {
     public void onStop() {
         Log.d(TAG, "onStop()");
         if (isChangingConfigurations()) {
-            //Do nothing.
+            Log.d(TAG, "onStop() -> isChangingConfigurations()");
         } else {
             mBleManager.release(getApplicationContext());
         }
@@ -87,16 +89,6 @@ public abstract class BleActivity extends Activity {
      */
     protected Iterable<? extends BleDevice> getDiscoveredBleDevices() {
         return mBleManager.getDiscoveredBleDevices();
-    }
-
-    /**
-     * Get all discovered {@link com.sensirion.libble.BleDevice} with only one name in particular.
-     *
-     * @param deviceName device name needed by the application.
-     * @return Iterable
-     */
-    protected Iterable<? extends BleDevice> getDiscoveredBleDevices(String deviceName) {
-        return mBleManager.getDiscoveredBleDevices(deviceName);
     }
 
     /**
@@ -148,6 +140,27 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
+     * Looks for a connected peripheral.
+     *
+     * @param deviceAddress of the peripheral.
+     * @return the {@link com.sensirion.libble.Peripheral} with the given address
+     */
+    public Peripheral getConnectedPeripheral(final String deviceAddress) {
+        return mBleManager.getConnectedPeripheral(deviceAddress);
+    }
+
+    /**
+     * Checks if a device is connected.
+     *
+     * @param deviceAddress of the device.
+     * @return <code>true</code> if connected - <code>false</code> otherwise.
+     */
+    public boolean isDeviceConnected(final String deviceAddress) {
+        return mBleManager.isDeviceConnected(deviceAddress);
+    }
+
+
+    /**
      * Register a listener in all connected peripherals.
      *
      * @param listener pretending to listen for notifications in all peripherals.
@@ -163,8 +176,8 @@ public abstract class BleActivity extends Activity {
      *                 null if we want to register a listener to all connected devices.
      * @param listener pretending to listen for notifications of a peripheral.
      */
-    public void registerPeripheralListener(String address, NotificationListener listener) {
-        mBleManager.registerPeripheralListener(address, listener);
+    public void registerPeripheralListener(NotificationListener listener, String address) {
+        mBleManager.registerPeripheralListener(listener, address);
     }
 
     /**
@@ -179,11 +192,11 @@ public abstract class BleActivity extends Activity {
     /**
      * Unregister a listener from a connected peripheral.
      *
-     * @param address  of the peripheral you don't want to get notifications from anymore.
      * @param listener that wants to unregister from the notifications of a peripheral.
+     * @param address  of the peripheral you don't want to get notifications from anymore.
      */
     public void unregisterPeripheralListener(String address, NotificationListener listener) {
-        mBleManager.unregisterPeripheralListener(address, listener);
+        mBleManager.unregisterPeripheralListener(listener, address);
     }
 
     /**
@@ -200,6 +213,56 @@ public abstract class BleActivity extends Activity {
      */
     public void requestEnableBluetooth(Context context) {
         mBleManager.requestEnableBluetooth(context);
+    }
+
+    /**
+     * Enables or disables notifications in all the devices.
+     *
+     * @param enabled <code>true</code> for enabling notifications - <code>false</code> otherwise.
+     */
+    public void setAllNotificationsEnabled(final boolean enabled) {
+        mBleManager.setAllNotificationsEnabled(enabled);
+    }
+
+    /**
+     * Counts the number of services.
+     *
+     * @param address of the peripheral.
+     * @return number of discovered services.
+     */
+    public int getNumberOfDiscoveredServices(final String address) {
+        return mBleManager.getNumberOfDiscoveredServices(address);
+    }
+
+    /**
+     * Obtains the names of each discovered service.
+     *
+     * @param address of the peripheral.
+     * @return {@link java.util.LinkedList} with the services names.
+     */
+    public List<String> getDiscoveredServicesNames(final String address) {
+        return mBleManager.getDiscoveredServicesNames(address);
+    }
+
+    /**
+     * Asks for a service with a particular name.
+     *
+     * @param deviceAddress of the peripheral.
+     * @param serviceName   name of the service.
+     * @return {@link com.sensirion.libble.bleservice.PeripheralService}
+     */
+    public PeripheralService getServiceWithName(final String deviceAddress, final String serviceName) {
+        return mBleManager.getServiceWithName(deviceAddress, serviceName);
+    }
+
+    /**
+     * Ask for the a characteristic of a service
+     *
+     * @param characteristicName name of the characteristic.
+     * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
+     */
+    public Object getCharacteristicValue(final String deviceAddress, final String characteristicName) {
+        return mBleManager.getCharacteristicValue(deviceAddress, characteristicName);
     }
 
     abstract public void onConnectedPeripheralSelected(String address);

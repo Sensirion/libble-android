@@ -1,31 +1,30 @@
 package com.sensirion.libble;
 
-import java.util.LinkedList;
+import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetRHTService;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public enum KnownDevices {
-
     /**
      * Humigadget device.
-     *
      * Has notifications: YES
-     *
-     * Notification interface: {@link com.sensirion.libble.listeners.HumigadgetListener}
+     * Notification interface: {@link com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetRHTListener}
      */
     HUMIGADGET {
         @Override
         public UUID[] getDescriptorUUIDs() {
-            final UUID descriptorUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+            final UUID descriptorUUID = UUID.fromString(HumigadgetRHTService.RHT_DESCRIPTOR_UUID);
             return new UUID[]{descriptorUUID};
         }
 
         @Override
         public List<String> getAdvertisedNames() {
-            List<String> stringList = new LinkedList<String>();
-            stringList.add("SHTC1 smart gadget");
-            stringList.add("SHT31 Smart Gadget");
-            return stringList;
+            List<String> deviceNames = new ArrayList<String>(2);
+            deviceNames.add("SHTC1 smart gadget");
+            deviceNames.add("SHT31 Smart Gadget");
+            return deviceNames;
         }
 
         @Override
@@ -36,16 +35,15 @@ public enum KnownDevices {
 
     /**
      * Returns the descriptor UUIDs from the gadget.
+     * In spite of we usually we only need one descriptor UUID, the
+     * method LeScan in Android Bluetooth library ask for an array.
      *
      * @return {@link java.util.UUID} array.
-     * <p/>
-     * In spite of we usually we only need one descriptor UUID, the method LeScan
-     * in Android Bluetooth library ask for an array.
      */
     public abstract UUID[] getDescriptorUUIDs();
 
     /**
-     * Returns a list of string of the valid advertised names of the gadget.
+     * Returns a {@link java.util.List} of {@link java.lang.String} of the valid advertised names of the gadget.
      *
      * @return {@link java.util.List}
      */

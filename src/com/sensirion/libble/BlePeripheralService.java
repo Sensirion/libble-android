@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -58,7 +59,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         onPeripheralChanged(ACTION_PERIPHERAL_DISCOVERY, address);
     }
 
-    private void onPeripheralChanged(String action, String address) {
+    private void onPeripheralChanged(final String action, final String address) {
         Log.i(TAG, "onPeripheralChanged() for action: " + action);
         Intent intent = new Intent(action);
         intent.putExtra(EXTRA_PERIPHERAL_ADDRESS, address);
@@ -66,22 +67,20 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     @Override
-    public synchronized void onPeripheralConnectionChanged(Peripheral peripheral) {
+    public synchronized void onPeripheralConnectionChanged(final Peripheral peripheral) {
         final String address = peripheral.getAddress();
 
         if (peripheral.isConnected()) {
             if (mDiscoveredPeripherals.containsKey(address)) {
                 if (mConnectedPeripherals.containsKey(address)) {
-                    //Do nothing
+                    Log.w(TAG, String.format("onPeripheralConnectionChanged -> Peripheral with address %s was already connected.", peripheral.getAddress()));
                 } else {
                     mDiscoveredPeripherals.remove(address);
                     mConnectedPeripherals.put(address, peripheral);
                 }
             }
-        } else {
-            if (mConnectedPeripherals.containsKey(address)) {
-                mConnectedPeripherals.remove(address);
-            }
+        } else if (mConnectedPeripherals.containsKey(address)) {
+            mConnectedPeripherals.remove(address);
         }
         onPeripheralChanged(ACTION_PERIPHERAL_CONNECTION_CHANGED, address);
     }
@@ -253,7 +252,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @param validDeviceName device name needed by the application.
      * @return Iterable
      */
-    public Iterable<? extends BleDevice> getDiscoveredPeripherals(String validDeviceName) {
+    public Iterable<? extends BleDevice> getDiscoveredPeripherals(final String validDeviceName) {
         return getDiscoveredPeripherals(new LinkedList<String>(Arrays.asList(validDeviceName)));
     }
 
@@ -263,8 +262,8 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @param validDeviceNames List of devices names.
      * @return Iterable.
      */
-    public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(List<String> validDeviceNames) {
-        HashSet<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
+    public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(final List<String> validDeviceNames) {
+        final Set<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
         if (validDeviceNames == null) { // returns all the devices.
             return discoveredPeripherals;
         }
@@ -293,9 +292,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param address MAC-Address of the desired {@link com.sensirion.libble.BleDevice}
      * @return Connected device as {@link com.sensirion.libble.BleDevice}
-     * or NULL if the device is not connected
+     * or <code>null</code> if the device is not connected
      */
-    public BleDevice getConnectedDevice(String address) {
+    public BleDevice getConnectedDevice(final String address) {
         return mConnectedPeripherals.get(address);
     }
 
@@ -308,7 +307,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      * callback.
      */
-    public synchronized boolean connect(String address) {
+    public synchronized boolean connect(final String address) {
         checkBluetooth();
         if (address == null || address.trim().isEmpty()) {
             Log.e(TAG, "connect() -> unspecified address.");
@@ -321,14 +320,12 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
             return mConnectedPeripherals.get(address).reconnect();
         }
 
-        final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-        if (device == null) {
-            Log.e(TAG, "connect() -> device not found. Unable to connect.");
+        Log.d(TAG, "connect() -> trying to create a new connection.");
+        final Peripheral newPeripheral = mDiscoveredPeripherals.get(address);
+        if (newPeripheral == null) {
             return false;
         }
-
-        Log.d(TAG, "connect() -> trying to create a new connection.");
-        mDiscoveredPeripherals.get(address).connect(getApplicationContext());
+        newPeripheral.connect(getApplicationContext());
         return true;
     }
 
@@ -338,7 +335,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      * callback.
      */
-    public synchronized void disconnect(String address) {
+    public synchronized void disconnect(final String address) {
         checkBluetooth();
         if (address == null || address.equals("")) {
             Log.w(TAG, "disconnect() -> unspecified address.");
@@ -347,6 +344,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
         if (mConnectedPeripherals.containsKey(address)) {
             mConnectedPeripherals.get(address).disconnect();
+            mConnectedPeripherals.remove(address);
         } else {
             Log.w(TAG, "disconnect() -> no connected device known with address: " + address);
         }
