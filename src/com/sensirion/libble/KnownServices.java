@@ -36,7 +36,7 @@ public enum KnownServices {
     public final List<String> NAMED_CHARACTERISTICS; //Characteristics name of the service.
     public final Class<?> TYPE; //Type of return when reading a characteristic
 
-    private KnownServices(String name, List<String> characteristicsList, Class<?> type) {
+    private KnownServices(final String name, final List<String> characteristicsList, final Class<?> type) {
         NAME = name;
         NAMED_CHARACTERISTICS = characteristicsList;
         TYPE = type;

@@ -33,16 +33,15 @@ public class PeripheralServiceFactory {
     }
 
     /**
-     * Wraps a given {@link android.bluetooth.BluetoothGattService} to
-     * a {@link PeripheralService}
-     *
+     * Wraps a given {@link android.bluetooth.BluetoothGattService} to a {@link PeripheralService}
+     * @param parent {@link com.sensirion.libble.Peripheral} that discovered the service.
      * @param service {@link android.bluetooth.BluetoothGattService} that should be wrapped
      * @return {@link PeripheralService}
      */
-    public PeripheralService createServiceFor(Peripheral parent, BluetoothGattService service) {
-        String uuid = service.getUuid().toString();
+    public PeripheralService createServiceFor(final Peripheral parent, final BluetoothGattService service) {
+        final String uuid = service.getUuid().toString();
         if (mServiceLookUp.containsKey(uuid)) {
-            Class c = mServiceLookUp.get(uuid);
+            final Class c = mServiceLookUp.get(uuid);
             Log.i(TAG, "Create known service with uuid: " + uuid + " | from class: " + c.getSimpleName());
             try {
                 Constructor<? extends PeripheralService> constructor = c.getDeclaredConstructor(Peripheral.class, BluetoothGattService.class);
@@ -66,10 +65,9 @@ public class PeripheralServiceFactory {
     /**
      * Let's you add your own specific service implementations that are created on app-level.
      * Make sure that these classes extend {@link com.sensirion.libble.bleservice.PeripheralService}.
-     *
      * @param newService for being checked.
      */
-    public void registerServiceImplementation(String uuid, Class<? extends PeripheralService> newService) {
+    public void registerServiceImplementation(final String uuid, final Class<? extends PeripheralService> newService) {
         if (mServiceLookUp.containsKey(uuid)) {
             Log.w(TAG, "The service " + uuid + " was replaced by another service version.");
             mServiceLookUp.remove(uuid);
