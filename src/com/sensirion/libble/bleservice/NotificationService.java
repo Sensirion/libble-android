@@ -8,13 +8,13 @@ import com.sensirion.libble.NotificationListener;
 import com.sensirion.libble.Peripheral;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 public abstract class NotificationService<CharacteristicValueType, ListenerType extends NotificationListener> extends PeripheralService<CharacteristicValueType> {
 
     private static final String TAG = NotificationService.class.getSimpleName();
-    protected final Set<ListenerType> mListeners = Collections.synchronizedSet(new CopyOnWriteArraySet<ListenerType>());
+    protected final Set<ListenerType> mListeners = Collections.synchronizedSet(new HashSet<ListenerType>());
     private BluetoothGattCharacteristic mNotifyCharacteristic;
     private boolean mNotificationsAreEnabled = false;
     private boolean mIsRequestingNotifications = false;
