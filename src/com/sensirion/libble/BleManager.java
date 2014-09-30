@@ -181,7 +181,16 @@ public class BleManager {
     }
 
     /**
-     * Get all connected {@link com.sensirion.libble.BleDevice}.
+     * Returns the number of connected devices.
+     *
+     * @return <code>int</code> with the number of devices.
+     */
+    public int getConnectedBleDeviceCount() {
+        return mBlePeripheralService.getConnectedBleDeviceCount();
+    }
+
+    /**
+     * Get all connected {@link com.sensirion.libble.BleDevice}
      *
      * @return Iterable
      */
@@ -196,8 +205,7 @@ public class BleManager {
      * Returns the {@link com.sensirion.libble.BleDevice} belonging to the given address
      *
      * @param address MAC-Address of the desired {@link com.sensirion.libble.BleDevice}
-     * @return Connected device as {@link com.sensirion.libble.BleDevice}
-     * or <code>null</code> if the device is not connected
+     * @return Connected device as {@link com.sensirion.libble.BleDevice} or <code>null</code> if the device is not connected
      */
     public BleDevice getConnectedDevice(final String address) {
         if (mBlePeripheralService == null) {

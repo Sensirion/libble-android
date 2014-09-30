@@ -34,7 +34,8 @@ public class PeripheralServiceFactory {
 
     /**
      * Wraps a given {@link android.bluetooth.BluetoothGattService} to a {@link PeripheralService}
-     * @param parent {@link com.sensirion.libble.Peripheral} that discovered the service.
+     *
+     * @param parent  {@link com.sensirion.libble.Peripheral} that discovered the service.
      * @param service {@link android.bluetooth.BluetoothGattService} that should be wrapped
      * @return {@link PeripheralService}
      */
@@ -65,6 +66,7 @@ public class PeripheralServiceFactory {
     /**
      * Let's you add your own specific service implementations that are created on app-level.
      * Make sure that these classes extend {@link com.sensirion.libble.bleservice.PeripheralService}.
+     *
      * @param newService for being checked.
      */
     public void registerServiceImplementation(final String uuid, final Class<? extends PeripheralService> newService) {
