@@ -110,6 +110,15 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
+     * Returns the number of connected devices.
+     *
+     * @return <code>int</code> with the number of devices.
+     */
+    public int getConnectedBleDeviceCount() {
+        return mBleManager.getConnectedBleDeviceCount();
+    }
+
+    /**
      * Returns the {@link com.sensirion.libble.BleDevice} belonging to the given address
      *
      * @param address MAC-Address of the desired {@link com.sensirion.libble.BleDevice}

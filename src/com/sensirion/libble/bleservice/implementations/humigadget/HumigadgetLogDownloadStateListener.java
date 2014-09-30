@@ -1,6 +1,8 @@
 package com.sensirion.libble.bleservice.implementations.humigadget;
 
-public interface HumigadgetLogListener extends HumigadgetRHTListener {
+import com.sensirion.libble.NotificationListener;
+
+public interface HumigadgetLogDownloadStateListener extends NotificationListener {
     /**
      * Sets the actual number of downloaded elements.
      *

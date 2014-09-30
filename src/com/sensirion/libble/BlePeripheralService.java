@@ -288,6 +288,14 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     /**
+     * Returns the number of connected devices.
+     * @return <code>int</code> with the number of devices.
+     */
+    public int getConnectedBleDeviceCount() {
+        return mConnectedPeripherals.size();
+    }
+
+    /**
      * Returns the {@link com.sensirion.libble.BleDevice} belonging to the given address
      *
      * @param address MAC-Address of the desired {@link com.sensirion.libble.BleDevice}

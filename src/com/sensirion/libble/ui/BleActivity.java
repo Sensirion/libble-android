@@ -150,6 +150,15 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
+     * Returns the number of connected devices.
+     *
+     * @return <code>int</code> with the number of devices.
+     */
+    public int getConnectedBleDeviceCount() {
+        return mBleManager.getConnectedBleDeviceCount();
+    }
+
+    /**
      * Checks if a device is connected.
      *
      * @param deviceAddress of the device.
