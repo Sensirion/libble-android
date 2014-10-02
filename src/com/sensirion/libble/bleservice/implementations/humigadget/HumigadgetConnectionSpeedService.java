@@ -10,7 +10,6 @@ import com.sensirion.libble.bleservice.PeripheralService;
 import java.util.Arrays;
 import java.util.List;
 
-//TODO: TEST
 public class HumigadgetConnectionSpeedService extends PeripheralService<Boolean> {
 
     //SERVICE UUIDs

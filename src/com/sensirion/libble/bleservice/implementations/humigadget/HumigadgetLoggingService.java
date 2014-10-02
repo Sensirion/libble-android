@@ -10,9 +10,10 @@ import com.sensirion.libble.bleservice.PeripheralService;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Collections;
 import java.util.Iterator;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Executors;
 
 //TODO: ADD METHOD FOR READING LOG FROM TIMESTAMP
@@ -39,7 +40,7 @@ public class HumigadgetLoggingService extends PeripheralService {
 
     private static final int MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 1300;
 
-    public final Set<NotificationListener> mListeners = new CopyOnWriteArraySet<NotificationListener>();
+    private final List<NotificationListener> mListeners = Collections.synchronizedList(new LinkedList<NotificationListener>());
 
     private final BluetoothGattCharacteristic mStartStopCharacteristic;
     private final BluetoothGattCharacteristic mIntervalCharacteristic;
