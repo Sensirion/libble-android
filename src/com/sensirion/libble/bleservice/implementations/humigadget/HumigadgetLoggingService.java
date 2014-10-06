@@ -16,7 +16,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-//TODO: ADD METHOD FOR READING LOG FROM TIMESTAMP
 public class HumigadgetLoggingService extends PeripheralService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
@@ -311,9 +310,35 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     /**
+     * Sets the start pointer using the timestamp in ms.
+     *
+     * @param timestamp from where the user wants to start to download the log - <code>null</code> if the user wants the minimum possible start point.
+     * @return <code>true</code> if the user was able to set the pointer - <code>false</code> otherwise.
+     */
+    public boolean setStartPointerFromTimestampMs(final Long timestamp) {
+        if (timestamp == null) {
+            return resetStartPointer();
+        }
+        return setStartPointerFromEpochTime((int) (timestamp / 1000));
+    }
+
+    /**
+     * Sets the start pointer using the epoch time.
+     *
+     * @param epochTime from where the user wants to start to download the log - <code>null</code> if the user wants the minimum possible start point.
+     * @return <code>true</code> if the user was able to set the pointer - <code>false</code> otherwise.
+     */
+    public boolean setStartPointerFromEpochTime(final Integer epochTime) {
+        if (epochTime == null || epochTime < mUserData) {
+            return resetStartPointer();
+        }
+        return setStartPointer((epochTime - mUserData) / mInterval);
+    }
+
+    /**
      * Sets the start pointer. It's done just before logging.
      *
-     * @param userStartPoint with the start point selected by the user - <code>null</code> if the user wants the minimun possible start point.
+     * @param userStartPoint with the start point selected by the user - <code>null</code> if the user wants the minimum possible start point.
      * @return <code>true</code> if the start pointer was set - <code>false</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
@@ -480,6 +505,24 @@ public class HumigadgetLoggingService extends PeripheralService {
      * Downloads all the data from the device.
      */
     public synchronized void startDataDownload() {
+        startDataDownload(null);
+    }
+
+    /**
+     * Downloads all the data from the device after the given timestamp.
+     *
+     * @param timestamp from where the user wants to start to download the log.
+     */
+    public synchronized void startDataDownload(final long timestamp) {
+        startDataDownload((Integer) (int) (timestamp / 1000));
+    }
+
+    /**
+     * Downloads all the data from the device after the given epoch time.
+     *
+     * @param epochTime from where the user wants to start to download the log.
+     */
+    public synchronized void startDataDownload(final Integer epochTime) {
         if (mListeners.isEmpty()) {
             Log.e(TAG, "There's a need for at least one listener in order to start logging data from the device");
             return;
@@ -497,7 +540,7 @@ public class HumigadgetLoggingService extends PeripheralService {
                     setGadgetLoggingEnabled(false);
                 }
                 resetEndPointer();
-                resetStartPointer();
+                setStartPointerFromEpochTime(epochTime);
 
                 //Counts the number of values to download.
                 final int totalNumberOfValues = calculateValuesToDownload();
@@ -597,11 +640,10 @@ public class HumigadgetLoggingService extends PeripheralService {
 
     /**
      * Checks if the device has elements to log.
-     *
      * @return <code>true</code> if the device has elements to log - <code>false</code> otherwise.
      */
     public boolean hasElementsToLog() {
-        return getCurrentPoint() - mExtractedDatapointsCounter > 0;
+        return getCurrentPoint() - mStartPointer > 0;
     }
 
     /**
