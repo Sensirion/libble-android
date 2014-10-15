@@ -38,12 +38,11 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     public static final String EXTRA_PERIPHERAL_ADDRESS = PREFIX + ".EXTRA_PERIPHERAL_ADDRESS";
     private static final long DEFAULT_SCAN_DURATION_MS = 10 * 1000;
     private final IBinder mBinder = new LocalBinder();
+    private final Map<String, Peripheral> mDiscoveredPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
+    private final Map<String, Peripheral> mConnectedPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
     private Timer mScanTimer;
     private boolean mIsScanning;
     private BluetoothAdapter mBluetoothAdapter;
-
-    private Map<String, Peripheral> mDiscoveredPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
-    private Map<String, Peripheral> mConnectedPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
 
     @Override
     public synchronized void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
@@ -129,7 +128,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
         //After using a given device, you should make sure that BluetoothGatt.close()
         // is called such that resources are cleaned up properly.
-        for (Peripheral p : mConnectedPeripherals.values()) {
+        for (final Peripheral p : mConnectedPeripherals.values()) {
             p.close();
         }
         mConnectedPeripherals.clear();
@@ -147,14 +146,13 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     /**
      * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
-     * <p/>
      * Requests scanning process for BLE devices in range. If the connection to the {@link com.sensirion.libble.BlePeripheralService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
      * @param UUIDs List of UUID that the scan can use. NULL in case the user is able to use any device.
-     * @return true if scan has been started. False otherwise.
+     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
      */
-    public synchronized boolean startLeScan(UUID[] UUIDs) {
+    public synchronized boolean startLeScan(final UUID[] UUIDs) {
         if (mIsScanning) {
             Log.w(TAG, "startLeScan() -> scan already in progress");
             return mIsScanning;
@@ -201,7 +199,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     /**
      * Checks whether bluetooth is available on the current device.
      *
-     * @return True if bluetooth is available
+     * @return <code>true</code> if bluetooth is available - <code>false</code> otherwise.
      */
     public synchronized boolean isBluetoothAvailable() {
         if (mBluetoothAdapter == null) {
@@ -240,7 +238,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     /**
      * Get all discovered {@link com.sensirion.libble.BleDevice}.
      *
-     * @return Iterable
+     * @return Iterable of {@link com.sensirion.libble.BleDevice}
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals() {
         return new HashSet<BleDevice>(mDiscoveredPeripherals.values());
@@ -250,7 +248,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * Get all discovered {@link com.sensirion.libble.BleDevice} with only one name in particular.
      *
      * @param validDeviceName device name needed by the application.
-     * @return Iterable
+     * @return Iterable of {@link com.sensirion.libble.BleDevice}
      */
     public Iterable<? extends BleDevice> getDiscoveredPeripherals(final String validDeviceName) {
         return getDiscoveredPeripherals(new LinkedList<String>(Arrays.asList(validDeviceName)));
@@ -260,7 +258,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * Get all discovered {@link com.sensirion.libble.BleDevice} with valid names for the application.
      *
      * @param validDeviceNames List of devices names.
-     * @return Iterable.
+     * @return Iterable of {@link com.sensirion.libble.BleDevice}
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(final List<String> validDeviceNames) {
         final Set<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
@@ -281,7 +279,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     /**
      * Get all connected {@link com.sensirion.libble.BleDevice}.
      *
-     * @return Iterable
+     * @return Iterable of {@link com.sensirion.libble.BleDevice}
      */
     public synchronized Iterable<? extends BleDevice> getConnectedPeripherals() {
         return new HashSet<BleDevice>(mConnectedPeripherals.values());
@@ -313,8 +311,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @param address The device address of the destination device.
      * @return Return true if the connection is initiated successfully. The
      * connection result is reported asynchronously through the
-     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
-     * callback.
+     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
      */
     public synchronized boolean connect(final String address) {
         checkBluetooth();
@@ -341,8 +338,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     /**
      * Disconnects an existing connection or cancel a pending connection. The
      * disconnection result is reported asynchronously through the
-     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
-     * callback.
+     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
      */
     public synchronized void disconnect(final String address) {
         checkBluetooth();

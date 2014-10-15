@@ -1,6 +1,5 @@
 package com.sensirion.libble.bleservice.implementations.humigadget;
 
-import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.NotificationListener;
 
 public interface HumigadgetLogDownloadListener extends NotificationListener {
@@ -9,29 +8,29 @@ public interface HumigadgetLogDownloadListener extends NotificationListener {
      *
      * @param downloadProgress number of downloaded elements.
      */
-    void setDownloadProgress(int downloadProgress);
+    void setDownloadProgress(String deviceAddress, int downloadProgress);
 
     /**
      * Sends to the user the last datapoint read.
      *
-     * @param dataPoint readed by the user.
+     * @param dataPoint downloaded.
      */
-    void onNewDatapointDownloaded(RHTDataPoint dataPoint);
+    void onNewDatapointDownloaded(String deviceAddress, RHTDataPoint dataPoint);
 
     /**
      * Sets the total number of elements in a download.
      *
      * @param amount number of elements to download.
      */
-    void setRequestedDatapointAmount(int amount);
+    void setRequestedDatapointAmount(String deviceAddress, int amount);
 
     /**
      * Advices the listeners that an error was produced when downloading the log.
      */
-    void onDownloadFailure(BleDevice device);
+    void onLogDownloadFailure(String deviceAddress);
 
     /**
      * Advices the listeners that the service has finish downloading the file.
      */
-    void onDownloadCompleted(BleDevice device);
+    void onLogDownloadCompleted(String deviceAddress);
 }

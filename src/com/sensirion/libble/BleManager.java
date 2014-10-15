@@ -13,6 +13,7 @@ import com.sensirion.libble.bleservice.PeripheralService;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -158,10 +159,11 @@ public class BleManager {
     /**
      * Get all discovered {@link com.sensirion.libble.BleDevice}.
      *
-     * @return Iterable
+     * @return Iterable with {@link com.sensirion.libble.BleDevice}
      */
     public Iterable<? extends BleDevice> getDiscoveredBleDevices() {
         if (mBlePeripheralService == null) {
+            Log.w(TAG, "getDiscoveredBleDevices() -> not connected to BlePeripheralService");
             return new ArrayList<BleDevice>();
         }
         return mBlePeripheralService.getDiscoveredPeripherals();
@@ -171,10 +173,11 @@ public class BleManager {
      * Get all discovered {@link com.sensirion.libble.BleDevice} with valid names for the application.
      *
      * @param validDeviceNames {@link java.util.List} of devices names.
-     * @return Iterable
+     * @return Iterable with {@link com.sensirion.libble.BleDevice}
      */
     public Iterable<? extends BleDevice> getDiscoveredBleDevices(final List<String> validDeviceNames) {
         if (mBlePeripheralService == null) {
+            Log.w(TAG, "getDiscoveredBleDevices(List<String>) -> not connected to BlePeripheralService");
             return new ArrayList<BleDevice>();
         }
         return mBlePeripheralService.getDiscoveredPeripherals(validDeviceNames);
@@ -186,17 +189,22 @@ public class BleManager {
      * @return <code>int</code> with the number of devices.
      */
     public int getConnectedBleDeviceCount() {
+        if (mBlePeripheralService == null) {
+            Log.w(TAG, "getConnectedDeviceCount() -> not connected to BlePeripheralService");
+            return 0;
+        }
         return mBlePeripheralService.getConnectedBleDeviceCount();
     }
 
     /**
      * Get all connected {@link com.sensirion.libble.BleDevice}
      *
-     * @return Iterable
+     * @return Iterable of {@link com.sensirion.libble.BleDevice}
      */
     public Iterable<? extends BleDevice> getConnectedBleDevices() {
         if (mBlePeripheralService == null) {
-            return new ArrayList<BleDevice>();
+            Log.w(TAG, "getConnectedBleDevices() -> not connected to BlePeripheralService");
+            return new LinkedList<BleDevice>();
         }
         return mBlePeripheralService.getConnectedPeripherals();
     }
@@ -204,14 +212,15 @@ public class BleManager {
     /**
      * Returns the {@link com.sensirion.libble.BleDevice} belonging to the given address
      *
-     * @param address MAC-Address of the desired {@link com.sensirion.libble.BleDevice}
+     * @param deviceAddress MAC-Address of the desired {@link com.sensirion.libble.BleDevice}
      * @return Connected device as {@link com.sensirion.libble.BleDevice} or <code>null</code> if the device is not connected
      */
-    public BleDevice getConnectedDevice(final String address) {
+    public BleDevice getConnectedDevice(final String deviceAddress) {
         if (mBlePeripheralService == null) {
+            Log.w(TAG, "getConnectedDevice() -> not connected to BlePeripheralService");
             return null;
         }
-        return mBlePeripheralService.getConnectedDevice(address);
+        return mBlePeripheralService.getConnectedDevice(deviceAddress);
     }
 
     /**
@@ -222,12 +231,11 @@ public class BleManager {
     public boolean connectPeripheral(final String address) {
         if (mBlePeripheralService == null) {
             Log.e(TAG, BlePeripheralService.class.getSimpleName() + " is null -> could not connect peripheral!");
-        } else {
-            Log.d(TAG, "connectPeripheral() -> stopScanning()");
-            stopScanning();
-            return mBlePeripheralService.connect(address);
+            return false;
         }
-        return false;
+        Log.d(TAG, "connectPeripheral() -> stopScanning()");
+        stopScanning();
+        return mBlePeripheralService.connect(address);
     }
 
     /**
@@ -236,10 +244,10 @@ public class BleManager {
      * @param address MAC-Address of the peripheral that should be disconnected
      */
     public void disconnectPeripheral(final String address) {
-        if (mBlePeripheralService != null) {
-            mBlePeripheralService.disconnect(address);
+        if (mBlePeripheralService == null) {
+            Log.e(TAG, BlePeripheralService.class.getSimpleName() + " is null -> could not disconnect peripheral!");
         } else {
-            Log.e(TAG, "Service not ready!");
+            mBlePeripheralService.disconnect(address);
         }
     }
 
@@ -250,7 +258,6 @@ public class BleManager {
      * @return the {@link com.sensirion.libble.Peripheral} with the given address
      */
     public Peripheral getConnectedPeripheral(final String deviceAddress) {
-        Log.i(TAG, "getConnectedPeripheral -> Requested peripheral with address: " + deviceAddress);
         final Iterator<? extends BleDevice> iterator = getConnectedBleDevices().iterator();
         while (iterator.hasNext()) {
             final BleDevice device = iterator.next();
@@ -357,7 +364,7 @@ public class BleManager {
      * @return <code>true</code> if it's enabled - <code>false</code> otherwise.
      */
     public boolean isBluetoothEnabled() {
-        BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        final BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             Log.e(TAG, "Bluetooth adapter was not found.");
             return false;
@@ -387,6 +394,11 @@ public class BleManager {
      * @return <code>true</code> if connected - <code>false</code> otherwise.
      */
     public boolean isDeviceConnected(final String deviceAddress) {
+        if (mBlePeripheralService == null) {
+            Log.w(TAG, "isDeviceConnected -> not connected to BlePeripheralService");
+            return false;
+        }
+
         for (BleDevice device : mBlePeripheralService.getConnectedPeripherals()) {
             if (device.getAddress().equals(deviceAddress)) {
                 return true;

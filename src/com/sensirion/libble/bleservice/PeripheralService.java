@@ -71,6 +71,15 @@ public class PeripheralService<CharacteristicValueType> {
         return this.getClass().getName().endsWith(serviceDescription);
     }
 
+    /**
+     * Obtains the device address of the device.
+     *
+     * @return {@link java.lang.String} with the device address.
+     */
+    public String getDeviceAddress() {
+        return mPeripheral.getAddress();
+    }
+
     @Override
     public boolean equals(final Object otherService) {
         if (otherService instanceof PeripheralService) {

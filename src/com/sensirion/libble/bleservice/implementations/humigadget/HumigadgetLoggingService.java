@@ -20,8 +20,8 @@ public class HumigadgetLoggingService extends PeripheralService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
 
-    public static final int TIMEOUT_DOWNLOAD_DATA_MS = 7500;
-    public static final int MAX_CONSECUTIVE_TRIES = 10;
+    private static final int TIMEOUT_DOWNLOAD_DATA_MS = 7500;
+    private static final int MAX_CONSECUTIVE_TRIES = 10;
 
     private static final String TAG = HumigadgetLoggingService.class.getSimpleName();
 
@@ -648,12 +648,12 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     /**
-     * Returns the total maximum of elements to log.
+     * Obtains the maximum elements to log.
      *
-     * @return number of elements to log.
+     * @return <code>int</code> with the total number of elements to log.
      */
     public int getNumberElementsToLog() {
-        return getNumberElementsToLog(null);
+        return getNumberElementsToLog(0);
     }
 
     /**
@@ -662,7 +662,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @param userStartPoint given by the user
      * @return number of elements to log.
      */
-    public int getNumberElementsToLog(final Integer userStartPoint) {
+    public int getNumberElementsToLog(final int userStartPoint) {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
 
         if (getCurrentPoint() == 0) {
@@ -675,6 +675,31 @@ public class HumigadgetLoggingService extends PeripheralService {
         }
         Log.i(TAG, String.format("The device has %d values to log.", totalValues));
         return totalValues;
+    }
+
+    /**
+     * Obtains the total of elements to log since the given timestamp.
+     *
+     * @param timestamp since when the logs wants to be started.
+     * @return <code>int</code> with the number of elements to log after the given timestamp.
+     */
+    public int getNumberElementsToLogFromTimestamp(final Long timestamp) {
+
+        if (timestamp == null) {
+            return getNumberElementsToLog(0);
+        }
+
+        final int epochTime = (int) (timestamp / 1000);
+
+        if (epochTime < getUserData()) {
+            return getNumberElementsToLog(0);
+        }
+
+        final int endTimestampGadget = mUserData + getCurrentPoint() * getInterval();
+        if (epochTime >= endTimestampGadget) {
+            return 0;
+        }
+        return getNumberElementsToLog((endTimestampGadget - epochTime) / getInterval());
     }
 
     /**
@@ -717,8 +742,8 @@ public class HumigadgetLoggingService extends PeripheralService {
         while (iterator.hasNext()) {
             try {
                 final HumigadgetLogDownloadListener listener = iterator.next();
-                listener.setDownloadProgress(mExtractedDatapointsCounter);
-                listener.onNewDatapointDownloaded(dataPoint);
+                listener.setDownloadProgress(getDeviceAddress(), mExtractedDatapointsCounter);
+                listener.onNewDatapointDownloaded(getDeviceAddress(), dataPoint);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
@@ -735,7 +760,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         final Iterator<HumigadgetLogDownloadListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().setRequestedDatapointAmount(numberElementsToDownload);
+                iterator.next().setRequestedDatapointAmount(getDeviceAddress(), numberElementsToDownload);
             } catch (RuntimeException e) {
                 Log.e(TAG, "The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
@@ -748,12 +773,12 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     private void onDownloadFailure() {
         final Iterator<HumigadgetLogDownloadListener> iterator = mListeners.iterator();
-        Log.i(TAG, String.format("onDownloadFailure -> Notifying to the %d listeners. ", mListeners.toArray().length));
+        Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.toArray().length));
         while (iterator.hasNext()) {
             try {
-                iterator.next().onDownloadFailure(mPeripheral);
+                iterator.next().onLogDownloadFailure(getDeviceAddress());
             } catch (RuntimeException e) {
-                Log.e(TAG, "onDownloadFailure -> The following exception was produced when notifying the listeners: ", e);
+                Log.e(TAG, "onLogDownloadFailure -> The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
             }
         }
@@ -767,7 +792,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.toArray().length));
         while (iterator.hasNext()) {
             try {
-                iterator.next().onDownloadCompleted(mPeripheral);
+                iterator.next().onLogDownloadCompleted(getDeviceAddress());
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDownloadComplete -> The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
@@ -786,7 +811,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         }
         setGadgetLoggingEnabled(true);
         if (initialLoggingState) {
-            Log.i(TAG, String.format("deleteDataFromTheDevice -> In device %s data was deleted.", mPeripheral.getAddress()));
+            Log.i(TAG, String.format("deleteDataFromTheDevice -> In device %s data was deleted.", getDeviceAddress()));
             return true;
         }
         return setGadgetLoggingEnabled(false);
