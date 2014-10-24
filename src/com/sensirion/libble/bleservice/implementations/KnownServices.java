@@ -1,10 +1,9 @@
-package com.sensirion.libble;
+package com.sensirion.libble.bleservice.implementations;
 
 import com.sensirion.libble.bleservice.implementations.generic_services.BatteryPeripheralService;
-import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetConnectionSpeedService;
-import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetLoggingService;
-import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetRHTService;
-import com.sensirion.libble.bleservice.implementations.humigadget.RHTDataPoint;
+import com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetConnectionSpeedService;
+import com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetLoggingService;
+import com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetRHTNotificationService;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -20,7 +19,7 @@ public enum KnownServices {
     /**
      * HUMIGADGET RHT NOTIFICATION SERVICE
      */
-    HUMIGADGET_RHT_NOTIFICATION_SERVICE(HumigadgetRHTService.class.getSimpleName(), Arrays.asList(HumigadgetRHTService.RHT_CHARACTERISTIC_READ_NAME), RHTDataPoint.class),
+    HUMIGADGET_RHT_NOTIFICATION_SERVICE(HumigadgetRHTNotificationService.class.getSimpleName(), Arrays.asList(HumigadgetRHTNotificationService.RHT_CHARACTERISTIC_READ_NAME), HumigadgetRHTNotificationService.class),
 
     /**
      * HUMIGADGET LOGGING SERVICE

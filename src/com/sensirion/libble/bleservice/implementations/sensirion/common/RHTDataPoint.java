@@ -1,23 +1,30 @@
-package com.sensirion.libble.bleservice.implementations.humigadget;
-
-import com.sensirion.libble.BleDevice;
+package com.sensirion.libble.bleservice.implementations.sensirion.common;
 
 /**
  * Convenience class for storing the obtained data points.
  */
 public class RHTDataPoint {
-    private final BleDevice mDevice;
+
+    private final String mDeviceAddress;
     private final float mHumidity;
     private final float mTemperature;
     private final long mTimestampMs;
     private final boolean mComesFromLog;
 
-    public RHTDataPoint(final BleDevice device, final float humidity, final float temperature, final int epochTime, final boolean comesFromLog) {
-        this(device, humidity, temperature, epochTime * 1000l, comesFromLog);
+    public RHTDataPoint(final String address, final float humidity, final float temperature, final int epochTime){
+        this(address, humidity, temperature, epochTime, false);
     }
 
-    public RHTDataPoint(final BleDevice device, final float humidity, final float temperature, final long timestampMs, final boolean comesFromLog) {
-        mDevice = device;
+    public RHTDataPoint(final String address, final float humidity, final float temperature, final int epochTime, final boolean comesFromLog) {
+        this(address, humidity, temperature, epochTime * 1000l, comesFromLog);
+    }
+
+    public RHTDataPoint(final String address, final float humidity, final float temperature, final long timestampMs){
+        this(address, humidity, temperature, timestampMs, false);
+    }
+
+    public RHTDataPoint(final String address, final float humidity, final float temperature, final long timestampMs, final boolean comesFromLog) {
+        mDeviceAddress = address;
         mHumidity = humidity;
         mTemperature = temperature;
         mTimestampMs = timestampMs;
@@ -33,12 +40,12 @@ public class RHTDataPoint {
     }
 
     /**
-     * Returns the mDevice of the datapoint.
+     * Obtains the address of the device.
      *
-     * @return {@link com.sensirion.libble.BleDevice} of the mDevice that send the datapoint.
+     * @return {@link java.lang.String} with the device address - <code>null</code> in case it's not known.
      */
-    public BleDevice getDevice() {
-        return mDevice;
+    public String getDeviceAddress() {
+        return mDeviceAddress;
     }
 
     /**
@@ -68,9 +75,18 @@ public class RHTDataPoint {
         return mComesFromLog;
     }
 
+    /**
+     * Returns if the data come from device notifications.
+     *
+     * @return <code>true</code> in case the data came from notifications - <code>false</code> otherwise.
+     */
+    public boolean getComesFromNotifications() {
+        return !getComesFromLog();
+    }
+
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append("Relative Humidity: ").append(getHumidity());
         sb.append(" Temperature: ").append(getTemperature());
         if (getComesFromLog()) {

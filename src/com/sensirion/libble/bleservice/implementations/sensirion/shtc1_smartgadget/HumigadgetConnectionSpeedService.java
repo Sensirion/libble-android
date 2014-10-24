@@ -1,4 +1,4 @@
-package com.sensirion.libble.bleservice.implementations.humigadget;
+package com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;

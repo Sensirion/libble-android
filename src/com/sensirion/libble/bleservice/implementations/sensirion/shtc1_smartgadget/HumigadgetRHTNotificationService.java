@@ -1,4 +1,4 @@
-package com.sensirion.libble.bleservice.implementations.humigadget;
+package com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
@@ -7,23 +7,25 @@ import android.util.Log;
 
 import com.sensirion.libble.Peripheral;
 import com.sensirion.libble.bleservice.NotificationService;
+import com.sensirion.libble.bleservice.implementations.sensirion.common.RHTDataPoint;
+import com.sensirion.libble.bleservice.implementations.sensirion.common.RHTListener;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
 import java.util.UUID;
 
-public class HumigadgetRHTService extends NotificationService<RHTDataPoint, HumigadgetRHTListener> {
+public class HumigadgetRHTNotificationService extends NotificationService<RHTDataPoint, RHTListener> {
 
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
 
     public static final String RHT_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
 
-    public static final String PREFIX = HumigadgetRHTService.class.getName();
+    public static final String PREFIX = HumigadgetRHTNotificationService.class.getName();
     public static final String RHT_CHARACTERISTIC_READ_NAME = PREFIX + ".getRHTData";
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";
 
-    private static final String TAG = HumigadgetRHTService.class.getSimpleName();
+    private static final String TAG = HumigadgetRHTNotificationService.class.getSimpleName();
 
     private static final int TIMEOUT_MS = 1100;
     private static final int MAX_NUMBER_REQUESTS = 4;
@@ -32,7 +34,7 @@ public class HumigadgetRHTService extends NotificationService<RHTDataPoint, Humi
 
     private RHTDataPoint mLastDatapoint;
 
-    public HumigadgetRHTService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
+    public HumigadgetRHTNotificationService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
         mHumidityTemperatureCharacteristic = getCharacteristicFor(RHT_CHARACTERISTIC_UUID);
         peripheral.readCharacteristic(mHumidityTemperatureCharacteristic);
@@ -67,11 +69,11 @@ public class HumigadgetRHTService extends NotificationService<RHTDataPoint, Humi
         final float temperature = ((float) humidityAndTemperature[1]) / 100.0f;
         final long timestamp = System.currentTimeMillis();
 
-        mLastDatapoint = new RHTDataPoint(mPeripheral, ambientHumidity, temperature, timestamp, false);
+        mLastDatapoint = new RHTDataPoint(mPeripheral.getAddress(), ambientHumidity, temperature, timestamp, false);
     }
 
     private void notifyListeners() {
-        final Iterator<HumigadgetRHTListener> iterator = super.mListeners.iterator();
+        final Iterator<RHTListener> iterator = super.mListeners.iterator();
         while (iterator.hasNext()) {
             try {
                 iterator.next().onNewRHTValues(mLastDatapoint);
@@ -111,7 +113,7 @@ public class HumigadgetRHTService extends NotificationService<RHTDataPoint, Humi
      * Return the last HUMIGADGET_RHT_NOTIFICATION_SERVICE data in case it's known.
      *
      * @param characteristicName name of the characteristic.
-     * @return an {@link com.sensirion.libble.bleservice.implementations.humigadget.RHTDataPoint} with the latest received characteristic - <code>null</code> otherwise.
+     * @return an {@link com.sensirion.libble.bleservice.implementations.sensirion.common.RHTDataPoint} with the latest received characteristic - <code>null</code> otherwise.
      */
     @Override
     public RHTDataPoint getCharacteristicValue(final String characteristicName) {

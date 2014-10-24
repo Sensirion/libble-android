@@ -16,7 +16,6 @@ import java.util.UUID;
 /**
  * This is the Activity all apps using the library can extend
  * instead of extending standard support FragmentActivity v4.
- * <p/>
  * This is a convenience class and simplifies use of the library.
  */
 
@@ -59,7 +58,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *
      * @return true if it's scanning, false otherwise.
      */
-    protected boolean startScanning() {
+    public boolean startScanning() {
         return mBleManager.startScanning();
     }
 
@@ -70,14 +69,14 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *                    null if all devices have to be retrieved.
      * @return true if it's scanning, false otherwise.
      */
-    protected boolean startScanning(UUID[] deviceUUIDs) {
+    public boolean startScanning(UUID[] deviceUUIDs) {
         return mBleManager.startScanning(deviceUUIDs);
     }
 
     /**
      * Stops the scan of new devices.
      */
-    protected void stopScanning() {
+    public void stopScanning() {
         mBleManager.stopScanning();
     }
 
@@ -86,7 +85,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *
      * @return Iterable
      */
-    protected Iterable<? extends BleDevice> getDiscoveredBleDevices() {
+    public Iterable<? extends BleDevice> getDiscoveredBleDevices() {
         return mBleManager.getDiscoveredBleDevices();
     }
 
@@ -96,7 +95,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      * @param deviceNames List of devices names.
      * @return Iterable
      */
-    protected Iterable<? extends BleDevice> getDiscoveredBleDevices(List<String> deviceNames) {
+    public Iterable<? extends BleDevice> getDiscoveredBleDevices(List<String> deviceNames) {
         return mBleManager.getDiscoveredBleDevices(deviceNames);
     }
 
@@ -105,7 +104,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *
      * @return Iterable
      */
-    protected Iterable<? extends BleDevice> getConnectedBleDevices() {
+    public Iterable<? extends BleDevice> getConnectedBleDevices() {
         return mBleManager.getConnectedBleDevices();
     }
 
@@ -125,7 +124,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      * @return Connected device as {@link com.sensirion.libble.BleDevice}
      * or NULL if the device is not connected
      */
-    protected BleDevice getConnectedDevice(String address) {
+    public BleDevice getConnectedDevice(String address) {
         return mBleManager.getConnectedDevice(address);
     }
 
@@ -144,7 +143,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *
      * @param address MAC-Address of the peripheral that should be connected
      */
-    protected boolean connectPeripheral(String address) {
+    public boolean connectPeripheral(String address) {
         return mBleManager.connectPeripheral(address);
     }
 
@@ -153,7 +152,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *
      * @param address MAC-Address of the peripheral that should be disconnected
      */
-    protected void disconnectPeripheral(String address) {
+    public void disconnectPeripheral(String address) {
         mBleManager.disconnectPeripheral(address);
     }
 

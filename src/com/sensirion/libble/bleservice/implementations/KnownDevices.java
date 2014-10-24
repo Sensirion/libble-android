@@ -1,6 +1,6 @@
-package com.sensirion.libble;
+package com.sensirion.libble.bleservice.implementations;
 
-import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetRHTService;
+import com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetRHTNotificationService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,12 +10,12 @@ public enum KnownDevices {
     /**
      * Humigadget device.
      * Has notifications: YES
-     * Notification interface: {@link com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetRHTListener}
+     * Notification interface: {@link com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetRHTNotificationService}
      */
     HUMIGADGET {
         @Override
         public UUID[] getDescriptorUUIDs() {
-            final UUID descriptorUUID = UUID.fromString(HumigadgetRHTService.RHT_DESCRIPTOR_UUID);
+            final UUID descriptorUUID = UUID.fromString(HumigadgetRHTNotificationService.RHT_DESCRIPTOR_UUID);
             return new UUID[]{descriptorUUID};
         }
 

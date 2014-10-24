@@ -1,4 +1,4 @@
-package com.sensirion.libble.ui;
+package com.sensirion.libble.ui.examples;
 
 
 import android.app.ListFragment;
@@ -21,6 +21,7 @@ import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BlePeripheralService;
 import com.sensirion.libble.R;
 import com.sensirion.libble.bleservice.implementations.generic_services.BatteryPeripheralService;
+import com.sensirion.libble.ui.BleActivity;
 
 import java.util.ArrayList;
 

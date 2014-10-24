@@ -1,4 +1,4 @@
-package com.sensirion.libble.bleservice.implementations.humigadget;
+package com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -7,6 +7,8 @@ import android.util.Log;
 import com.sensirion.libble.NotificationListener;
 import com.sensirion.libble.Peripheral;
 import com.sensirion.libble.bleservice.PeripheralService;
+import com.sensirion.libble.bleservice.implementations.sensirion.common.LogDownloadListener;
+import com.sensirion.libble.bleservice.implementations.sensirion.common.RHTDataPoint;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -39,7 +41,7 @@ public class HumigadgetLoggingService extends PeripheralService {
 
     private static final int MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 1300;
 
-    private final List<HumigadgetLogDownloadListener> mListeners = Collections.synchronizedList(new LinkedList<HumigadgetLogDownloadListener>());
+    private final List<LogDownloadListener> mListeners = Collections.synchronizedList(new LinkedList<LogDownloadListener>());
 
     private final BluetoothGattCharacteristic mStartStopCharacteristic;
     private final BluetoothGattCharacteristic mIntervalCharacteristic;
@@ -604,7 +606,7 @@ public class HumigadgetLoggingService extends PeripheralService {
             final float humidity = ((float) humidityAndTemperature[1]) / 100.0f;
             final int epoch = getUserData() + (mStartPointer + mExtractedDatapointsCounter) * mInterval;
 
-            final RHTDataPoint extractedDataPoint = new RHTDataPoint(mPeripheral, humidity, temperature, epoch, true);
+            final RHTDataPoint extractedDataPoint = new RHTDataPoint(mPeripheral.getAddress(), humidity, temperature, epoch, true);
 
             Log.i(TAG, String.format("Logged in device %s values %s", mPeripheral.getAddress(), extractedDataPoint.toString()));
 
@@ -712,11 +714,11 @@ public class HumigadgetLoggingService extends PeripheralService {
             Log.w(TAG, String.format("Received a null listener in peripheral: %s", mPeripheral.getAddress()));
             return;
         }
-        if (newListener instanceof HumigadgetLogDownloadListener) {
-            mListeners.add((HumigadgetLogDownloadListener) newListener);
+        if (newListener instanceof LogDownloadListener) {
+            mListeners.add((LogDownloadListener) newListener);
             Log.i(TAG, String.format("Peripheral %s received a new download listener: %s ", mPeripheral.getAddress(), newListener));
         } else {
-            Log.i(TAG, String.format("The download listener received by the peripheral %s is not a %s", mPeripheral.getAddress(), HumigadgetLogDownloadListener.class.getSimpleName()));
+            Log.i(TAG, String.format("The download listener received by the peripheral %s is not a %s", mPeripheral.getAddress(), LogDownloadListener.class.getSimpleName()));
         }
     }
 
@@ -738,12 +740,12 @@ public class HumigadgetLoggingService extends PeripheralService {
      * Notifies download progress to the listeners.
      */
     private void onDatapointRead(final RHTDataPoint dataPoint) {
-        final Iterator<HumigadgetLogDownloadListener> iterator = mListeners.iterator();
+        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                final HumigadgetLogDownloadListener listener = iterator.next();
+                final LogDownloadListener listener = iterator.next();
                 listener.setDownloadProgress(getDeviceAddress(), mExtractedDatapointsCounter);
-                listener.onNewDatapointDownloaded(getDeviceAddress(), dataPoint);
+                listener.onNewDatapointDownloaded(dataPoint);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
@@ -757,7 +759,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @param numberElementsToDownload number of elements to download.
      */
     private void notifyTotalNumberElements(final int numberElementsToDownload) {
-        final Iterator<HumigadgetLogDownloadListener> iterator = mListeners.iterator();
+        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
                 iterator.next().setRequestedDatapointAmount(getDeviceAddress(), numberElementsToDownload);
@@ -772,7 +774,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * Notifies download progress to the listeners.
      */
     private void onDownloadFailure() {
-        final Iterator<HumigadgetLogDownloadListener> iterator = mListeners.iterator();
+        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
         Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.toArray().length));
         while (iterator.hasNext()) {
             try {
@@ -788,7 +790,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * Notifies to the user that the application has finish downloading the logged data.
      */
     private void onDownloadComplete() {
-        final Iterator<HumigadgetLogDownloadListener> iterator = mListeners.iterator();
+        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
         Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.toArray().length));
         while (iterator.hasNext()) {
             try {

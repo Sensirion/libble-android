@@ -1,8 +1,8 @@
-package com.sensirion.libble.bleservice.implementations.humigadget;
+package com.sensirion.libble.bleservice.implementations.sensirion.common;
 
 import com.sensirion.libble.NotificationListener;
 
-public interface HumigadgetLogDownloadListener extends NotificationListener {
+public interface LogDownloadListener extends NotificationListener {
     /**
      * Sets the actual number of downloaded elements.
      *
@@ -15,7 +15,7 @@ public interface HumigadgetLogDownloadListener extends NotificationListener {
      *
      * @param dataPoint downloaded.
      */
-    void onNewDatapointDownloaded(String deviceAddress, RHTDataPoint dataPoint);
+    void onNewDatapointDownloaded(RHTDataPoint dataPoint);
 
     /**
      * Sets the total number of elements in a download.

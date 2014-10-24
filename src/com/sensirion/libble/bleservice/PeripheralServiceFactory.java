@@ -5,9 +5,9 @@ import android.util.Log;
 
 import com.sensirion.libble.Peripheral;
 import com.sensirion.libble.bleservice.implementations.generic_services.BatteryPeripheralService;
-import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetConnectionSpeedService;
-import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetLoggingService;
-import com.sensirion.libble.bleservice.implementations.humigadget.HumigadgetRHTService;
+import com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetConnectionSpeedService;
+import com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetLoggingService;
+import com.sensirion.libble.bleservice.implementations.sensirion.shtc1_smartgadget.HumigadgetRHTNotificationService;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -23,7 +23,7 @@ public class PeripheralServiceFactory {
     private PeripheralServiceFactory() {
         mServiceLookUp = new HashMap<String, Class<? extends PeripheralService>>();
         registerServiceImplementation(BatteryPeripheralService.SERVICE_UUID, BatteryPeripheralService.class);
-        registerServiceImplementation(HumigadgetRHTService.SERVICE_UUID, HumigadgetRHTService.class);
+        registerServiceImplementation(HumigadgetRHTNotificationService.SERVICE_UUID, HumigadgetRHTNotificationService.class);
         registerServiceImplementation(HumigadgetLoggingService.SERVICE_UUID, HumigadgetLoggingService.class);
         registerServiceImplementation(HumigadgetConnectionSpeedService.SERVICE_UUID, HumigadgetConnectionSpeedService.class);
     }

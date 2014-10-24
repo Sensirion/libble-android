@@ -1,4 +1,4 @@
-package com.sensirion.libble.ui;
+package com.sensirion.libble.ui.examples;
 
 import android.database.DataSetObserver;
 import android.util.Log;

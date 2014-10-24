@@ -1,4 +1,4 @@
-package com.sensirion.libble.ui;
+package com.sensirion.libble.ui.examples;
 
 import android.app.ListFragment;
 import android.content.BroadcastReceiver;
@@ -19,6 +19,7 @@ import android.widget.ToggleButton;
 import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.BlePeripheralService;
 import com.sensirion.libble.R;
+import com.sensirion.libble.ui.BleActivity;
 
 /**
  * Holds all the UI elements needed for showing the devices in range in a list
