@@ -744,8 +744,8 @@ public class HumigadgetLoggingService extends PeripheralService {
         while (iterator.hasNext()) {
             try {
                 final LogDownloadListener listener = iterator.next();
-                listener.setDownloadProgress(getDeviceAddress(), mExtractedDatapointsCounter);
-                listener.onNewDatapointDownloaded(mPeripheral.getAddress(), dataPoint);
+                listener.setDownloadProgress(mPeripheral, mExtractedDatapointsCounter);
+                listener.onNewDatapointDownloaded(mPeripheral, dataPoint);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
@@ -762,7 +762,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         final Iterator<LogDownloadListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().setRequestedDatapointAmount(getDeviceAddress(), numberElementsToDownload);
+                iterator.next().setRequestedDatapointAmount(mPeripheral, numberElementsToDownload);
             } catch (RuntimeException e) {
                 Log.e(TAG, "The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
@@ -778,7 +778,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.toArray().length));
         while (iterator.hasNext()) {
             try {
-                iterator.next().onLogDownloadFailure(getDeviceAddress());
+                iterator.next().onLogDownloadFailure(mPeripheral);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onLogDownloadFailure -> The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
@@ -794,7 +794,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.toArray().length));
         while (iterator.hasNext()) {
             try {
-                iterator.next().onLogDownloadCompleted(getDeviceAddress());
+                iterator.next().onLogDownloadCompleted(mPeripheral);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDownloadComplete -> The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
