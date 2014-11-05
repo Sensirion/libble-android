@@ -15,7 +15,7 @@ public interface LogDownloadListener extends NotificationListener {
      *
      * @param dataPoint downloaded.
      */
-    void onNewDatapointDownloaded(RHTDataPoint dataPoint);
+    void onNewDatapointDownloaded(String deviceAddress, RHTDataPoint dataPoint);
 
     /**
      * Sets the total number of elements in a download.

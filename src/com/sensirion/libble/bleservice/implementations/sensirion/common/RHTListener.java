@@ -1,5 +1,6 @@
 package com.sensirion.libble.bleservice.implementations.sensirion.common;
 
+import com.sensirion.libble.BleDevice;
 import com.sensirion.libble.NotificationListener;
 
 public interface RHTListener extends NotificationListener {
@@ -9,5 +10,5 @@ public interface RHTListener extends NotificationListener {
      *
      * @param dataPoint {@link RHTDataPoint} with the RHT_DATA.
      */
-    public void onNewRHTValues(final RHTDataPoint dataPoint);
+    public void onNewRHTValues(final BleDevice device, final RHTDataPoint dataPoint);
 }

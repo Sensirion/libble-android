@@ -5,28 +5,26 @@ package com.sensirion.libble.bleservice.implementations.sensirion.common;
  */
 public class RHTDataPoint {
 
-    private final String mDeviceAddress;
-    private final float mHumidity;
     private final float mTemperature;
+    private final float mHumidity;
     private final long mTimestampMs;
     private final boolean mComesFromLog;
 
-    public RHTDataPoint(final String address, final float humidity, final float temperature, final int epochTime){
-        this(address, humidity, temperature, epochTime, false);
+    public RHTDataPoint(final float temperature, final float humidity,  final int epochTime){
+        this(humidity, temperature, epochTime, false);
     }
 
-    public RHTDataPoint(final String address, final float humidity, final float temperature, final int epochTime, final boolean comesFromLog) {
-        this(address, humidity, temperature, epochTime * 1000l, comesFromLog);
+    public RHTDataPoint(final float temperature, final float humidity, final int epochTime, final boolean comesFromLog) {
+        this(humidity, temperature, epochTime * 1000l, comesFromLog);
     }
 
-    public RHTDataPoint(final String address, final float humidity, final float temperature, final long timestampMs){
-        this(address, humidity, temperature, timestampMs, false);
+    public RHTDataPoint(final float temperature, final float humidity, final long timestampMs){
+        this(temperature, humidity, timestampMs, false);
     }
 
-    public RHTDataPoint(final String address, final float humidity, final float temperature, final long timestampMs, final boolean comesFromLog) {
-        mDeviceAddress = address;
-        mHumidity = humidity;
+    public RHTDataPoint(final float temperature, final float humidity, final long timestampMs, final boolean comesFromLog) {
         mTemperature = temperature;
+        mHumidity = humidity;
         mTimestampMs = timestampMs;
         mComesFromLog = comesFromLog;
     }
@@ -38,16 +36,6 @@ public class RHTDataPoint {
     public float getTemperature() {
         return mTemperature;
     }
-
-    /**
-     * Obtains the address of the device.
-     *
-     * @return {@link java.lang.String} with the device address - <code>null</code> in case it's not known.
-     */
-    public String getDeviceAddress() {
-        return mDeviceAddress;
-    }
-
     /**
      * Returns the moment when it was obtained the data point in seconds.
      *
@@ -87,13 +75,9 @@ public class RHTDataPoint {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Relative Humidity: ").append(getHumidity());
-        sb.append(" Temperature: ").append(getTemperature());
-        if (getComesFromLog()) {
-            sb.append(" Epoch Time: ").append(getEpochTime());
-        } else {
-            sb.append(" TimestampMs: ").append(getTimestamp());
-        }
+        sb.append("Temperature: ").append(getTemperature());
+        sb.append(" Relative Humidity: ").append(getHumidity());
+        sb.append(" TimestampMs: ").append(getTimestamp());
         sb.append(" Comes from log: ").append(getComesFromLog());
         sb.append(" Seconds from now: ").append((int) ((System.currentTimeMillis() - getTimestamp()) / 1000l)).append(" second(s).");
         return sb.toString();

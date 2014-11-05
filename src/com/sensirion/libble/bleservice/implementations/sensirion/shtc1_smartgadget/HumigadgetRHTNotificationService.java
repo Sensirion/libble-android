@@ -27,8 +27,8 @@ public class HumigadgetRHTNotificationService extends NotificationService<RHTDat
 
     private static final String TAG = HumigadgetRHTNotificationService.class.getSimpleName();
 
-    private static final int TIMEOUT_MS = 1100;
-    private static final int MAX_NUMBER_REQUESTS = 4;
+    private static final short TIMEOUT_MS = 1100;
+    private static final byte MAX_NUMBER_REQUESTS = 4;
 
     private final BluetoothGattCharacteristic mHumidityTemperatureCharacteristic;
 
@@ -49,35 +49,36 @@ public class HumigadgetRHTNotificationService extends NotificationService<RHTDat
      * @return <code>true</code> in case it managed correctly the new data - <code>false</code> otherwise.
      */
     @Override
-    public boolean onChangeNotification(BluetoothGattCharacteristic updatedCharacteristic) {
+    public boolean onChangeNotification(final BluetoothGattCharacteristic updatedCharacteristic) {
         super.onCharacteristicRead(updatedCharacteristic);
         if (mHumidityTemperatureCharacteristic.getUuid().equals(updatedCharacteristic.getUuid())) {
-            byte[] rawData = updatedCharacteristic.getValue();
-            convertToHumanReadableValues(rawData);
+            final byte[] rawData = updatedCharacteristic.getValue();
+            mLastDatapoint = convertToHumanReadableValues(rawData);
             notifyListeners();
             return true;
         }
         return false;
     }
 
-    private void convertToHumanReadableValues(byte[] rawData) {
-        final short[] humidityAndTemperature = new short[rawData.length / 2];
+    private static RHTDataPoint convertToHumanReadableValues(final byte[] rawData) {
+        final short[] humidityAndTemperature = new short[2];
 
         ByteBuffer.wrap(rawData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
 
-        final float ambientHumidity = ((float) humidityAndTemperature[0]) / 100.0f;
-        final float temperature = ((float) humidityAndTemperature[1]) / 100.0f;
+        final float temperature = ((float) humidityAndTemperature[0]) / 100f;
+        final float humidity = ((float) humidityAndTemperature[1]) / 100f;
         final long timestamp = System.currentTimeMillis();
 
-        mLastDatapoint = new RHTDataPoint(mPeripheral.getAddress(), ambientHumidity, temperature, timestamp, false);
+        return new RHTDataPoint(temperature, humidity, timestamp, false);
     }
 
     private void notifyListeners() {
         final Iterator<RHTListener> iterator = super.mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().onNewRHTValues(mLastDatapoint);
-            } catch (Exception e) {
+                iterator.next().onNewRHTValues(mPeripheral, mLastDatapoint);
+            } catch (final Exception e) {
+                Log.e(TAG, "notifyListeners -> The following exception was produced: ", e);
                 iterator.remove();
             }
         }
@@ -97,7 +98,7 @@ public class HumigadgetRHTNotificationService extends NotificationService<RHTDat
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             mPeripheral.writeDescriptor(descriptor);
         } else {
-            Log.w(TAG, "found unhandled characteristic with UUID: " + characteristic.getUuid());
+            Log.d(TAG, String.format("setCharacteristicNotification -> Characteristic with UUID %s was found.", characteristic.getUuid()));
         }
     }
 

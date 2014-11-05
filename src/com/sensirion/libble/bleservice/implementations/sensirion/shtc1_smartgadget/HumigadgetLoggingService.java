@@ -602,11 +602,11 @@ public class HumigadgetLoggingService extends PeripheralService {
             ByteBuffer.wrap(dataPoint).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
 
             //Creates a datapoint object with the obtained data, and fills it with humidity and pressure.
-            final float temperature = ((float) humidityAndTemperature[0]) / 100.0f;
-            final float humidity = ((float) humidityAndTemperature[1]) / 100.0f;
+            final float temperature = ((float) humidityAndTemperature[0]) / 100f;
+            final float humidity = ((float) humidityAndTemperature[1]) / 100f;
             final int epoch = getUserData() + (mStartPointer + mExtractedDatapointsCounter) * mInterval;
 
-            final RHTDataPoint extractedDataPoint = new RHTDataPoint(mPeripheral.getAddress(), humidity, temperature, epoch, true);
+            final RHTDataPoint extractedDataPoint = new RHTDataPoint(humidity, temperature, epoch, true);
 
             Log.i(TAG, String.format("Logged in device %s values %s", mPeripheral.getAddress(), extractedDataPoint.toString()));
 
@@ -745,7 +745,7 @@ public class HumigadgetLoggingService extends PeripheralService {
             try {
                 final LogDownloadListener listener = iterator.next();
                 listener.setDownloadProgress(getDeviceAddress(), mExtractedDatapointsCounter);
-                listener.onNewDatapointDownloaded(dataPoint);
+                listener.onNewDatapointDownloaded(mPeripheral.getAddress(), dataPoint);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
