@@ -28,7 +28,7 @@ public abstract class BleActivity extends Activity {
     private BleManager mBleManager = BleManager.getInstance();
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mBleManager.init(getApplicationContext());
     }
@@ -55,6 +55,17 @@ public abstract class BleActivity extends Activity {
         super.onStop();
     }
 
+
+    /**
+     * Ask if the peripheral service is scanning.
+     *
+     * @return <code>true</code> if it's scanning - <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public boolean isScanning() {
+        return mBleManager.isScanning();
+    }
+
     /**
      * Starts to scan for all bluetooth devices in range.
      *
@@ -71,7 +82,8 @@ public abstract class BleActivity extends Activity {
      *                    <code>null</code> if all devices have to be retrieved.
      * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
-    public boolean startScanning(UUID[] deviceUUIDs) {
+    @SuppressWarnings("unused")
+    public boolean startScanning(final UUID[] deviceUUIDs) {
         return mBleManager.startScanning(deviceUUIDs);
     }
 
@@ -97,7 +109,8 @@ public abstract class BleActivity extends Activity {
      * @param deviceNames List of devices names.
      * @return Iterable
      */
-    public Iterable<? extends BleDevice> getDiscoveredBleDevices(List<String> deviceNames) {
+    @SuppressWarnings("unused")
+    public Iterable<? extends BleDevice> getDiscoveredBleDevices(final List<String> deviceNames) {
         return mBleManager.getDiscoveredBleDevices(deviceNames);
     }
 
@@ -117,7 +130,7 @@ public abstract class BleActivity extends Activity {
      * @return Connected device as {@link com.sensirion.libble.BleDevice}
      * or NULL if the device is not connected
      */
-    public BleDevice getConnectedDevice(String address) {
+    public BleDevice getConnectedDevice(final String address) {
         return mBleManager.getConnectedDevice(address);
     }
 
@@ -126,7 +139,8 @@ public abstract class BleActivity extends Activity {
      *
      * @param address MAC-Address of the peripheral that should be connected
      */
-    public boolean connectPeripheral(String address) {
+    @SuppressWarnings("unused")
+    public boolean connectPeripheral(final String address) {
         return mBleManager.connectPeripheral(address);
     }
 
@@ -135,7 +149,8 @@ public abstract class BleActivity extends Activity {
      *
      * @param address MAC-Address of the peripheral that should be disconnected
      */
-    public void disconnectPeripheral(String address) {
+    @SuppressWarnings("unused")
+    public void disconnectPeripheral(final String address) {
         mBleManager.disconnectPeripheral(address);
     }
 
@@ -145,6 +160,7 @@ public abstract class BleActivity extends Activity {
      * @param deviceAddress of the peripheral.
      * @return the {@link com.sensirion.libble.Peripheral} with the given address
      */
+    @SuppressWarnings("unused")
     public Peripheral getConnectedPeripheral(final String deviceAddress) {
         return mBleManager.getConnectedPeripheral(deviceAddress);
     }
@@ -154,6 +170,7 @@ public abstract class BleActivity extends Activity {
      *
      * @return <code>int</code> with the number of devices.
      */
+    @SuppressWarnings("unused")
     public int getConnectedBleDeviceCount() {
         return mBleManager.getConnectedBleDeviceCount();
     }
@@ -164,6 +181,7 @@ public abstract class BleActivity extends Activity {
      * @param deviceAddress of the device.
      * @return <code>true</code> if connected - <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public boolean isDeviceConnected(final String deviceAddress) {
         return mBleManager.isDeviceConnected(deviceAddress);
     }
@@ -174,7 +192,8 @@ public abstract class BleActivity extends Activity {
      *
      * @param listener pretending to listen for notifications in all peripherals.
      */
-    public void registerPeripheralListenerToAllConnected(NotificationListener listener) {
+    @SuppressWarnings("unused")
+    public void registerPeripheralListenerToAllConnected(final NotificationListener listener) {
         mBleManager.registerPeripheralListenerToAllConnected(listener);
     }
 
@@ -185,7 +204,8 @@ public abstract class BleActivity extends Activity {
      *                 null if we want to register a listener to all connected devices.
      * @param listener pretending to listen for notifications of a peripheral.
      */
-    public void registerPeripheralListener(NotificationListener listener, String address) {
+    @SuppressWarnings("unused")
+    public void registerPeripheralListener(final NotificationListener listener, final String address) {
         mBleManager.registerPeripheralListener(listener, address);
     }
 
@@ -194,7 +214,8 @@ public abstract class BleActivity extends Activity {
      *
      * @param listener that does not want to get notifications any more.
      */
-    public void unregisterPeripheralListenerFromAllConnected(NotificationListener listener) {
+    @SuppressWarnings("unused")
+    public void unregisterPeripheralListenerFromAllConnected(final NotificationListener listener) {
         mBleManager.unregisterPeripheralListenerFromAllConnected(listener);
     }
 
@@ -204,13 +225,15 @@ public abstract class BleActivity extends Activity {
      * @param listener that wants to unregister from the notifications of a peripheral.
      * @param address  of the peripheral you don't want to get notifications from anymore.
      */
-    public void unregisterPeripheralListener(String address, NotificationListener listener) {
+    @SuppressWarnings("unused")
+    public void unregisterPeripheralListener(final String address, final NotificationListener listener) {
         mBleManager.unregisterPeripheralListener(listener, address);
     }
 
     /**
      * Checks if bluetooth connection is enabled on the device.
      */
+    @SuppressWarnings("unused")
     public boolean isBluetoothEnabled() {
         return mBleManager.isBluetoothEnabled();
     }
@@ -220,7 +243,8 @@ public abstract class BleActivity extends Activity {
      *
      * @param context of the requesting activity.
      */
-    public void requestEnableBluetooth(Context context) {
+    @SuppressWarnings("unused")
+    public void requestEnableBluetooth(final Context context) {
         mBleManager.requestEnableBluetooth(context);
     }
 
@@ -229,6 +253,7 @@ public abstract class BleActivity extends Activity {
      *
      * @param enabled <code>true</code> for enabling notifications - <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public void setAllNotificationsEnabled(final boolean enabled) {
         mBleManager.setAllNotificationsEnabled(enabled);
     }
@@ -239,6 +264,7 @@ public abstract class BleActivity extends Activity {
      * @param address of the peripheral.
      * @return number of discovered services.
      */
+    @SuppressWarnings("unused")
     public int getNumberOfDiscoveredServices(final String address) {
         return mBleManager.getNumberOfDiscoveredServices(address);
     }
@@ -249,6 +275,7 @@ public abstract class BleActivity extends Activity {
      * @param address of the peripheral.
      * @return {@link java.util.LinkedList} with the services names.
      */
+    @SuppressWarnings("unused")
     public List<String> getDiscoveredServicesNames(final String address) {
         return mBleManager.getDiscoveredServicesNames(address);
     }
@@ -260,6 +287,7 @@ public abstract class BleActivity extends Activity {
      * @param serviceName   name of the service.
      * @return {@link com.sensirion.libble.bleservice.PeripheralService}
      */
+    @SuppressWarnings("unused")
     public PeripheralService getServiceWithName(final String deviceAddress, final String serviceName) {
         return mBleManager.getServiceWithName(deviceAddress, serviceName);
     }
@@ -270,6 +298,7 @@ public abstract class BleActivity extends Activity {
      * @param characteristicName name of the characteristic.
      * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
      */
+    @SuppressWarnings("unused")
     public Object getCharacteristicValue(final String deviceAddress, final String characteristicName) {
         return mBleManager.getCharacteristicValue(deviceAddress, characteristicName);
     }

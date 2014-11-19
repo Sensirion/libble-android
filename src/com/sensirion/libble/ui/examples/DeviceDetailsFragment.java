@@ -25,6 +25,7 @@ import com.sensirion.libble.ui.BleActivity;
 
 import java.util.ArrayList;
 
+@Deprecated
 public class DeviceDetailsFragment extends ListFragment {
     private static final String TAG = DeviceDetailsFragment.class.getSimpleName();
     private static final String PREFIX = DeviceDetailsFragment.class.getName();

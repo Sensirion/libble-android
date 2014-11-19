@@ -11,6 +11,8 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import com.radiusnetworks.bluetooth.BluetoothCrashResolver;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,10 +45,13 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     private Timer mScanTimer;
     private boolean mIsScanning;
     private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothCrashResolver mBluetoothSharingCrashResolver;
 
     @Override
-    public synchronized void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+    public synchronized void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
         final String address = device.getAddress();
+
+        mBluetoothSharingCrashResolver.notifyScannedDevice(device, this);
 
         if (mDiscoveredPeripherals.containsKey(address)) {
             Log.d(TAG, "onLeScan() -> updating rssi for known device: " + address);
@@ -88,6 +93,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     public void onCreate() {
         super.onCreate();
         Log.i(TAG, "onCreate(): instantiating BluetoothManager and -Adapter");
+
         /*
          * For API level 18 and above, get a reference to BluetoothAdapter
          * through BluetoothManager.
@@ -95,13 +101,13 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
             BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             if (bluetoothManager == null) {
-                Log.e(TAG, "Unable to initialize BluetoothManager.");
+                Log.e(TAG, "onCreate() -> Unable to initialize BluetoothManager.");
                 stopSelf();
             } else {
                 mBluetoothAdapter = bluetoothManager.getAdapter();
             }
         } else {
-            Log.e(TAG, "Bluetooth Le not supported in this API version - stopping " + TAG);
+            Log.e(TAG, "onCreate() -> Bluetooth Le not supported in this API version - stopping ");
             stopSelf();
         }
     }
@@ -135,7 +141,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     /**
-     * Requests scanning process for BLE devices in range. If the connection to the {@link com.sensirion.libble.BlePeripheralService}
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
      * @return true if scan has been started. False otherwise.
@@ -146,7 +152,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     /**
      * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
-     * Requests scanning process for BLE devices in range. If the connection to the {@link com.sensirion.libble.BlePeripheralService}
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
      * @param UUIDs List of UUID that the scan can use. NULL in case the user is able to use any device.
@@ -182,6 +188,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     private void onStartLeScan() {
         Log.i(TAG, "onStartLeScan()");
+
+        mBluetoothSharingCrashResolver = new BluetoothCrashResolver(this);
+        mBluetoothSharingCrashResolver.start();
 
         mScanTimer = new Timer();
         mScanTimer.schedule(new TimerTask() {
@@ -231,6 +240,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         Log.d(TAG, "onStopLeScan() -> purging tasks: " + mScanTimer.purge());
         mScanTimer = null;
 
+        mBluetoothSharingCrashResolver.stop();
         Intent intent = new Intent(ACTION_SCANNING_STOPPED);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }

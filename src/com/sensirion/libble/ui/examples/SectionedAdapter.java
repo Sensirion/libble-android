@@ -14,6 +14,7 @@ import java.util.List;
 /**
  * Taken from http://blogingtutorials.blogspot.ch/2010/11/android-listview-header-two-or-more-in.html
  */
+@Deprecated
 abstract public class SectionedAdapter extends BaseAdapter {
 
     private static final String TAG = SectionedAdapter.class.getSimpleName();

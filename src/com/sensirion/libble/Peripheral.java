@@ -46,7 +46,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private BluetoothGatt mBluetoothGatt;
     private int mReceivedSignalStrengthIndication;
     private boolean mIsConnected = false;
-    private final BleGattExecutor mBleGattExecutor = new BleGattExecutor() {
+    private final BleStackProtector mBleStackProtector = new BleStackProtector() {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -113,7 +113,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                     ((NotificationService) service).onChangeNotification(characteristic);
                 }
             }
-            mBleGattExecutor.execute(mBluetoothGatt);
+            mBleStackProtector.execute(mBluetoothGatt);
         }
 
         @Override
@@ -218,7 +218,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     public void connect(Context context) {
         // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
-        mBluetoothDevice.connectGatt(context, false, mBleGattExecutor);
+        mBluetoothDevice.connectGatt(context, false, mBleStackProtector);
     }
 
     public boolean reconnect() {
@@ -253,8 +253,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param characteristic The characteristic to read from.
      */
     public void readCharacteristic(final BluetoothGattCharacteristic characteristic) {
-        mBleGattExecutor.addReadCharacteristic(characteristic);
-        mBleGattExecutor.execute(mBluetoothGatt);
+        mBleStackProtector.addReadCharacteristic(characteristic);
+        mBleStackProtector.execute(mBluetoothGatt);
     }
 
     /**
@@ -318,7 +318,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private synchronized boolean forceCharacteristicReadOrWrite(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxRequestCount, final boolean isReading) {
         mConfirmationOperationRunning = true;
         final long timeNow = System.currentTimeMillis();
-        mBleGattExecutor.cleanCharacteristicCache();
+        mBleStackProtector.cleanCharacteristicCache();
         int requestCounter = 0;
         while (isConnected()) {
             if (System.currentTimeMillis() - timeoutMs * requestCounter > timeNow) {
@@ -345,7 +345,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         }
         mLastCharacteristicsUsedQueue.clear();
         mConfirmationOperationRunning = false;
-        mBleGattExecutor.cleanCharacteristicCache();
+        mBleStackProtector.cleanCharacteristicCache();
         return false;
     }
 
@@ -375,8 +375,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param characteristic The characteristic to overwrite.
      */
     public void writeCharacteristic(final BluetoothGattCharacteristic characteristic) {
-        mBleGattExecutor.addWriteCharacteristic(characteristic);
-        mBleGattExecutor.execute(mBluetoothGatt);
+        mBleStackProtector.addWriteCharacteristic(characteristic);
+        mBleStackProtector.execute(mBluetoothGatt);
     }
 
     /**
@@ -386,8 +386,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param enabled        If <code>true</code>, enable notification - <code>false</code> otherwise.
      */
     public void setCharacteristicNotification(final BluetoothGattCharacteristic characteristic, final boolean enabled) {
-        mBleGattExecutor.addCharacteristicNotification(characteristic, enabled);
-        mBleGattExecutor.execute(mBluetoothGatt);
+        mBleStackProtector.addCharacteristicNotification(characteristic, enabled);
+        mBleStackProtector.execute(mBluetoothGatt);
     }
 
     /**
@@ -396,8 +396,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param descriptor the descriptor we want to store.
      */
     public void writeDescriptor(final BluetoothGattDescriptor descriptor) {
-        mBleGattExecutor.addDescriptorCharacteristic(descriptor);
-        mBleGattExecutor.execute(mBluetoothGatt);
+        mBleStackProtector.addDescriptorCharacteristic(descriptor);
+        mBleStackProtector.execute(mBluetoothGatt);
     }
 
     /**
@@ -493,7 +493,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * This method cleans the characteristic stack of the device.
      */
     public void cleanCharacteristicCache() {
-        mBleGattExecutor.cleanCharacteristicCache();
+        mBleStackProtector.cleanCharacteristicCache();
     }
 
     @Override

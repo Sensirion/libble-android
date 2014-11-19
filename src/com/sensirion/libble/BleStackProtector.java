@@ -10,13 +10,24 @@ import android.util.Log;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class BleGattExecutor extends BluetoothGattCallback {
-    private static final String TAG = BleGattExecutor.class.getSimpleName();
+/**
+ * This class solves the bug 58381 that provokes that the Bluetooth LE stack becomes really unstable.
+ * <p/>
+ * This class acts as an intermediate between the user an the stack preventing that the stacks
+ * receives more than one order at a time, think that makes that the probability of a stack crash gets reduced.
+ * <p/>
+ * If the stack crashes this class will capture the exception and cleans it's cache.
+ * <p/>
+ * http://stackoverflow.com/questions/17870189/android-4-3-bluetooth-low-energy-unstable
+ * http://code.google.com/p/android/issues/detail?id=58381
+ */
+public class BleStackProtector extends BluetoothGattCallback {
+    private static final String TAG = BleStackProtector.class.getSimpleName();
     private final Queue<ServiceAction> mActionQueue = new LinkedList<ServiceAction>() {
         @Override
         public boolean add(ServiceAction newAction) {
             if (newAction == null) {
-                Log.e(TAG, "A null was received in the ActionQueue.");
+                Log.e(TAG, ".mActionQueue -> Received a null action.");
                 return false;
             }
             return super.add(newAction);
@@ -36,23 +47,20 @@ public class BleGattExecutor extends BluetoothGattCallback {
     }
 
     @Override
-    public void onCharacteristicRead(BluetoothGatt gatt,
-                                     BluetoothGattCharacteristic characteristic,
-                                     int status) {
+    public void onCharacteristicRead(final BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, final int status) {
         mCurrentAction = null;
         execute(gatt);
     }
 
     @Override
-    public void onCharacteristicWrite(BluetoothGatt gatt,
-                                      BluetoothGattCharacteristic characteristic, int status) {
+    public void onCharacteristicWrite(final BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, final int status) {
         super.onCharacteristicWrite(gatt, characteristic, status);
         mCurrentAction = null;
         execute(gatt);
     }
 
     @Override
-    public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+    public void onDescriptorWrite(final BluetoothGatt gatt, final BluetoothGattDescriptor descriptor, final int status) {
         super.onDescriptorWrite(gatt, descriptor, status);
         mCurrentAction = null;
         execute(gatt);
@@ -65,8 +73,7 @@ public class BleGattExecutor extends BluetoothGattCallback {
     }
 
     /**
-     * Method that controls that all the orders made by the queue are executed one by one,
-     * for making the Android stack more stable.
+     * Method that controls that all the instructions stored in the queue are executed one by one.
      */
     public synchronized void execute(final BluetoothGatt gatt) {
         try {
@@ -93,8 +100,8 @@ public class BleGattExecutor extends BluetoothGattCallback {
                     Log.w(TAG, "execute() -> there is another action in progress!");
                 }
             }
-        } catch (Exception e) {
-            Log.e(TAG, String.format("execute() --> Queue have collapse (%d elements), so it has been cleared).", mActionQueue.size()));
+        } catch (final Exception e) {
+            Log.e(TAG, String.format("execute() --> BleStack has collapsed with %s objects. Cache has been cleared. (Exception type = %s)", mActionQueue.size(), e.getClass()));
             cleanCharacteristicCache();
         }
     }
@@ -106,7 +113,7 @@ public class BleGattExecutor extends BluetoothGattCallback {
      */
     public void addReadCharacteristic(final BluetoothGattCharacteristic characteristic) {
         if (characteristic == null) {
-            Log.e(TAG, "Ble Stack Manager has received a null characteristic.");
+            Log.e(TAG, "addReadCharacteristic -> Received a null characteristic.");
         } else {
             mActionQueue.add(new ReadCharacteristicAction(characteristic));
         }
@@ -119,7 +126,7 @@ public class BleGattExecutor extends BluetoothGattCallback {
      */
     public void addWriteCharacteristic(final BluetoothGattCharacteristic characteristic) {
         if (characteristic == null) {
-            Log.e(TAG, "Ble Stack Manager has received a null characteristic.");
+            Log.e(TAG, "addWriteCharacteristic -> Received a null characteristic.");
         } else {
             mActionQueue.add(new WriteCharacteristicAction(characteristic));
         }
@@ -132,7 +139,7 @@ public class BleGattExecutor extends BluetoothGattCallback {
      */
     public void addDescriptorCharacteristic(final BluetoothGattDescriptor descriptor) {
         if (descriptor == null) {
-            Log.e(TAG, "Ble Stack Manager has received a null descriptor.");
+            Log.e(TAG, "addDescriptorCharacteristic -> Received a null descriptor.");
         } else {
             mActionQueue.add(new WriteDescriptorAction(descriptor));
         }
@@ -146,7 +153,7 @@ public class BleGattExecutor extends BluetoothGattCallback {
      */
     public void addCharacteristicNotification(final BluetoothGattCharacteristic notificationCharacteristic, final boolean enable) {
         if (notificationCharacteristic == null) {
-            Log.e(TAG, "Ble Stack Manager has received a null characteristic.");
+            Log.e(TAG, "addCharacteristicNotification -> Received a null characteristic.");
         } else {
             mActionQueue.add(new WriteCharacteristicNotification(notificationCharacteristic, enable));
         }
@@ -198,7 +205,9 @@ public class BleGattExecutor extends BluetoothGattCallback {
     }
 
     private static class WriteCharacteristicAction extends ServiceAction {
+
         private final BluetoothGattCharacteristic characteristic;
+        private final String TAG = String.format("%s.%s", BleStackProtector.TAG, WriteCharacteristicAction.class.getSimpleName());
 
         protected WriteCharacteristicAction(final BluetoothGattCharacteristic characteristic) {
             this.characteristic = characteristic;
@@ -207,11 +216,10 @@ public class BleGattExecutor extends BluetoothGattCallback {
         @Override
         public boolean execute(final BluetoothGatt gatt) {
             final boolean characteristicSend = gatt.writeCharacteristic(this.characteristic);
-            Log.w(TAG, String.format("Written characteristic with UUID: %s was a %s", this.characteristic.getUuid(), characteristicSend));
+            Log.w(TAG, String.format("execute -> Written characteristic with UUID: %s was a %s", this.characteristic.getUuid(), characteristicSend));
             return characteristicSend;
         }
     }
-
 
     private static class WriteCharacteristicNotification extends ServiceAction {
         private final BluetoothGattCharacteristic characteristic;

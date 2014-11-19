@@ -16,6 +16,7 @@ import java.util.List;
 /**
  * Represents a discovered or connected peripheral in a ListView
  */
+@Deprecated
 public class PeripheralListItemAdapter extends BaseAdapter {
 
     private List<BleDevice> mBleDevices;

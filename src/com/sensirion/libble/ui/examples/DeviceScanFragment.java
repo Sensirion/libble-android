@@ -24,6 +24,7 @@ import com.sensirion.libble.ui.BleActivity;
 /**
  * Holds all the UI elements needed for showing the devices in range in a list
  */
+@Deprecated
 public class DeviceScanFragment extends ListFragment {
     private static final String TAG = DeviceScanFragment.class.getSimpleName();
     private BroadcastReceiver mScanStateReceiver = new BroadcastReceiver() {

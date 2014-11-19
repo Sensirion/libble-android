@@ -10,7 +10,7 @@ public class RHTDataPoint {
     private final long mTimestampMs;
     private final boolean mComesFromLog;
 
-    public RHTDataPoint(final float temperature, final float humidity,  final int epochTime){
+    public RHTDataPoint(final float temperature, final float humidity, final int epochTime) {
         this(humidity, temperature, epochTime, false);
     }
 
@@ -18,7 +18,7 @@ public class RHTDataPoint {
         this(humidity, temperature, epochTime * 1000l, comesFromLog);
     }
 
-    public RHTDataPoint(final float temperature, final float humidity, final long timestampMs){
+    public RHTDataPoint(final float temperature, final float humidity, final long timestampMs) {
         this(temperature, humidity, timestampMs, false);
     }
 
@@ -36,6 +36,7 @@ public class RHTDataPoint {
     public float getTemperature() {
         return mTemperature;
     }
+
     /**
      * Returns the moment when it was obtained the data point in seconds.
      *
