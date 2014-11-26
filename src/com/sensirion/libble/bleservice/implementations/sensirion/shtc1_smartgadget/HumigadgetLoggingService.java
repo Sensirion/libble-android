@@ -62,6 +62,8 @@ public class HumigadgetLoggingService extends PeripheralService {
     private Integer mEndPointer = null;
     private Integer mUserData = null;
 
+    private static final int SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS = 5;
+
     private volatile boolean mDownloadInProgress = false;
 
     public HumigadgetLoggingService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
@@ -568,7 +570,7 @@ public class HumigadgetLoggingService extends PeripheralService {
                  * same time. With this wait it 'only' receives a maximum of 200 orders per second.
                  */
                 try {
-                    Thread.sleep(5);
+                    Thread.sleep(SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS);
                 } catch (InterruptedException ignored) {
                 }
             }
@@ -828,5 +830,13 @@ public class HumigadgetLoggingService extends PeripheralService {
             return true;
         }
         return setGadgetLoggingEnabled(false);
+    }
+
+    /**
+     * Checks if the user is downloading data from the service.
+     * @return <code>true</code> if the user is downloading data from the device - <code>false</code> otherwise.
+     */
+    public boolean isDownloadInProgress(){
+        return mDownloadInProgress;
     }
 }
