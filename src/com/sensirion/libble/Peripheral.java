@@ -254,6 +254,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     public void readCharacteristic(final BluetoothGattCharacteristic characteristic) {
         mBleStackProtector.addReadCharacteristic(characteristic);
+
         mBleStackProtector.execute(mBluetoothGatt);
     }
 

@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothProfile;
+import android.os.DeadObjectException;
 import android.util.Log;
 
 import java.util.LinkedList;
@@ -78,31 +79,37 @@ public class BleStackProtector extends BluetoothGattCallback {
     public synchronized void execute(final BluetoothGatt gatt) {
         try {
             if (mCurrentAction == null) {
-                while (mActionQueue.size() > 0) {
-                    mLastAccessQueueTimestamp = System.currentTimeMillis();
-                    final ServiceAction action = mActionQueue.element();
-                    if (action == null) {
-                        break;
-                    }
-                    mActionQueue.remove();
-                    mCurrentAction = action;
-                    if (!action.execute(gatt))
-                        break;
-
-                    mCurrentAction = null;
-                }
+                executeQueue(gatt);
             } else {
-                if (mLastAccessQueueTimestamp < System.currentTimeMillis() - TIMEOUT_MILLISECONDS) {
-                    mActionQueue.poll();
-                    Log.e(TAG, String.format("execute() -> Timeout produced with a command from type %s, so the element has been deleted.", mCurrentAction));
-                    mCurrentAction = null;
-                } else {
-                    Log.w(TAG, "execute() -> there is another action in progress!");
-                }
+                checkQueueTimeout();
             }
         } catch (final Exception e) {
             Log.e(TAG, String.format("execute() --> BleStack has collapsed with %s objects. Cache has been cleared. (Exception type = %s)", mActionQueue.size(), e.getClass()));
             cleanCharacteristicCache();
+        }
+    }
+
+    private void executeQueue(final BluetoothGatt gatt) {
+        while (mActionQueue.size() > 0) {
+            mLastAccessQueueTimestamp = System.currentTimeMillis();
+            final ServiceAction action = mActionQueue.element();
+            if (action == null) {
+                break;
+            }
+            mActionQueue.remove();
+            mCurrentAction = action;
+            if (!action.execute(gatt)) {
+                break;
+            }
+            mCurrentAction = null;
+        }
+    }
+
+    private void checkQueueTimeout() {
+        if (mLastAccessQueueTimestamp < System.currentTimeMillis() - TIMEOUT_MILLISECONDS) {
+            mActionQueue.poll();
+            Log.e(TAG, String.format("execute() -> Timeout produced with a command from type %s, so the element has been deleted.", mCurrentAction));
+            mCurrentAction = null;
         }
     }
 
@@ -169,7 +176,18 @@ public class BleStackProtector extends BluetoothGattCallback {
 
     //CLASSES THAT REPRESENTS THE ACTIONS
     private abstract static class ServiceAction {
-        abstract boolean execute(BluetoothGatt gatt);
+        protected final String TAG = String.format("%s.%s", BleStackProtector.TAG, ServiceAction.class.getSimpleName());
+
+        public final boolean execute(final BluetoothGatt gatt) {
+            try {
+                return unsafeExecute(gatt);
+            } catch (final Exception e) {
+                Log.e(TAG, String.format("execute -> The %s threw the following exception of the type %s -> ", BluetoothGatt.class.getSimpleName(), e.getClass().getSimpleName()), e);
+            }
+            return false;
+        }
+
+        abstract boolean unsafeExecute(final BluetoothGatt gatt) throws DeadObjectException;
 
         @Override
         public String toString() {
@@ -185,7 +203,7 @@ public class BleStackProtector extends BluetoothGattCallback {
         }
 
         @Override
-        public boolean execute(BluetoothGatt gatt) {
+        boolean unsafeExecute(BluetoothGatt gatt) {
             return gatt.writeDescriptor(this.descriptor);
         }
     }
@@ -199,7 +217,7 @@ public class BleStackProtector extends BluetoothGattCallback {
         }
 
         @Override
-        public boolean execute(final BluetoothGatt gatt) {
+        protected boolean unsafeExecute(final BluetoothGatt gatt) throws DeadObjectException {
             return gatt.readCharacteristic(this.characteristic);
         }
     }
@@ -207,14 +225,14 @@ public class BleStackProtector extends BluetoothGattCallback {
     private static class WriteCharacteristicAction extends ServiceAction {
 
         private final BluetoothGattCharacteristic characteristic;
-        private final String TAG = String.format("%s.%s", BleStackProtector.TAG, WriteCharacteristicAction.class.getSimpleName());
+        private final String TAG = String.format("%s.%s", super.TAG, WriteCharacteristicAction.class.getSimpleName());
 
-        protected WriteCharacteristicAction(final BluetoothGattCharacteristic characteristic) {
+        WriteCharacteristicAction(final BluetoothGattCharacteristic characteristic) {
             this.characteristic = characteristic;
         }
 
         @Override
-        public boolean execute(final BluetoothGatt gatt) {
+        boolean unsafeExecute(final BluetoothGatt gatt) throws DeadObjectException {
             final boolean characteristicSend = gatt.writeCharacteristic(this.characteristic);
             Log.w(TAG, String.format("execute -> Written characteristic with UUID: %s was a %s", this.characteristic.getUuid(), characteristicSend));
             return characteristicSend;
@@ -225,13 +243,13 @@ public class BleStackProtector extends BluetoothGattCallback {
         private final BluetoothGattCharacteristic characteristic;
         private final boolean enable;
 
-        protected WriteCharacteristicNotification(final BluetoothGattCharacteristic characteristic, final boolean enable) {
+        WriteCharacteristicNotification(final BluetoothGattCharacteristic characteristic, final boolean enable) {
             this.characteristic = characteristic;
             this.enable = enable;
         }
 
         @Override
-        public boolean execute(final BluetoothGatt gatt) {
+        boolean unsafeExecute(final BluetoothGatt gatt) throws DeadObjectException {
             return gatt.setCharacteristicNotification(this.characteristic, this.enable);
         }
     }

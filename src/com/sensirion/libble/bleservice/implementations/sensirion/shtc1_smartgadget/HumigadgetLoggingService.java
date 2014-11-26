@@ -100,7 +100,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         super.onCharacteristicRead(characteristic);
 
         if (characteristic == null) {
-            Log.e(TAG, "Received a null characteristic");
+            Log.e(TAG, "onCharacteristicRead -> Received a null characteristic");
             return false;
         }
 
@@ -108,25 +108,25 @@ public class HumigadgetLoggingService extends PeripheralService {
 
         if (characteristicUUID.equals(START_STOP_UUID)) {
             mLoggingIsEnabled = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 1;
-            Log.d(TAG, String.format("Device %s logging is %s", mPeripheral.getAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
+            Log.d(TAG, String.format("onCharacteristicRead -> Device %s logging is %s", mPeripheral.getAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
         } else if (characteristicUUID.equals(LOGGING_INTERVAL_UUID)) {
             mInterval = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-            Log.d(TAG, String.format("Device %s interval it's at %d seconds.", mPeripheral.getAddress(), mInterval));
+            Log.d(TAG, String.format("onCharacteristicRead -> Device %s interval it's at %d seconds.", mPeripheral.getAddress(), mInterval));
         } else if (characteristicUUID.equals(CURRENT_POINTER_UUID)) {
             mCurrentPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-            Log.d(TAG, String.format("Device %s current pointer is: %d", mPeripheral.getAddress(), mCurrentPointer));
+            Log.d(TAG, String.format("onCharacteristicRead -> Device %s current pointer is: %d", mPeripheral.getAddress(), mCurrentPointer));
         } else if (characteristicUUID.equals(START_POINTER_UUID)) {
             mStartPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-            Log.d(TAG, String.format("Device %s start pointer is: %d", mPeripheral.getAddress(), mStartPointer));
+            Log.d(TAG, String.format("onCharacteristicRead -> Device %s start pointer is: %d", mPeripheral.getAddress(), mStartPointer));
         } else if (characteristicUUID.equals(END_POINTER_UUID)) {
             mEndPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-            Log.d(TAG, String.format("Device %s end pointer is: %d", mPeripheral.getAddress(), mEndPointer));
+            Log.d(TAG, String.format("onCharacteristicRead -> Device %s end pointer is: %d", mPeripheral.getAddress(), mEndPointer));
         } else if (characteristicUUID.equals(LOGGED_DATA_UUID)) {
-            Log.d(TAG, String.format("Device %s received a log.", mPeripheral.getAddress()));
+            Log.d(TAG, String.format("onCharacteristicRead -> Device %s received a log.", mPeripheral.getAddress()));
             parseLoggedData(characteristic);
         } else if (characteristicUUID.equals(USER_DATA_UUID)) {
             mUserData = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-            Log.d(TAG, String.format("Device %s received %d as it's user data.", mPeripheral.getAddress(), mUserData));
+            Log.d(TAG, String.format("onCharacteristicRead -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mUserData));
         } else {
             return false;
         }
@@ -141,27 +141,27 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     public synchronized boolean synchronizeData() {
         if (isGadgetLoggingEnabled() == null) {
-            Log.e(TAG, "A problem was produced when trying to read the enabling state of the device.");
+            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the enabling state of the device.");
             return false;
         }
         if (getInterval() == null) {
-            Log.e(TAG, "A problem was produced when trying to read the interval of the device.");
+            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the interval of the device.");
             return false;
         }
         if (getCurrentPoint() == null) {
-            Log.e(TAG, "A problem was produced when trying to read the current pointer of the device.");
+            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the current pointer of the device.");
             return false;
         }
         if (getStartPointer() == null) {
-            Log.e(TAG, "A problem was produced when trying to obtain the start pointer of the device.");
+            Log.e(TAG, "synchronizeData -> A problem was produced when trying to obtain the start pointer of the device.");
             return false;
         }
         if (getEndPointer() == null) {
-            Log.e(TAG, "A problem was produced when trying to obtain the end pointer of the device.");
+            Log.e(TAG, "synchronizeData -> A problem was produced when trying to obtain the end pointer of the device.");
             return false;
         }
         if (getUserData() == null) {
-            Log.e(TAG, "A problem was produced when trying to user data of the device.");
+            Log.e(TAG, "synchronizeData -> A problem was produced when trying to user data of the device.");
             return false;
         }
         return true;
@@ -352,24 +352,24 @@ public class HumigadgetLoggingService extends PeripheralService {
             recalculatedStartPoint = calculateMinimumStartPoint();
         } else {
             if (userStartPoint < 0) {
-                throw new IllegalArgumentException(TAG + ": setStartPointer() -> userStartPoint has to be null or >= 0");
+                throw new IllegalArgumentException(String.format("%s: setStartPointer() -> userStartPoint has to be null or >= 0", TAG));
             }
             if (userStartPoint.equals(mStartPointer) && mCurrentPointer < GADGET_RINGBUFFER_SIZE) {
-                Log.i(TAG, String.format("Start pointer is already %d on the peripheral: %s", mStartPointer, mPeripheral.getAddress()));
+                Log.i(TAG, String.format("setStartPointer() -> Start pointer is already %d on the peripheral: %s", mStartPointer, mPeripheral.getAddress()));
                 return true;
             }
             recalculatedStartPoint = calculateStartPoint(userStartPoint);
             if (recalculatedStartPoint == null) {
-                Log.e(TAG, "It was impossible to set the start point of the device.");
+                Log.e(TAG, "setStartPointer() -> It was impossible to set the start point of the device.");
                 return false;
             }
         }
         if (recalculatedStartPoint.equals(mStartPointer)) {
-            Log.i(TAG, "Start point was already set in the device.");
+            Log.i(TAG, "setStartPointer() -> Start point was already set in the device.");
             return true;
         }
         // Prepares logging interval characteristic.
-        Log.i(TAG, String.format("Start point will be set to: %d", recalculatedStartPoint));
+        Log.i(TAG, String.format("setStartPointer() -> Start point will be set to: %d", recalculatedStartPoint));
         mStartPointerCharacteristic.setValue(recalculatedStartPoint, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
         return mPeripheral.forceWriteCharacteristic(mStartPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
     }
@@ -429,7 +429,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         }
         mPeripheral.forceWriteCharacteristic(mEndPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         mPeripheral.forceReadCharacteristic(mEndPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        Log.i(TAG, "setEndPointer -> New end pointer -> " + mEndPointer);
+        Log.i(TAG, "setEndPointer -> New end pointer: " + mEndPointer);
         return true;
     }
 
@@ -455,38 +455,38 @@ public class HumigadgetLoggingService extends PeripheralService {
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
     public synchronized boolean setGadgetLoggingEnabled(final boolean enable) {
-        Log.d(TAG, String.format("Trying to %s logging service on the device %s", (enable ? "enable" : "disable"), mPeripheral.getAddress()));
+        Log.d(TAG, String.format("setGadgetLoggingEnabled -> Trying to %s logging service on the device %s", (enable ? "enable" : "disable"), mPeripheral.getAddress()));
         if (enable == isGadgetLoggingEnabled()) {
-            Log.e(TAG, String.format("In the device %s logging is already %s.", mPeripheral.getAddress(), (enable ? "enabled" : "disabled")));
+            Log.e(TAG, String.format("setGadgetLoggingEnabled -> In the device %s logging is already %s.", mPeripheral.getAddress(), (enable ? "enabled" : "disabled")));
             return true;
         }
 
         if ((mIntervalCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE) == 0
                 && (mIntervalCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) == 0) {
 
-            Log.e(TAG, String.format("The device %s doesn't have enough permissions for writing.", mPeripheral.getAddress()));
+            Log.e(TAG, String.format("setGadgetLoggingEnabled -> The device %s doesn't have enough permissions for writing.", mPeripheral.getAddress()));
             return false;
         }
 
         if (enable) {
             if (updateLastSyncedTimestampOnDevice()) {
-                Log.d(TAG, "User data was set in the device.");
+                Log.d(TAG, "setGadgetLoggingEnabled -> User data was set in the device.");
             } else {
-                Log.e(TAG, "It was impossible to set interval correctly on the device.");
+                Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible to set interval correctly on the device.");
                 return false;
             }
 
             if (setLoggingEnabled(true)) {
-                Log.i(TAG, String.format("In the peripheral %s logging was enabled", mPeripheral.getAddress()));
+                Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was enabled", mPeripheral.getAddress()));
             } else {
-                Log.e(TAG, "It was impossible enable logging the device.");
+                Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
                 return false;
             }
         } else {
             if (setLoggingEnabled(false)) {
-                Log.i(TAG, String.format("In the peripheral %s logging was disabled", mPeripheral.getAddress()));
+                Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was disabled", mPeripheral.getAddress()));
             } else {
-                Log.e(TAG, "It was impossible enable logging the device.");
+                Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
                 return false;
             }
         }
@@ -497,7 +497,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         final int epochTime = getEpochTime();
 
         if (setUserData(epochTime)) {
-            Log.i(TAG, String.format("In peripheral %s the user data was set to the epochTime time: %s ", mPeripheral.getAddress(), epochTime));
+            Log.i(TAG, String.format("updateLastSyncedTimestampOnDevice -> In peripheral %s the user data was set to the epochTime time: %s ", mPeripheral.getAddress(), epochTime));
             return true;
         }
         return false;
@@ -526,46 +526,57 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     public synchronized void startDataDownload(final Integer epochTime) {
         if (mListeners.isEmpty()) {
-            Log.e(TAG, "There's a need for at least one listener in order to start logging data from the device");
+            Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
             return;
         }
 
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-
+                final boolean wasDeviceLoggingEnabled = isGadgetLoggingEnabled();
                 mDownloadInProgress = true;
-
-                //If the gadget logging is enabled it disables it for downloading the data.
-                final boolean gadgetLoggingInitiallyEnabled = isGadgetLoggingEnabled();
-                if (gadgetLoggingInitiallyEnabled) {
-                    setGadgetLoggingEnabled(false);
-                }
-                resetEndPointer();
-                setStartPointerFromEpochTime(epochTime);
-
-                //Counts the number of values to download.
-                final int totalNumberOfValues = calculateValuesToDownload();
-
-                while (getEndPointer() > 0 && mNumConsecutiveFailsReadingData < MAX_CONSECUTIVE_TRIES) {
-                    for (int i = totalNumberOfValues - mExtractedDatapointsCounter; i > 0; i--) {
-                        mPeripheral.readCharacteristic(mLoggedDataCharacteristic);
-                    }
-                    if (lastTimeLogged < System.currentTimeMillis() - TIMEOUT_DOWNLOAD_DATA_MS) {
-                        onDownloadFailure();
-                        return;
-                    }
-                }
+                prepareDeviceToDownload(epochTime, wasDeviceLoggingEnabled);
+                downloadDataFromPeripheral();
                 mPeripheral.cleanCharacteristicCache();
                 mDownloadInProgress = false;
-
-                if (gadgetLoggingInitiallyEnabled) {
+                if (wasDeviceLoggingEnabled) {
                     setGadgetLoggingEnabled(true);
                 }
-
                 onDownloadComplete();
             }
         });
+    }
+
+    private void prepareDeviceToDownload(final Integer epochTime, final boolean wasDeviceLoggingEnabled) {
+        //If the gadget logging is enabled it disables it for downloading the data.
+        if (wasDeviceLoggingEnabled) {
+            setGadgetLoggingEnabled(false);
+        }
+        resetEndPointer();
+        setStartPointerFromEpochTime(epochTime);
+    }
+
+    private void downloadDataFromPeripheral() {
+        final int totalValuesToDownload = calculateValuesToDownload();
+        while (getEndPointer() > 0 && mNumConsecutiveFailsReadingData < MAX_CONSECUTIVE_TRIES) {
+            for (int i = totalValuesToDownload - mExtractedDatapointsCounter; i > 0; i--) {
+                mPeripheral.readCharacteristic(mLoggedDataCharacteristic);
+                /**
+                 * A wait of 5 milliseconds is produced after asking the device for reading new logged data
+                 * in order to improve the Android BLE stack stability. If this wait is not produced the stack
+                 * receives too many request at a time making it really hard to process all the orders at the
+                 * same time. With this wait it 'only' receives a maximum of 200 orders per second.
+                 */
+                try {
+                    Thread.sleep(5);
+                } catch (InterruptedException ignored) {
+                }
+            }
+            if (lastTimeLogged < System.currentTimeMillis() - TIMEOUT_DOWNLOAD_DATA_MS) {
+                onDownloadFailure();
+                return;
+            }
+        }
     }
 
     private int calculateValuesToDownload() {
@@ -608,7 +619,7 @@ public class HumigadgetLoggingService extends PeripheralService {
 
             final RHTDataPoint extractedDataPoint = new RHTDataPoint(humidity, temperature, epoch, true);
 
-            Log.i(TAG, String.format("Logged in device %s values %s", mPeripheral.getAddress(), extractedDataPoint.toString()));
+            Log.i(TAG, String.format("parseLoggedData -> Logged in device %s values %s", mPeripheral.getAddress(), extractedDataPoint.toString()));
 
             //Adds the new datapoint to the the list.
             mNumConsecutiveFailsReadingData = 0;
@@ -624,7 +635,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         if (rhtRawData.length == 0 || rhtRawData.length % DATA_POINT_SIZE > 0) {
             // The data received it's not valid, it has to have values and
             // the whole download has to be multiple of the data point size.
-            Log.e(TAG, String.format("The received data don't have a valid length: %d", rhtRawData.length));
+            Log.e(TAG, String.format("isRawDatapointCorrupted -> The received data don't have a valid length: %d", rhtRawData.length));
             mNumConsecutiveFailsReadingData++;
             return true;
         }
@@ -675,7 +686,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         if (totalValues > GADGET_RINGBUFFER_SIZE) {
             totalValues = GADGET_RINGBUFFER_SIZE;
         }
-        Log.i(TAG, String.format("The device has %d values to log.", totalValues));
+        Log.i(TAG, String.format("getNumberElementsToLog -> The device has %d values to log.", totalValues));
         return totalValues;
     }
 
@@ -711,14 +722,14 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     public void registerDownloadListener(final NotificationListener newListener) {
         if (newListener == null) {
-            Log.w(TAG, String.format("Received a null listener in peripheral: %s", mPeripheral.getAddress()));
+            Log.w(TAG, String.format("registerDownloadListener -> Received a null listener in peripheral: %s", mPeripheral.getAddress()));
             return;
         }
         if (newListener instanceof LogDownloadListener) {
             mListeners.add((LogDownloadListener) newListener);
-            Log.i(TAG, String.format("Peripheral %s received a new download listener: %s ", mPeripheral.getAddress(), newListener));
+            Log.i(TAG, String.format("registerDownloadListener -> Peripheral %s received a new download listener: %s ", mPeripheral.getAddress(), newListener));
         } else {
-            Log.i(TAG, String.format("The download listener received by the peripheral %s is not a %s", mPeripheral.getAddress(), LogDownloadListener.class.getSimpleName()));
+            Log.i(TAG, String.format("registerDownloadListener -> The download listener received by the peripheral %s is not a %s", mPeripheral.getAddress(), LogDownloadListener.class.getSimpleName()));
         }
     }
 
@@ -730,9 +741,9 @@ public class HumigadgetLoggingService extends PeripheralService {
     public void removeDownloadListener(final NotificationListener listenerForRemove) {
         if (mListeners.contains(listenerForRemove)) {
             mListeners.remove(listenerForRemove);
-            Log.i(TAG, String.format("Peripheral %s deleted %s listener from the list.", mPeripheral.getAddress(), listenerForRemove));
+            Log.i(TAG, String.format("removeDownloadListener -> Peripheral %s deleted %s listener from the list.", mPeripheral.getAddress(), listenerForRemove));
         } else {
-            Log.w(TAG, String.format("Peripheral %s did not have the listener %s.", mPeripheral.getAddress(), listenerForRemove));
+            Log.w(TAG, String.format("removeDownloadListener -> Peripheral %s did not have the listener %s.", mPeripheral.getAddress(), listenerForRemove));
         }
     }
 
@@ -764,7 +775,7 @@ public class HumigadgetLoggingService extends PeripheralService {
             try {
                 iterator.next().setRequestedDatapointAmount(mPeripheral, numberElementsToDownload);
             } catch (RuntimeException e) {
-                Log.e(TAG, "The following exception was produced when notifying the listeners: ", e);
+                Log.e(TAG, "notifyTotalNumberElements -> The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
             }
         }
