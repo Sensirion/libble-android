@@ -3,7 +3,7 @@ package com.sensirion.libble.bleservice.implementations.sensirion.common;
 /**
  * Convenience class for storing the obtained data points.
  */
-public class RHTDataPoint {
+public class RHTDataPoint implements Comparable<RHTDataPoint>{
 
     private final float mTemperature;
     private final float mHumidity;
@@ -82,5 +82,14 @@ public class RHTDataPoint {
         sb.append(" Comes from log: ").append(getComesFromLog());
         sb.append(" Seconds from now: ").append((int) ((System.currentTimeMillis() - getTimestamp()) / 1000l)).append(" second(s).");
         return sb.toString();
+    }
+
+    @Override
+    @SuppressWarnings("NullableProblems")
+    public int compareTo(final RHTDataPoint anotherDatapoint) {
+        if (anotherDatapoint.getTimestamp() - mTimestampMs > 0){
+            return -1;
+        }
+        return 1;
     }
 }
