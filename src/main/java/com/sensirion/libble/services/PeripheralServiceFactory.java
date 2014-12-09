@@ -46,7 +46,7 @@ public class PeripheralServiceFactory {
         final String uuid = service.getUuid().toString();
         final Class c = mServiceLookUp.get(uuid);
 
-        if (c == null){
+        if (c == null) {
             Log.w(TAG, String.format("createServiceFor() -> Create generic service with uuid: %s", uuid));
             return new PeripheralService(parent, service);
         }
@@ -57,7 +57,7 @@ public class PeripheralServiceFactory {
             return constructor.newInstance(parent, service);
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             Log.e(TAG, "createServiceFor -> During the creation of a service the following exception was thrown -> ", e);
-            throw new RuntimeException(String.format("%s: createServiceFor -> During the creation of a service the following exception was thrown ->", TAG),  e);
+            throw new RuntimeException(String.format("%s: createServiceFor -> During the creation of a service the following exception was thrown ->", TAG), e);
         }
     }
 

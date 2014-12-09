@@ -578,7 +578,7 @@ public class HumigadgetLoggingService extends PeripheralService {
             final int epoch = getUserData() + (mStartPointer + mExtractedDatapointsCounter) * mInterval;
             final long timestamp = epoch * 1000l;
 
-            final RHTDataPoint extractedDataPoint = new RHTDataPoint(humidity, temperature, timestamp);
+            final RHTDataPoint extractedDataPoint = new RHTDataPoint(temperature, humidity, timestamp);
 
             Log.i(TAG, String.format("parseLoggedData -> Logged in device %s values %s", mPeripheral.getAddress(), extractedDataPoint.toString()));
 
