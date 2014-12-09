@@ -177,7 +177,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     @Override
-    public <T extends PeripheralService> T getPeripheralService(Class<T> type) {
+    public <T extends PeripheralService> T getPeripheralService(final Class<T> type) {
         for (PeripheralService service : mServices) {
             if (service.getClass().equals(type)) {
                 return (T) service;

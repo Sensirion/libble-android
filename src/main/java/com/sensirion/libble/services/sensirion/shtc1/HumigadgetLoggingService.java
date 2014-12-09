@@ -321,7 +321,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @param timestamp from where the user wants to start to download the log - <code>null</code> if the user wants the minimum possible start point.
      * @return <code>true</code> if the user was able to set the pointer - <code>false</code> otherwise.
      */
-    public boolean setStartPointerFromTimestampMs(final Long timestamp) {
+    public boolean setStartPointerFromTimestamp(final Long timestamp) {
         if (timestamp == null) {
             return resetStartPointer();
         }
@@ -409,7 +409,6 @@ public class HumigadgetLoggingService extends PeripheralService {
         return setEndPointer(null);
     }
 
-
     /**
      * Prepare end pointer for logging obtaining.
      *
@@ -433,7 +432,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         }
         mPeripheral.forceWriteCharacteristic(mEndPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         mPeripheral.forceReadCharacteristic(mEndPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        Log.i(TAG, "setEndPointer -> New end pointer: " + mEndPointer);
+        Log.i(TAG, String.format("setEndPointer -> New end pointer: %s", mEndPointer));
         return true;
     }
 
@@ -560,7 +559,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         setStartPointerFromEpochTime(epochTime);
     }
 
-    private void downloadDataFromPeripheral() {
+    private synchronized void downloadDataFromPeripheral() {
         final int totalValuesToDownload = calculateValuesToDownload();
         while (getEndPointer() > 0 && mNumConsecutiveFailsReadingData < MAX_CONSECUTIVE_TRIES) {
             for (int i = totalValuesToDownload - mExtractedDatapointsCounter; i > 0; i--) {
@@ -620,8 +619,9 @@ public class HumigadgetLoggingService extends PeripheralService {
             final float temperature = ((float) humidityAndTemperature[0]) / 100f;
             final float humidity = ((float) humidityAndTemperature[1]) / 100f;
             final int epoch = getUserData() + (mStartPointer + mExtractedDatapointsCounter) * mInterval;
+            final long timestamp = epoch * 1000l;
 
-            final RHTDataPoint extractedDataPoint = new RHTDataPoint(humidity, temperature, epoch, true);
+            final RHTDataPoint extractedDataPoint = new RHTDataPoint(humidity, temperature, timestamp);
 
             Log.i(TAG, String.format("parseLoggedData -> Logged in device %s values %s", mPeripheral.getAddress(), extractedDataPoint.toString()));
 
@@ -635,7 +635,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         return true;
     }
 
-    private boolean isRawDatapointCorrupted(byte[] rhtRawData) {
+    private boolean isRawDatapointCorrupted(final byte[] rhtRawData) {
         if (rhtRawData.length == 0 || rhtRawData.length % DATA_POINT_SIZE > 0) {
             // The data received it's not valid, it has to have values and
             // the whole download has to be multiple of the data point size.
@@ -743,11 +743,17 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @param listenerForRemove listener that doesn't need the listen for notifications anymore.
      */
     public void removeDownloadListener(final NotificationListener listenerForRemove) {
-        if (mListeners.contains(listenerForRemove)) {
-            mListeners.remove(listenerForRemove);
-            Log.i(TAG, String.format("removeDownloadListener -> Peripheral %s deleted %s listener from the list.", mPeripheral.getAddress(), listenerForRemove));
-        } else {
-            Log.w(TAG, String.format("removeDownloadListener -> Peripheral %s did not have the listener %s.", mPeripheral.getAddress(), listenerForRemove));
+        if (listenerForRemove == null) {
+            Log.w(TAG, "removeDownloadListener -> Received null listener.");
+            return;
+        }
+        if (listenerForRemove instanceof LogDownloadListener) {
+            if (mListeners.contains(listenerForRemove)) {
+                mListeners.remove(listenerForRemove);
+                Log.i(TAG, String.format("removeDownloadListener -> Peripheral %s deleted %s listener from the list.", mPeripheral.getAddress(), listenerForRemove));
+            } else {
+                Log.w(TAG, String.format("removeDownloadListener -> Peripheral %s did not have the listener %s.", mPeripheral.getAddress(), listenerForRemove));
+            }
         }
     }
 
@@ -790,7 +796,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     private void onDownloadFailure() {
         final Iterator<LogDownloadListener> iterator = mListeners.iterator();
-        Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.toArray().length));
+        Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.size()));
         while (iterator.hasNext()) {
             try {
                 iterator.next().onLogDownloadFailure(mPeripheral);
@@ -806,7 +812,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     private void onDownloadComplete() {
         final Iterator<LogDownloadListener> iterator = mListeners.iterator();
-        Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.toArray().length));
+        Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.size()));
         while (iterator.hasNext()) {
             try {
                 iterator.next().onLogDownloadCompleted(mPeripheral);

@@ -50,7 +50,7 @@ public class HumigadgetRHTNotificationService extends NotificationService<RHTDat
         final float humidity = ((float) humidityAndTemperature[1]) / 100f;
         final long timestamp = System.currentTimeMillis();
 
-        return new RHTDataPoint(temperature, humidity, timestamp, false);
+        return new RHTDataPoint(temperature, humidity, timestamp);
     }
 
     /**
