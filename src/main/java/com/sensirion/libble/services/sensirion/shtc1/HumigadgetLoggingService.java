@@ -2,6 +2,7 @@ package com.sensirion.libble.services.sensirion.shtc1;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.sensirion.libble.peripherals.Peripheral;
@@ -287,15 +288,15 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     public boolean setInterval(final int interval) {
         if (mLoggingIsEnabled) {
-            Log.e(TAG, "We can't set the interval because logging it's enabled.");
+            Log.e(TAG, "setInterval -> We can't set the interval because logging it's enabled.");
             return false;
         }
         if (mDownloadInProgress) {
-            Log.e(TAG, "We can't set the interval because there's a download in progress");
+            Log.e(TAG, "setInterval -> We can't set the interval because there's a download in progress");
             return false;
         }
         if (interval == mInterval) {
-            Log.i(TAG, String.format("Interval was already %s on the peripheral %s", interval, mPeripheral.getAddress()));
+            Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", interval, mPeripheral.getAddress()));
             return true;
         }
         // Prepares logging interval characteristic.
@@ -313,32 +314,6 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     public boolean resetStartPointer() {
         return setStartPointer(null);
-    }
-
-    /**
-     * Sets the start pointer using the timestamp in ms.
-     *
-     * @param timestamp from where the user wants to start to download the log - <code>null</code> if the user wants the minimum possible start point.
-     * @return <code>true</code> if the user was able to set the pointer - <code>false</code> otherwise.
-     */
-    public boolean setStartPointerFromTimestamp(final Long timestamp) {
-        if (timestamp == null) {
-            return resetStartPointer();
-        }
-        return setStartPointerFromEpochTime((int) (timestamp / 1000));
-    }
-
-    /**
-     * Sets the start pointer using the epoch time.
-     *
-     * @param epochTime from where the user wants to start to download the log - <code>null</code> if the user wants the minimum possible start point.
-     * @return <code>true</code> if the user was able to set the pointer - <code>false</code> otherwise.
-     */
-    public boolean setStartPointerFromEpochTime(final Integer epochTime) {
-        if (epochTime == null || epochTime < mUserData) {
-            return resetStartPointer();
-        }
-        return setStartPointer((epochTime - mUserData) / mInterval);
     }
 
     /**
@@ -385,7 +360,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         return 1;
     }
 
-    private Integer calculateStartPoint(final Integer userStartPoint) {
+    private Integer calculateStartPoint(@NonNull final Integer userStartPoint) {
         if (userStartPoint >= mEndPointer) {
             Log.w(TAG, "calculateStartPoint() -> userStartPoint is bigger or equal than EndPointer!");
             return null;
@@ -510,24 +485,6 @@ public class HumigadgetLoggingService extends PeripheralService {
      * Downloads all the data from the device.
      */
     public synchronized void startDataDownload() {
-        startDataDownload(null);
-    }
-
-    /**
-     * Downloads all the data from the device after the given timestamp.
-     *
-     * @param timestamp from where the user wants to start to download the log.
-     */
-    public synchronized void startDataDownload(final long timestamp) {
-        startDataDownload((Integer) (int) (timestamp / 1000));
-    }
-
-    /**
-     * Downloads all the data from the device after the given epoch time.
-     *
-     * @param epochTime from where the user wants to start to download the log.
-     */
-    public synchronized void startDataDownload(final Integer epochTime) {
         if (mListeners.isEmpty()) {
             Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
             return;
@@ -538,7 +495,7 @@ public class HumigadgetLoggingService extends PeripheralService {
             public void run() {
                 final boolean wasDeviceLoggingEnabled = isGadgetLoggingEnabled();
                 mDownloadInProgress = true;
-                prepareDeviceToDownload(epochTime, wasDeviceLoggingEnabled);
+                prepareDeviceToDownload(wasDeviceLoggingEnabled);
                 downloadDataFromPeripheral();
                 mPeripheral.cleanCharacteristicCache();
                 mDownloadInProgress = false;
@@ -550,19 +507,20 @@ public class HumigadgetLoggingService extends PeripheralService {
         });
     }
 
-    private void prepareDeviceToDownload(final Integer epochTime, final boolean wasDeviceLoggingEnabled) {
+    private void prepareDeviceToDownload(final boolean wasDeviceLoggingEnabled) {
         //If the gadget logging is enabled it disables it for downloading the data.
         if (wasDeviceLoggingEnabled) {
             setGadgetLoggingEnabled(false);
         }
         resetEndPointer();
-        setStartPointerFromEpochTime(epochTime);
+        resetStartPointer();
     }
 
     private synchronized void downloadDataFromPeripheral() {
+        mExtractedDatapointsCounter = 0;
         final int totalValuesToDownload = calculateValuesToDownload();
         while (getEndPointer() > 0 && mNumConsecutiveFailsReadingData < MAX_CONSECUTIVE_TRIES) {
-            for (int i = totalValuesToDownload - mExtractedDatapointsCounter; i > 0; i--) {
+            for (int i = totalValuesToDownload; i > 0; i--) {
                 mPeripheral.readCharacteristic(mLoggedDataCharacteristic);
                 /**
                  * A wait of 5 milliseconds is produced after asking the device for reading new logged data
@@ -584,7 +542,6 @@ public class HumigadgetLoggingService extends PeripheralService {
 
     private int calculateValuesToDownload() {
         final int totalNumberOfValues = getNumberElementsToLog();
-        mExtractedDatapointsCounter = 0;
         notifyTotalNumberElements(totalNumberOfValues);
         lastTimeLogged = System.currentTimeMillis();
         Log.i(TAG, String.format("calculateValuesToDownload -> The user has to download %d values.", totalNumberOfValues));
@@ -660,63 +617,29 @@ public class HumigadgetLoggingService extends PeripheralService {
      *
      * @return <code>true</code> if the device has elements to log - <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public boolean hasElementsToLog() {
         return getCurrentPoint() - mStartPointer > 0;
     }
 
     /**
-     * Obtains the maximum elements to log.
+     * Obtains the number of elements to log
      *
      * @return <code>int</code> with the total number of elements to log.
      */
     public int getNumberElementsToLog() {
-        return getNumberElementsToLog(0);
-    }
-
-    /**
-     * Returns the total of elements to log.
-     *
-     * @param userStartPoint given by the user
-     * @return number of elements to log.
-     */
-    public int getNumberElementsToLog(final int userStartPoint) {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
 
         if (getCurrentPoint() == 0) {
             return 0;
         }
-        setStartPointer(userStartPoint);
+        resetStartPointer();
         int totalValues = getCurrentPoint() - getStartPointer();
         if (totalValues > GADGET_RINGBUFFER_SIZE) {
             totalValues = GADGET_RINGBUFFER_SIZE;
         }
         Log.i(TAG, String.format("getNumberElementsToLog -> The device has %d values to log.", totalValues));
         return totalValues;
-    }
-
-    /**
-     * Obtains the total of elements to log since the given timestamp.
-     *
-     * @param timestamp since when the logs wants to be started.
-     * @return <code>int</code> with the number of elements to log after the given timestamp.
-     */
-    public int getNumberElementsToLogFromTimestamp(final Long timestamp) {
-
-        if (timestamp == null) {
-            return getNumberElementsToLog(0);
-        }
-
-        final int epochTime = (int) (timestamp / 1000);
-
-        if (epochTime < getUserData()) {
-            return getNumberElementsToLog(0);
-        }
-
-        final int endTimestampGadget = mUserData + getCurrentPoint() * getInterval();
-        if (epochTime >= endTimestampGadget) {
-            return 0;
-        }
-        return getNumberElementsToLog((endTimestampGadget - epochTime) / getInterval());
     }
 
     /**
@@ -742,6 +665,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      *
      * @param listenerForRemove listener that doesn't need the listen for notifications anymore.
      */
+    @SuppressWarnings("unused")
     public void removeDownloadListener(final NotificationListener listenerForRemove) {
         if (listenerForRemove == null) {
             Log.w(TAG, "removeDownloadListener -> Received null listener.");
@@ -816,7 +740,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         while (iterator.hasNext()) {
             try {
                 iterator.next().onLogDownloadCompleted(mPeripheral);
-            } catch (RuntimeException e) {
+            } catch (final RuntimeException e) {
                 Log.e(TAG, "onDownloadComplete -> The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
             }
