@@ -42,7 +42,9 @@ public class HumigadgetLoggingService extends PeripheralService {
 
     private static final int MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 1300;
     private static final int SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS = 5;
+
     private final List<LogDownloadListener> mListeners = Collections.synchronizedList(new LinkedList<LogDownloadListener>());
+
     private final BluetoothGattCharacteristic mStartStopCharacteristic;
     private final BluetoothGattCharacteristic mIntervalCharacteristic;
     private final BluetoothGattCharacteristic mCurrentPointerCharacteristic;
@@ -50,15 +52,20 @@ public class HumigadgetLoggingService extends PeripheralService {
     private final BluetoothGattCharacteristic mEndPointerCharacteristic;
     private final BluetoothGattCharacteristic mLoggedDataCharacteristic;
     private final BluetoothGattCharacteristic mUserDataCharacteristic;
+
     private int mExtractedDatapointsCounter = 0;
     private long lastTimeLogged;
     private byte mNumConsecutiveFailsReadingData = 0;
+
+    private Integer mStartPointDownload = null;
+
     private Boolean mLoggingIsEnabled = null;
     private Integer mInterval = null;
     private Integer mCurrentPointer = null;
     private Integer mStartPointer = null;
     private Integer mEndPointer = null;
-    private Integer mUserData = null;
+    private Integer mPeripheralEpoch = null;
+
     private volatile boolean mDownloadInProgress = false;
 
     public HumigadgetLoggingService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
@@ -129,8 +136,8 @@ public class HumigadgetLoggingService extends PeripheralService {
                 parseLoggedData(characteristic);
                 break;
             case USER_DATA_UUID:
-                mUserData = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mUserData));
+                mPeripheralEpoch = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+                Log.d(TAG, String.format("onCharacteristicRead -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mPeripheralEpoch));
                 break;
             default:
                 return false;
@@ -254,12 +261,12 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @return {@link java.lang.Integer} with the introduced user data.
      */
     public Integer getUserData() {
-        if (mUserData == null) {
+        if (mPeripheralEpoch == null) {
             super.mPeripheral.forceReadCharacteristic(mUserDataCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         } else {
             super.mPeripheral.readCharacteristic(mUserDataCharacteristic);
         }
-        return mUserData;
+        return mPeripheralEpoch;
     }
 
     /**
@@ -325,10 +332,9 @@ public class HumigadgetLoggingService extends PeripheralService {
      */
     public boolean setStartPointer(final Integer userStartPoint) {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        final Integer recalculatedStartPoint;
         if (userStartPoint == null) {
             Log.d(TAG, "setStartPointer() -> userStartPoint == null, user wants all the data!");
-            recalculatedStartPoint = calculateMinimumStartPoint();
+            mStartPointDownload = calculateMinimumStartPoint();
         } else {
             if (userStartPoint < 0) {
                 throw new IllegalArgumentException(String.format("%s: setStartPointer() -> userStartPoint has to be null or >= 0", TAG));
@@ -337,19 +343,19 @@ public class HumigadgetLoggingService extends PeripheralService {
                 Log.i(TAG, String.format("setStartPointer() -> Start pointer is already %d on the peripheral: %s", mStartPointer, mPeripheral.getAddress()));
                 return true;
             }
-            recalculatedStartPoint = calculateStartPoint(userStartPoint);
-            if (recalculatedStartPoint == null) {
+            mStartPointDownload = calculateStartPoint(userStartPoint);
+            if (mStartPointDownload == null) {
                 Log.e(TAG, "setStartPointer() -> It was impossible to set the start point of the device.");
                 return false;
             }
         }
-        if (recalculatedStartPoint.equals(mStartPointer)) {
+        if (mStartPointDownload.equals(mStartPointer)) {
             Log.i(TAG, "setStartPointer() -> Start point was already set in the device.");
             return true;
         }
         // Prepares logging interval characteristic.
-        Log.i(TAG, String.format("setStartPointer() -> Start point will be set to: %d", recalculatedStartPoint));
-        mStartPointerCharacteristic.setValue(recalculatedStartPoint, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+        Log.i(TAG, String.format("setStartPointer() -> Start point will be set to: %d", mStartPointDownload));
+        mStartPointerCharacteristic.setValue(mStartPointDownload, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
         return mPeripheral.forceWriteCharacteristic(mStartPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
     }
 
@@ -512,8 +518,8 @@ public class HumigadgetLoggingService extends PeripheralService {
         if (wasDeviceLoggingEnabled) {
             setGadgetLoggingEnabled(false);
         }
-        resetEndPointer();
         resetStartPointer();
+        resetEndPointer();
     }
 
     private synchronized void downloadDataFromPeripheral() {
@@ -569,13 +575,13 @@ public class HumigadgetLoggingService extends PeripheralService {
             //Obtains the datapoint from the array.
             System.arraycopy(rhtRawData, i, dataPoint, 0, DATA_POINT_SIZE);
 
-            //Separates the datapoint between humidity and pressure.
+            //Separates the datapoint between humidity and temperature.
             ByteBuffer.wrap(dataPoint).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
 
-            //Creates a datapoint object with the obtained data, and fills it with humidity and pressure.
+            //Creates a datapoint object with the obtained data, and fills it with humidity and temperature.
             final float temperature = ((float) humidityAndTemperature[0]) / 100f;
             final float humidity = ((float) humidityAndTemperature[1]) / 100f;
-            final int epoch = getUserData() + (mStartPointer + mExtractedDatapointsCounter) * mInterval;
+            final int epoch = mPeripheralEpoch + (mStartPointDownload + mExtractedDatapointsCounter) * mInterval;
             final long timestamp = epoch * 1000l;
 
             final RHTDataPoint extractedDataPoint = new RHTDataPoint(temperature, humidity, timestamp);
