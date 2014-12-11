@@ -6,13 +6,13 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:0.14.+'
+        classpath 'com.android.tools.build:gradle:1.0.0'
     }
 }
 
 dependencies {
     //needed for LocalBroadCastManager
-    compile 'com.android.support:support-v4:21.0.2'
+    compile 'com.android.support:support-v4:21.0.3'
 }
 
 apply from: '../gradle-helpers/library-utils.gradle'
