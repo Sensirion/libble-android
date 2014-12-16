@@ -65,7 +65,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     /**
      * Starts to scan for all bluetooth devices in range.
      *
-     * @return true if it's scanning, false otherwise.
+     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
     public boolean startScanning() {
@@ -77,7 +77,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *
      * @param deviceUUIDs deviceUUIDs that we want want to use,
      *                    null if all devices have to be retrieved.
-     * @return true if it's scanning, false otherwise.
+     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
     public boolean startScanning(final UUID[] deviceUUIDs) {

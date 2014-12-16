@@ -68,7 +68,7 @@ public abstract class BleActivity extends Activity {
     /**
      * Starts to scan for all bluetooth devices in range.
      *
-     * @return true if it's scanning, false otherwise.
+     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
     public boolean startScanning() {
         return mBleManager.startScanning();

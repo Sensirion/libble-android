@@ -8,6 +8,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -270,7 +272,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @param validDeviceNames List of devices names.
      * @return Iterable of {@link BleDevice}
      */
-    public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(final List<String> validDeviceNames) {
+    public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(@Nullable final List<String> validDeviceNames) {
         final Set<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
         if (validDeviceNames == null) { // returns all the devices.
             return discoveredPeripherals;

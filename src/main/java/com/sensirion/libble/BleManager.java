@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.peripherals.BleDevice;
@@ -64,13 +65,13 @@ public class BleManager {
      * This method should be called immediately just after the first getInstance()
      * call in the application that wants to use the library.
      *
-     * @param context cannot be <code>null</code>
+     * @param ctx cannot be <code>null</code>
      */
-    public void init(@NonNull final Context context) {
+    public void init(@NonNull final Context ctx) {
         Log.i(TAG, "init() -> binding to BlePeripheralService");
-        Intent intent = new Intent(context.getApplicationContext(), BlePeripheralService.class);
+        Intent intent = new Intent(ctx.getApplicationContext(), BlePeripheralService.class);
 
-        if (context.getApplicationContext().bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
+        if (ctx.getApplicationContext().bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
             Log.i(TAG, "init() -> successfully bound to BlePeripheralService!");
         } else {
             throw new IllegalStateException("init() -> unable to bind to BlePeripheralService!");
@@ -107,7 +108,7 @@ public class BleManager {
      *                    <code>null</code> if all devices have to be retrieved.
      * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
-    public boolean startScanning(final UUID[] deviceUUIDs) {
+    public boolean startScanning(@Nullable final UUID[] deviceUUIDs) {
         if (mBlePeripheralService == null) {
             Log.w(TAG, "startScanning() -> not yet connected to BlePeripheralService; try to re-trigger scanning when connected.");
             mShouldStartScanning = true;
@@ -172,7 +173,7 @@ public class BleManager {
      * @param validDeviceNames {@link java.util.List} of devices names.
      * @return Iterable with {@link com.sensirion.libble.peripherals.BleDevice}
      */
-    public Iterable<? extends BleDevice> getDiscoveredBleDevices(final List<String> validDeviceNames) {
+    public Iterable<? extends BleDevice> getDiscoveredBleDevices(@Nullable final List<String> validDeviceNames) {
         if (mBlePeripheralService == null) {
             Log.w(TAG, "getDiscoveredBleDevices(List<String>) -> not connected to BlePeripheralService");
             return new ArrayList<>();
@@ -223,22 +224,22 @@ public class BleManager {
     /**
      * Tries to establish a connection to a selected peripheral (by address)
      *
-     * @param address MAC-Address of the peripheral that should be connected
+     * @param deviceAddress of the peripheral that should be connected
      */
-    public boolean connectPeripheral(final String address) {
+    public boolean connectPeripheral(final String deviceAddress) {
         if (mBlePeripheralService == null) {
             Log.e(TAG, String.format("connectPeripheral -> %s is null so peripheral can't be connected.", BlePeripheralService.class.getSimpleName()));
             return false;
         }
         Log.d(TAG, "connectPeripheral() -> stopScanning()");
         stopScanning();
-        return mBlePeripheralService.connect(address);
+        return mBlePeripheralService.connect(deviceAddress);
     }
 
     /**
      * Tries to disconnect a selected peripheral (by address)
      *
-     * @param deviceAddress MAC-Address of the peripheral that should be disconnected
+     * @param deviceAddress of the peripheral that should be disconnected
      */
     public void disconnectPeripheral(final String deviceAddress) {
         if (mBlePeripheralService == null) {
