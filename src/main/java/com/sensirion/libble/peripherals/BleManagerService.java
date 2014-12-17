@@ -8,7 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -31,10 +30,10 @@ import java.util.UUID;
 /**
  * This class offers the main functionality of the library to the user (app)
  */
-public class BlePeripheralService extends Service implements BluetoothAdapter.LeScanCallback, BlePeripheralConnectionListener {
+public class BleManagerService extends Service implements BluetoothAdapter.LeScanCallback, BlePeripheralConnectionListener {
 
-    private static final String TAG = BlePeripheralService.class.getSimpleName();
-    private static final String PREFIX = BlePeripheralService.class.getName();
+    private static final String TAG = BleManagerService.class.getSimpleName();
+    private static final String PREFIX = BleManagerService.class.getName();
     public static final String ACTION_PERIPHERAL_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_DISCOVERY";
     public static final String ACTION_PERIPHERAL_CONNECTION_CHANGED = PREFIX + "/ACTION_PERIPHERAL_CONNECTION_CHANGED";
     public static final String ACTION_SCANNING_STARTED = PREFIX + "/ACTION_SCANNING_STARTED";
@@ -51,18 +50,18 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     @Override
     public synchronized void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
-        final String address = device.getAddress();
+        final String deviceAddress = device.getAddress();
 
         mBluetoothSharingCrashResolver.notifyScannedDevice(device, this);
 
-        if (mDiscoveredPeripherals.containsKey(address)) {
-            Log.d(TAG, "onLeScan() -> updating rssi for known device: " + address);
-            mDiscoveredPeripherals.get(address).setReceivedSignalStrengthIndication(rssi);
+        if (mDiscoveredPeripherals.containsKey(deviceAddress)) {
+            Log.d(TAG, String.format("onLeScan() -> Device %s has a rssi of %d.", deviceAddress, rssi));
+            mDiscoveredPeripherals.get(deviceAddress).setReceivedSignalStrengthIndication(rssi);
         } else {
-            mDiscoveredPeripherals.put(address, new Peripheral(this, device, rssi));
+            mDiscoveredPeripherals.put(deviceAddress, new Peripheral(this, device, rssi));
         }
 
-        onPeripheralChanged(ACTION_PERIPHERAL_DISCOVERY, address);
+        onPeripheralChanged(ACTION_PERIPHERAL_DISCOVERY, deviceAddress);
     }
 
     private void onPeripheralChanged(final String action, final String address) {
@@ -115,12 +114,12 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
+    public IBinder onBind(final Intent intent) {
         return mBinder;
     }
 
     @Override
-    public boolean onUnbind(Intent intent) {
+    public boolean onUnbind(final Intent intent) {
         // Called when all clients have disconnected from a particular interface
         // published by the service.
         closeAll();
@@ -143,7 +142,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     /**
-     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BleManagerService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
      * @return true if scan has been started. False otherwise.
@@ -154,7 +153,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     /**
      * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
-     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BleManagerService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
      * @param UUIDs List of UUID that the scan can use. NULL in case the user is able to use any device.
@@ -185,7 +184,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         if (isBluetoothAvailable()) {
             return;
         }
-        throw new IllegalStateException("Bluetooth is not available!");
+        throw new IllegalStateException(String.format("%s: checkBluetooth -> Bluetooth is not available!", TAG));
     }
 
     private void onStartLeScan() {
@@ -214,7 +213,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      */
     public synchronized boolean isBluetoothAvailable() {
         if (mBluetoothAdapter == null) {
-            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
+            Log.e(TAG, "isBluetoothAvailable -> Unable to obtain a BluetoothAdapter.");
             return false;
         }
         return true;
@@ -354,7 +353,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      */
     public synchronized void disconnect(final String address) {
         checkBluetooth();
-        if (address == null || address.equals("")) {
+        if (address == null || address.trim().isEmpty()) {
             Log.w(TAG, "disconnect() -> unspecified address.");
             return;
         }
@@ -363,7 +362,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
             mConnectedPeripherals.get(address).disconnect();
             mConnectedPeripherals.remove(address);
         } else {
-            Log.w(TAG, "disconnect() -> no connected device known with address: " + address);
+            Log.w(TAG, String.format("disconnect() -> Device with address %s was not found.", address));
         }
     }
 
@@ -372,8 +371,8 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     public class LocalBinder extends Binder {
-        public BlePeripheralService getService() {
-            return BlePeripheralService.this;
+        public BleManagerService getService() {
+            return BleManagerService.this;
         }
     }
 }

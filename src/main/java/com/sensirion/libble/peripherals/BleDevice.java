@@ -14,8 +14,4 @@ public interface BleDevice {
     int getRSSI();
 
     boolean isConnected();
-
-    <T extends PeripheralService> T getPeripheralService(Class<T> type);
-
-    Iterable<String> getDiscoveredPeripheralServices();
 }

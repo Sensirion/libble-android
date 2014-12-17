@@ -176,7 +176,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         return mIsConnected;
     }
 
-    @Override
     public <T extends PeripheralService> T getPeripheralService(final Class<T> type) {
         for (PeripheralService service : mServices) {
             if (service.getClass().equals(type)) {
@@ -206,7 +205,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *
      * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
      */
-    @Override
     public Iterable<String> getDiscoveredPeripheralServices() {
         final Set<String> discoveredServices = new HashSet<>();
 
@@ -224,7 +222,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     public boolean reconnect() {
         if (mBluetoothGatt == null) {
-            Log.e(TAG, "Bluetooth gatt it's not connected.");
+            Log.e(TAG, "reconnect -> Bluetooth gatt it's not connected.");
             return false;
         }
         return mBluetoothGatt.connect();
@@ -232,7 +230,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     public void disconnect() {
         if (mBluetoothGatt == null) {
-            Log.w(TAG, "Bluetooth gatt was already disconnected.");
+            Log.w(TAG, "disconnect -> Bluetooth gatt was already disconnected.");
             return;
         }
         mBluetoothGatt.disconnect();
@@ -341,8 +339,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
             try {
                 Thread.sleep(INTERVAL_BETWEEN_CHECKS_MILLISECONDS);
-            } catch (InterruptedException e) {
-                Log.w(TAG, "Interrupted exception when reading characteristic with UUID: " + characteristic.getUuid().toString());
+            } catch (final InterruptedException ignored) {
+                Log.w(TAG, String.format("forceCharacteristicReadOrWrite -> Characteristic %s produced an interruptedException.", characteristic.getUuid().toString()));
             }
         }
         mLastCharacteristicsUsedQueue.clear();

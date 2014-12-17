@@ -1,4 +1,4 @@
-package com.sensirion.libble.services;
+package com.sensirion.libble.peripherals;
 
 import com.sensirion.libble.services.sensirion.shtc1.HumigadgetRHTNotificationService;
 

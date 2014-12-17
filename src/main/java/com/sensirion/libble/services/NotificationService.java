@@ -47,7 +47,6 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
             setCharacteristicNotification(gattCharacteristic, true);
             mNotificationsAreEnabled = true;
         }
-
     }
 
     /**
