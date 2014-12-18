@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.sensirion.libble"
-    android:versionName="0.9.5">
+    package="com.sensirion.libble">
 
-    <uses-sdk
-        android:minSdkVersion="18"
-        android:targetSdkVersion="21" />
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="true" />
