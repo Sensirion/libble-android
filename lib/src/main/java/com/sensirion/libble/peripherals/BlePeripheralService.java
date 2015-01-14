@@ -7,14 +7,16 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.util.Pair;
 
 import com.radiusnetworks.bluetooth.BluetoothCrashResolver;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,27 +25,26 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 
 /**
  * This class offers the main functionality of the library to the user (app)
  */
-public class BleManagerService extends Service implements BluetoothAdapter.LeScanCallback, BlePeripheralConnectionListener {
+public class BlePeripheralService extends Service implements BluetoothAdapter.LeScanCallback {
 
-    private static final String TAG = BleManagerService.class.getSimpleName();
-    private static final String PREFIX = BleManagerService.class.getName();
+    private static final String TAG = BlePeripheralService.class.getSimpleName();
+    private static final long DEFAULT_SCAN_DURATION_MS = 10 * 1000;
+    private static final String PREFIX = BlePeripheralService.class.getName();
     public static final String ACTION_PERIPHERAL_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_DISCOVERY";
     public static final String ACTION_PERIPHERAL_CONNECTION_CHANGED = PREFIX + "/ACTION_PERIPHERAL_CONNECTION_CHANGED";
     public static final String ACTION_SCANNING_STARTED = PREFIX + "/ACTION_SCANNING_STARTED";
     public static final String ACTION_SCANNING_STOPPED = PREFIX + "/ACTION_SCANNING_STOPPED";
     public static final String EXTRA_PERIPHERAL_ADDRESS = PREFIX + ".EXTRA_PERIPHERAL_ADDRESS";
-    private static final long DEFAULT_SCAN_DURATION_MS = 10 * 1000;
     private final IBinder mBinder = new LocalBinder();
     private final Map<String, Peripheral> mDiscoveredPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
     private final Map<String, Peripheral> mConnectedPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
-    private Timer mScanTimer;
+    private final List<BleDeviceStateListener> mPeripheralStateListeners = Collections.synchronizedList(new LinkedList<BleDeviceStateListener>());
+    private final List<BleScanListener> mPeripheralScanListeners = Collections.synchronizedList(new LinkedList<BleScanListener>());
     private boolean mIsScanning;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothCrashResolver mBluetoothSharingCrashResolver;
@@ -51,34 +52,28 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
     @Override
     public synchronized void onLeScan(final BluetoothDevice device, final int rssi, final byte[] scanRecord) {
         final String deviceAddress = device.getAddress();
+        final Peripheral peripheral;
 
         mBluetoothSharingCrashResolver.notifyScannedDevice(device, this);
 
         if (mDiscoveredPeripherals.containsKey(deviceAddress)) {
             Log.d(TAG, String.format("onLeScan() -> Device %s has a rssi of %d.", deviceAddress, rssi));
+            peripheral = mDiscoveredPeripherals.get(deviceAddress);
             mDiscoveredPeripherals.get(deviceAddress).setReceivedSignalStrengthIndication(rssi);
         } else {
-            mDiscoveredPeripherals.put(deviceAddress, new Peripheral(this, device, rssi));
+            peripheral = new Peripheral(BlePeripheralService.this, device, rssi);
+            mDiscoveredPeripherals.put(deviceAddress, peripheral);
         }
-
-        onPeripheralChanged(ACTION_PERIPHERAL_DISCOVERY, deviceAddress);
+        sendLocalBroadcast(ACTION_PERIPHERAL_DISCOVERY, EXTRA_PERIPHERAL_ADDRESS, deviceAddress);
+        notifyDiscoveredPeripheralChanged(peripheral);
     }
 
-    private void onPeripheralChanged(final String action, final String address) {
-        Log.i(TAG, "onPeripheralChanged() for action: " + action);
-        Intent intent = new Intent(action);
-        intent.putExtra(EXTRA_PERIPHERAL_ADDRESS, address);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-    }
-
-    @Override
-    public synchronized void onPeripheralConnectionChanged(final Peripheral peripheral) {
+    public synchronized void onPeripheralConnectionChanged(@NonNull final Peripheral peripheral) {
         final String address = peripheral.getAddress();
-
         if (peripheral.isConnected()) {
             if (mDiscoveredPeripherals.containsKey(address)) {
                 if (mConnectedPeripherals.containsKey(address)) {
-                    Log.w(TAG, String.format("onPeripheralConnectionChanged -> Peripheral with address %s was already connected.", peripheral.getAddress()));
+                    Log.w(TAG, String.format("onPeripheralStateChanged -> Peripheral with address %s was already connected.", peripheral.getAddress()));
                 } else {
                     mDiscoveredPeripherals.remove(address);
                     mConnectedPeripherals.put(address, peripheral);
@@ -87,20 +82,52 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
         } else if (mConnectedPeripherals.containsKey(address)) {
             mConnectedPeripherals.remove(address);
         }
-        onPeripheralChanged(ACTION_PERIPHERAL_CONNECTION_CHANGED, address);
+
+        sendLocalBroadcast(ACTION_PERIPHERAL_CONNECTION_CHANGED, EXTRA_PERIPHERAL_ADDRESS, address);
+        notifyPeripheralConnectionChanged(peripheral);
+    }
+
+    private void notifyPeripheralConnectionChanged(@NonNull final Peripheral peripheral) {
+        final Iterator<BleDeviceStateListener> itr = mPeripheralStateListeners.iterator();
+        while (itr.hasNext()) {
+            final BleDeviceStateListener listener = itr.next();
+            try {
+                if (peripheral.isConnected()) {
+                    listener.onDeviceConnected(peripheral);
+                } else {
+                    listener.onDeviceDisconnected(peripheral);
+                }
+            } catch (final Exception e) {
+                Log.e(TAG, "notifyPeripheralConnectionChanged -> The following error was produced when notifying the peripheral states: ", e);
+                itr.remove();
+            }
+        }
+    }
+
+    private void notifyDiscoveredPeripheralChanged(@NonNull final Peripheral peripheral) {
+        final Iterator<BleDeviceStateListener> itr = mPeripheralStateListeners.iterator();
+        while (itr.hasNext()) {
+            final BleDeviceStateListener listener = itr.next();
+            try {
+                listener.onDeviceDiscovered(peripheral);
+            } catch (final Exception e) {
+                Log.e(TAG, "notifyDiscoveredPeripheralChanged -> The following error was produced when notifying the peripheral states: ", e);
+                itr.remove();
+            }
+        }
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.i(TAG, "onCreate(): instantiating BluetoothManager and -Adapter");
+        Log.i(TAG, "onCreate() -> instantiating BluetoothManager and Adapter");
 
         /*
          * For API level 18 and above, get a reference to BluetoothAdapter
          * through BluetoothManager.
          */
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             if (bluetoothManager == null) {
                 Log.e(TAG, "onCreate() -> Unable to initialize BluetoothManager.");
                 stopSelf();
@@ -135,17 +162,17 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
 
         //After using a given device, you should make sure that BluetoothGatt.close()
         // is called such that resources are cleaned up properly.
-        for (final Peripheral p : mConnectedPeripherals.values()) {
-            p.close();
+        for (final Peripheral peripheral : mConnectedPeripherals.values()) {
+            peripheral.close();
         }
         mConnectedPeripherals.clear();
     }
 
     /**
-     * Requests scanning process for BLE devices in range. If the connection to the {@link BleManagerService}
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
-     * @return true if scan has been started. False otherwise.
+     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
      */
     public synchronized boolean startLeScan() {
         return startLeScan(null);
@@ -153,10 +180,10 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
 
     /**
      * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
-     * Requests scanning process for BLE devices in range. If the connection to the {@link BleManagerService}
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
-     * @param UUIDs List of UUID that the scan can use. NULL in case the user is able to use any device.
+     * @param UUIDs List of UUID that the scan can use. <code>null</code> in case the user is able to use any device.
      * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
      */
     public synchronized boolean startLeScan(final UUID[] UUIDs) {
@@ -193,17 +220,53 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
         mBluetoothSharingCrashResolver = new BluetoothCrashResolver(this);
         mBluetoothSharingCrashResolver.start();
 
-        mScanTimer = new Timer();
-        mScanTimer.schedule(new TimerTask() {
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                Log.i(TAG, "mScanTimer.TimerTask() -> stopLeScan()");
+                Log.i(TAG, "onStartLeScan -> handler.postDelayed() -> stopLeScan()");
                 stopLeScan();
+                handler.removeCallbacks(this);
             }
         }, DEFAULT_SCAN_DURATION_MS);
 
-        Intent intent = new Intent(ACTION_SCANNING_STARTED);
+        sendLocalBroadcast(ACTION_SCANNING_STARTED);
+        notifyScanStateChange(true);
+    }
+
+
+    private void sendLocalBroadcast(@NonNull final String action) {
+        sendLocalBroadcast(action, null);
+    }
+
+    private void sendLocalBroadcast(@NonNull final String action, @NonNull final String extraKey, @NonNull final String extraValue) {
+        final Pair<String, String> peripheralExtra = new Pair<>(extraKey, extraValue);
+        final List<Pair<String, String>> broadcastExtras = new LinkedList<>();
+        broadcastExtras.add(peripheralExtra);
+        sendLocalBroadcast(action, broadcastExtras);
+    }
+
+    private void sendLocalBroadcast(@NonNull final String action, @Nullable final List<Pair<String, String>> extras) {
+        final Intent intent = new Intent(action);
+        if (extras != null) {
+            for (final Pair<String, String> extra : extras) {
+                intent.putExtra(extra.first, extra.second);
+            }
+        }
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+    private void notifyScanStateChange(final boolean enabled) {
+        final Iterator<BleScanListener> itr = mPeripheralScanListeners.iterator();
+        while (itr.hasNext()) {
+            final BleScanListener listener = itr.next();
+            try {
+                listener.onScanStateChanged(enabled);
+            } catch (final Exception e) {
+                itr.remove();
+                Log.e(TAG, "notifyConnectionChange -> The following error was produced when notifying a peripheral connection change -> ", e);
+            }
+        }
     }
 
     /**
@@ -235,41 +298,26 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
     }
 
     private void onStopLeScan() {
-        Log.i(TAG, "onStopLeScan() -> cancelling the scan timer");
-
-        mScanTimer.cancel();
-        Log.d(TAG, "onStopLeScan() -> purging tasks: " + mScanTimer.purge());
-        mScanTimer = null;
-
+        Log.i(TAG, "onStopLeScan() -> Scan was stopped.");
         mBluetoothSharingCrashResolver.stop();
-        Intent intent = new Intent(ACTION_SCANNING_STOPPED);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+        notifyScanStateChange(false);
+        sendLocalBroadcast(ACTION_SCANNING_STOPPED);
     }
 
     /**
-     * Get all discovered {@link BleDevice}.
+     * Get all discovered {@link com.sensirion.libble.peripherals.BleDevice}.
      *
-     * @return Iterable of {@link BleDevice}
+     * @return Iterable of {@link com.sensirion.libble.peripherals.BleDevice}
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals() {
         return new HashSet<BleDevice>(mDiscoveredPeripherals.values());
     }
 
     /**
-     * Get all discovered {@link BleDevice} with only one name in particular.
-     *
-     * @param validDeviceName device name needed by the application.
-     * @return Iterable of {@link BleDevice}
-     */
-    public Iterable<? extends BleDevice> getDiscoveredPeripherals(final String validDeviceName) {
-        return getDiscoveredPeripherals(new LinkedList<>(Arrays.asList(validDeviceName)));
-    }
-
-    /**
      * Get all discovered {@link BleDevice} with valid names for the application.
      *
      * @param validDeviceNames List of devices names.
-     * @return Iterable of {@link BleDevice}
+     * @return Iterable of {@link com.sensirion.libble.peripherals.BleDevice}
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(@Nullable final List<String> validDeviceNames) {
         final Set<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
@@ -309,10 +357,9 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
      * Returns the {@link BleDevice} belonging to the given address
      *
      * @param address MAC-Address of the desired {@link BleDevice}
-     * @return Connected device as {@link BleDevice}
-     * or <code>null</code> if the device is not connected
+     * @return Connected device as {@link com.sensirion.libble.peripherals.BleDevice} - <code>null</code> if the device is not connected
      */
-    public BleDevice getConnectedDevice(final String address) {
+    public BleDevice getConnectedDevice(@NonNull final String address) {
         return mConnectedPeripherals.get(address);
     }
 
@@ -320,13 +367,12 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
      * Connects to the GATT server hosted on the Bluetooth LE device.
      *
      * @param address The device address of the destination device.
-     * @return Return true if the connection is initiated successfully. The
-     * connection result is reported asynchronously through the
-     * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
+     * @return <code>true</code> if the connection is initiated successfully. The connection result is reported asynchronously
+     * through the {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
      */
-    public synchronized boolean connect(final String address) {
+    public synchronized boolean connect(@NonNull final String address) {
         checkBluetooth();
-        if (address == null || address.trim().isEmpty()) {
+        if (address.trim().isEmpty()) {
             Log.e(TAG, "connect() -> unspecified address.");
             return false;
         }
@@ -347,17 +393,70 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
     }
 
     /**
+     * Adds a listener to the peripheral state change notifying list.
+     *
+     * @param listener that wants to be added - Cannot be <code>null</code>
+     */
+    public synchronized void registerPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
+        if (mPeripheralStateListeners.contains(listener)) {
+            Log.w(TAG, String.format("registerPeripheralStateListener -> Listener %s was already added to the listener list", listener));
+        } else {
+            mPeripheralStateListeners.add(listener);
+        }
+    }
+
+    /**
+     * Adds a listener to the peripheral scan state change notifying list.
+     *
+     * @param listener that wants to be added - Cannot be <code>null</code>
+     */
+    public synchronized void registerPeripheralScanListener(@NonNull final BleScanListener listener) {
+        if (mPeripheralScanListeners.contains(listener)) {
+            Log.w(TAG, String.format("registerPeripheralScanListener -> Listener %s was already added to the listener list", listener));
+        } else {
+            mPeripheralScanListeners.add(listener);
+        }
+    }
+
+    /**
+     * Removes a listener from the peripheral state change notifying list.
+     *
+     * @param listener that wants to be removed - Cannot be <code>null</code>
+     */
+    public synchronized void unregisterPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
+        if (mPeripheralStateListeners.contains(listener)) {
+            mPeripheralStateListeners.remove(listener);
+            Log.i(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was removed from the list.", listener));
+        } else {
+            Log.w(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was already removed from the list.", listener));
+        }
+    }
+
+    /**
+     * Removes a listener from the scan state change notifying list.
+     *
+     * @param listener that wants to be removed - Cannot be <code>null</code>
+     */
+    public synchronized void unregisterPeripheralScanListener(@NonNull final BleScanListener listener) {
+        if (mPeripheralScanListeners.contains(listener)) {
+            mPeripheralScanListeners.remove(listener);
+            Log.i(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was removed from the list.", listener));
+        } else {
+            Log.w(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was already removed from the list.", listener));
+        }
+    }
+
+    /**
      * Disconnects an existing connection or cancel a pending connection. The
      * disconnection result is reported asynchronously through the
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
      */
-    public synchronized void disconnect(final String address) {
+    public synchronized void disconnect(@NonNull final String address) {
         checkBluetooth();
-        if (address == null || address.trim().isEmpty()) {
+        if (address.trim().isEmpty()) {
             Log.w(TAG, "disconnect() -> unspecified address.");
             return;
         }
-
         if (mConnectedPeripherals.containsKey(address)) {
             mConnectedPeripherals.get(address).disconnect();
             mConnectedPeripherals.remove(address);
@@ -371,8 +470,8 @@ public class BleManagerService extends Service implements BluetoothAdapter.LeSca
     }
 
     public class LocalBinder extends Binder {
-        public BleManagerService getService() {
-            return BleManagerService.this;
+        public BlePeripheralService getService() {
+            return BlePeripheralService.this;
         }
     }
 }

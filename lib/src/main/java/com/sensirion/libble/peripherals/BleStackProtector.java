@@ -22,7 +22,7 @@ import java.util.Queue;
  * http://stackoverflow.com/questions/17870189/android-4-3-bluetooth-low-energy-unstable
  * http://code.google.com/p/android/issues/detail?id=58381
  */
-public class BleStackProtector extends BluetoothGattCallback {
+class BleStackProtector extends BluetoothGattCallback {
     private static final String TAG = BleStackProtector.class.getSimpleName();
     private final Queue<ServiceAction> mActionQueue = new LinkedList<ServiceAction>() {
         @Override

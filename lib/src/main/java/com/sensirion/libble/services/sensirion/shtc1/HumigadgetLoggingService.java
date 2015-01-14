@@ -653,11 +653,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      *
      * @param newListener listener that wants to listen for notifications.
      */
-    public void registerDownloadListener(final NotificationListener newListener) {
-        if (newListener == null) {
-            Log.w(TAG, String.format("registerDownloadListener -> Received a null listener in peripheral: %s", mPeripheral.getAddress()));
-            return;
-        }
+    public void registerDownloadListener(@NonNull final NotificationListener newListener) {
         if (newListener instanceof LogDownloadListener) {
             mListeners.add((LogDownloadListener) newListener);
             Log.i(TAG, String.format("registerDownloadListener -> Peripheral %s received a new download listener: %s ", mPeripheral.getAddress(), newListener));
@@ -672,11 +668,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @param listenerForRemove listener that doesn't need the listen for notifications anymore.
      */
     @SuppressWarnings("unused")
-    public void removeDownloadListener(final NotificationListener listenerForRemove) {
-        if (listenerForRemove == null) {
-            Log.w(TAG, "removeDownloadListener -> Received null listener.");
-            return;
-        }
+    public void removeDownloadListener(@NonNull final NotificationListener listenerForRemove) {
         if (listenerForRemove instanceof LogDownloadListener) {
             if (mListeners.contains(listenerForRemove)) {
                 mListeners.remove(listenerForRemove);

@@ -64,3 +64,6 @@ tmp/**/*
 # Gradle build
 build/
 .gradle/
+gradle/
+gradlew
+gradlew.bat

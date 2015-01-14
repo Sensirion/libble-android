@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -37,7 +38,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private final Queue<BluetoothGattCharacteristic> mLastCharacteristicsUsedQueue = new LinkedBlockingQueue<>();
 
     //Peripheral attributes
-    private final BlePeripheralConnectionListener mParent;
+    private final BlePeripheralService mParent;
     private final BluetoothDevice mBluetoothDevice;
     private final String mAdvertisedName;
     private final String mAddress;
@@ -49,9 +50,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private int mReceivedSignalStrengthIndication;
     private boolean mIsConnected = false;
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
-
         @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+        public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
             super.onConnectionStateChange(gatt, status, newState);
             final String address = gatt.getDevice().getAddress();
 
@@ -80,9 +80,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         }
 
         @Override
-        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+        public void onServicesDiscovered(@NonNull final BluetoothGatt gatt, final int status) {
             super.onServicesDiscovered(gatt, status);
-
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 for (BluetoothGattService service : gatt.getServices()) {
                     mServices.add(PeripheralServiceFactory.getInstance().createServiceFor(Peripheral.this, service));
@@ -93,7 +92,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         }
 
         @Override
-        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+        public void onCharacteristicRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 for (PeripheralService service : mServices) {
@@ -128,7 +127,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         }
     };
 
-    public Peripheral(BlePeripheralConnectionListener parent, BluetoothDevice bluetoothDevice, int rssi) {
+    public Peripheral(@NonNull final BlePeripheralService parent, @NonNull final BluetoothDevice bluetoothDevice, final int rssi) {
         mParent = parent;
         mBluetoothDevice = bluetoothDevice;
         mBluetoothGatt = null;
@@ -176,6 +175,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         return mIsConnected;
     }
 
+    @SuppressWarnings("unused")
     public <T extends PeripheralService> T getPeripheralService(final Class<T> type) {
         for (PeripheralService service : mServices) {
             if (service.getClass().equals(type)) {
@@ -205,19 +205,18 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *
      * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
      */
+    @SuppressWarnings("unused")
     public Iterable<String> getDiscoveredPeripheralServices() {
         final Set<String> discoveredServices = new HashSet<>();
-
         for (PeripheralService service : mServices) {
             discoveredServices.add(String.format("%s %s", service.getClass().getSimpleName(), service.getUUIDString()));
         }
-
         return discoveredServices;
     }
 
-    public void connect(Context context) {
+    public void connect(@NonNull final Context ctx) {
         // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
-        mBluetoothDevice.connectGatt(context, false, mBleStackProtector);
+        mBluetoothDevice.connectGatt(ctx, false, mBleStackProtector);
     }
 
     public boolean reconnect() {
@@ -264,6 +263,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param maxWaitingTime acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public boolean readCharacteristicWithConfirmation(final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
         return forceReadCharacteristic(characteristic, maxWaitingTime, 1);
     }
@@ -289,6 +289,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param maxWaitingTime acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public boolean writeCharacteristicWithConfirmation(final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
         return forceWriteCharacteristic(characteristic, maxWaitingTime, 1);
     }
@@ -498,7 +499,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     @Override
     @SuppressWarnings("SimplifiableIfStatement")
-
     public boolean equals(final Object otherPeripheral) {
         if (otherPeripheral instanceof Peripheral) {
             return mAddress.equals(((Peripheral) otherPeripheral).getAddress());
@@ -507,13 +507,18 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Compares two peripherals with the RSSI. Used for sorting.
+     * Compares two discovered peripherals with the RSSI. Used for sorting.
+     * In case the peripherals are connected it respects the order of insertion. (Return 0)
+     * In case the peripherals are disconnected it worrks using the order of insertion.
      *
      * @param anotherPeripheral peripheral that has to be sorted.
-     * @return positive number if this peripheral has bigger RSSI, negative otherwise.
+     * @return positive number if this peripheral has bigger RSSI, negative otherwise. returns <code>0</code> if the device is connected.
      */
     @Override
     public int compareTo(@Nullable final Peripheral anotherPeripheral) {
+        if (isConnected()) {
+            return 0;
+        }
         if (anotherPeripheral == null) {
             Log.e(TAG, "compareTo -> Received a null peripheral.");
             return 0; //A peripheral cannot be compared to a null peripheral.

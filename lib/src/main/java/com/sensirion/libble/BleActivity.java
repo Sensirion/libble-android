@@ -3,9 +3,12 @@ package com.sensirion.libble;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.sensirion.libble.peripherals.BleDevice;
+import com.sensirion.libble.peripherals.BleDeviceStateListener;
+import com.sensirion.libble.peripherals.BleScanListener;
 import com.sensirion.libble.peripherals.Peripheral;
 import com.sensirion.libble.services.NotificationListener;
 import com.sensirion.libble.services.PeripheralService;
@@ -70,6 +73,7 @@ public abstract class BleActivity extends Activity {
      *
      * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public boolean startScanning() {
         return mBleManager.startScanning();
     }
@@ -89,6 +93,7 @@ public abstract class BleActivity extends Activity {
     /**
      * Stops the scan of new devices.
      */
+    @SuppressWarnings("unused")
     public void stopScanning() {
         mBleManager.stopScanning();
     }
@@ -98,6 +103,7 @@ public abstract class BleActivity extends Activity {
      *
      * @return Iterable
      */
+    @SuppressWarnings("unused")
     public Iterable<? extends BleDevice> getDiscoveredBleDevices() {
         return mBleManager.getDiscoveredBleDevices();
     }
@@ -118,6 +124,7 @@ public abstract class BleActivity extends Activity {
      *
      * @return Iterable
      */
+    @SuppressWarnings("unused")
     public Iterable<? extends BleDevice> getConnectedBleDevices() {
         return mBleManager.getConnectedBleDevices();
     }
@@ -129,6 +136,7 @@ public abstract class BleActivity extends Activity {
      * @return Connected device as {@link com.sensirion.libble.peripherals.BleDevice}
      * or NULL if the device is not connected
      */
+    @SuppressWarnings("unused")
     public BleDevice getConnectedDevice(final String address) {
         return mBleManager.getConnectedDevice(address);
     }
@@ -302,7 +310,50 @@ public abstract class BleActivity extends Activity {
         return mBleManager.getCharacteristicValue(deviceAddress, characteristicName);
     }
 
+
+    /**
+     * Adds a listener to the peripheral state change notifying list.
+     *
+     * @param listener that wants to be added - Cannot be <code>null</code>
+     */
+    @SuppressWarnings("unused")
+    public synchronized void registerPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
+        mBleManager.registerPeripheralStateListener(listener);
+    }
+
+    /**
+     * Adds a listener to the peripheral scan state change notifying list.
+     *
+     * @param listener that wants to be added - Cannot be <code>null</code>
+     */
+    @SuppressWarnings("unused")
+    public synchronized void registerPeripheralScanListener(@NonNull final BleScanListener listener) {
+        mBleManager.registerPeripheralScanListener(listener);
+    }
+
+    /**
+     * Removes a listener from the peripheral state change notifying list.
+     *
+     * @param listener that wants to be removed - Cannot be <code>null</code>
+     */
+    @SuppressWarnings("unused")
+    public synchronized void unregisterPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
+        mBleManager.unregisterPeripheralStateListener(listener);
+    }
+
+    /**
+     * Removes a listener from the scan state change notifying list.
+     *
+     * @param listener that wants to be removed - Cannot be <code>null</code>
+     */
+    @SuppressWarnings("unused")
+    public synchronized void unregisterPeripheralScanListener(@NonNull final BleScanListener listener) {
+        mBleManager.unregisterPeripheralScanListener(listener);
+    }
+
+    @SuppressWarnings("unused")
     abstract public void onConnectedPeripheralSelected(String address);
 
+    @SuppressWarnings("unused")
     abstract public void onDiscoveredPeripheralSelected(String address);
 }
