@@ -5,11 +5,11 @@ package com.sensirion.libble.peripherals;
  */
 public interface BleDeviceStateListener {
     /**
+     * NOTE: The services and characteristics of this device are not connected yet.
+     * NOTE: The connected device is removed from the library internal discovered list.
      * This method is called when a device is connected.
      *
      * @param device that was connected.
-     * NOTE: The services and characteristics of this device are not connected yet.
-     * NOTE: The connected device is removed from the library internal discovered list.
      */
     void onDeviceConnected(BleDevice device);
 

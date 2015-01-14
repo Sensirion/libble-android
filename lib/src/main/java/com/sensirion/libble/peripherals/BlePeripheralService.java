@@ -32,20 +32,30 @@ import java.util.UUID;
  */
 public class BlePeripheralService extends Service implements BluetoothAdapter.LeScanCallback {
 
+    //Class tags.
     private static final String TAG = BlePeripheralService.class.getSimpleName();
-    private static final long DEFAULT_SCAN_DURATION_MS = 10 * 1000;
     private static final String PREFIX = BlePeripheralService.class.getName();
+    //Broadcast actions
     public static final String ACTION_PERIPHERAL_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_DISCOVERY";
     public static final String ACTION_PERIPHERAL_CONNECTION_CHANGED = PREFIX + "/ACTION_PERIPHERAL_CONNECTION_CHANGED";
     public static final String ACTION_SCANNING_STARTED = PREFIX + "/ACTION_SCANNING_STARTED";
     public static final String ACTION_SCANNING_STOPPED = PREFIX + "/ACTION_SCANNING_STOPPED";
     public static final String EXTRA_PERIPHERAL_ADDRESS = PREFIX + ".EXTRA_PERIPHERAL_ADDRESS";
+    //Default Scan attributes
+    private static final int ONE_SECOND_MS = 1000;
+    private static final long DEFAULT_SCAN_DURATION_MS = 10 * ONE_SECOND_MS; //10 seconds
+    //Binder
     private final IBinder mBinder = new LocalBinder();
+    //List of peripherals
     private final Map<String, Peripheral> mDiscoveredPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
     private final Map<String, Peripheral> mConnectedPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
+    //Listeners list.
     private final List<BleDeviceStateListener> mPeripheralStateListeners = Collections.synchronizedList(new LinkedList<BleDeviceStateListener>());
     private final List<BleScanListener> mPeripheralScanListeners = Collections.synchronizedList(new LinkedList<BleScanListener>());
-    private boolean mIsScanning;
+    //Scan attributes.
+    private long mScanDurationMs;
+    private boolean mIsScanning = false;
+    //Android connectors
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothCrashResolver mBluetoothSharingCrashResolver;
 
@@ -122,10 +132,6 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         super.onCreate();
         Log.i(TAG, "onCreate() -> instantiating BluetoothManager and Adapter");
 
-        /*
-         * For API level 18 and above, get a reference to BluetoothAdapter
-         * through BluetoothManager.
-         */
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
             final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
             if (bluetoothManager == null) {
@@ -147,8 +153,6 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     @Override
     public boolean onUnbind(final Intent intent) {
-        // Called when all clients have disconnected from a particular interface
-        // published by the service.
         closeAll();
         return super.onUnbind(intent);
     }
@@ -160,8 +164,6 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     private void closeAll() {
         Log.i(TAG, "closeAll() -> closing all connections.");
 
-        //After using a given device, you should make sure that BluetoothGatt.close()
-        // is called such that resources are cleaned up properly.
         for (final Peripheral peripheral : mConnectedPeripherals.values()) {
             peripheral.close();
         }
@@ -174,8 +176,21 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public synchronized boolean startLeScan() {
-        return startLeScan(null);
+        return startLeScan(null, DEFAULT_SCAN_DURATION_MS);
+    }
+
+    /**
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
+     * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
+     *
+     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
+     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public synchronized boolean startLeScan(final long scanDurationMs) {
+        return startLeScan(null, scanDurationMs);
     }
 
     /**
@@ -186,7 +201,26 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @param UUIDs List of UUID that the scan can use. <code>null</code> in case the user is able to use any device.
      * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
      */
-    public synchronized boolean startLeScan(final UUID[] UUIDs) {
+    public synchronized boolean startLeScan(@Nullable final UUID[] UUIDs) {
+        return startLeScan(UUIDs, DEFAULT_SCAN_DURATION_MS);
+    }
+
+    /**
+     * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
+     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
+     * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
+     *
+     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
+     * @param UUIDs          List of UUID that the scan can use. <code>null</code> in case the user is able to use any device.
+     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     */
+    public synchronized boolean startLeScan(@Nullable final UUID[] UUIDs, final long scanDurationMs) {
+        if (scanDurationMs <= 0) {
+            throw new IllegalArgumentException(String.format("%s: startLeScan -> Scan duration needs to be a positive number.", TAG));
+        }
+
+        mScanDurationMs = scanDurationMs;
+
         if (mIsScanning) {
             Log.w(TAG, "startLeScan() -> scan already in progress");
             return mIsScanning;
@@ -228,12 +262,11 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
                 stopLeScan();
                 handler.removeCallbacks(this);
             }
-        }, DEFAULT_SCAN_DURATION_MS);
+        }, mScanDurationMs);
 
         sendLocalBroadcast(ACTION_SCANNING_STARTED);
         notifyScanStateChange(true);
     }
-
 
     private void sendLocalBroadcast(@NonNull final String action) {
         sendLocalBroadcast(action, null);

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.peripherals.BleDevice;
@@ -57,7 +58,6 @@ public abstract class BleActivity extends Activity {
         super.onStop();
     }
 
-
     /**
      * Ask if the peripheral service is scanning.
      *
@@ -75,19 +75,43 @@ public abstract class BleActivity extends Activity {
      */
     @SuppressWarnings("unused")
     public boolean startScanning() {
-        return mBleManager.startScanning();
+        return startScanning(null, null);
     }
 
     /**
-     * Start scanning devices in range using provided UUIDs.
+     * Starts to scan for all bluetooth devices in range.
+     *
+     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
+     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public synchronized boolean startScanning(final long scanDurationMs) {
+        return startScanning(null, scanDurationMs);
+    }
+
+    /**
+     * Start scanning devices in range for provided UUIDs.
      *
      * @param deviceUUIDs deviceUUIDs that we want want to use,
      *                    <code>null</code> if all devices have to be retrieved.
      * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    public boolean startScanning(final UUID[] deviceUUIDs) {
-        return mBleManager.startScanning(deviceUUIDs);
+    public boolean startScanning(@Nullable final UUID[] deviceUUIDs) {
+        return startScanning(deviceUUIDs, null);
+    }
+
+    /**
+     * Start scanning devices in range for provided UUIDs.
+     *
+     * @param deviceUUIDs    deviceUUIDs that we want want to use,
+     *                       <code>null</code> if all devices have to be retrieved.
+     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
+     *                       <code>null</code> if the default scan duration will be used.
+     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     */
+    public boolean startScanning(@Nullable final UUID[] deviceUUIDs, @Nullable final Long scanDurationMs) {
+        return mBleManager.startScanning(deviceUUIDs, scanDurationMs);
     }
 
     /**

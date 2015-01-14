@@ -39,14 +39,10 @@ import java.util.Set;
  * Bluetooth LE devices in the background (e.g. iBeacon-enabled apps), especially when these users
  * are around Bluetooth LE devices that randomize their mac address like Gimbal beacons.
  * This class can both recover from crashes and prevent crashes from happening in the first place
- *
  * More details on the bug can be found at the following URLs:
- *
  * https://code.google.com/p/android/issues/detail?id=67272
  * https://github.com/RadiusNetworks/android-ibeacon-service/issues/16
- *
  * Version 1.0
- *
  * Created by dyoung on 3/24/14.
  */
 

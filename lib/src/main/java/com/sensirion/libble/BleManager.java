@@ -100,17 +100,41 @@ public class BleManager {
      * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
     public boolean startScanning() {
-        return startScanning(null);
+        return startScanning(null, null);
+    }
+
+
+    /**
+     * Starts to scan for all bluetooth devices in range.
+     *
+     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
+     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     */
+    public synchronized boolean startScanning(final long scanDurationMs) {
+        return startScanning(null, scanDurationMs);
     }
 
     /**
-     * Start scanning devices in range using provided UUIDs.
+     * Start scanning devices in range for provided UUIDs.
      *
      * @param deviceUUIDs deviceUUIDs that we want want to use,
      *                    <code>null</code> if all devices have to be retrieved.
      * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
      */
     public boolean startScanning(@Nullable final UUID[] deviceUUIDs) {
+        return startScanning(deviceUUIDs, null);
+    }
+
+    /**
+     * Start scanning devices in range for provided UUIDs.
+     *
+     * @param deviceUUIDs    deviceUUIDs that we want want to use,
+     *                       <code>null</code> if all devices have to be retrieved.
+     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
+     *                       <code>null</code> if the default scan duration will be used.
+     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     */
+    public boolean startScanning(@Nullable final UUID[] deviceUUIDs, @Nullable final Long scanDurationMs) {
         if (mBlePeripheralService == null) {
             Log.w(TAG, "startScanning() -> not yet connected to BlePeripheralService; try to re-trigger scanning when connected.");
             mShouldStartScanning = true;
@@ -120,12 +144,13 @@ public class BleManager {
             Log.w(TAG, "startScanning() -> already scanning; ignoring this request.");
             return true;
         }
-        if (deviceUUIDs == null) {
-            Log.d(TAG, "startScanning() -> mBlePeripheralService.startLeScan()");
-            return mBlePeripheralService.startLeScan();
+
+        Log.d(TAG, "startScanning() -> mBlePeripheralService.startLeScan()");
+
+        if (scanDurationMs == null) {
+            return mBlePeripheralService.startLeScan(deviceUUIDs);
         }
-        Log.d(TAG, "startScanning() -> mBlePeripheralService.startLeScan(UUIDs)");
-        return mBlePeripheralService.startLeScan(deviceUUIDs);
+        return mBlePeripheralService.startLeScan(deviceUUIDs, scanDurationMs);
     }
 
     /**
