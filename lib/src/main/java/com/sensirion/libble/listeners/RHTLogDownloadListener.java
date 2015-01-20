@@ -1,9 +1,10 @@
-package com.sensirion.libble.services.sensirion.common;
+package com.sensirion.libble.listeners;
 
 import com.sensirion.libble.peripherals.BleDevice;
 import com.sensirion.libble.services.NotificationListener;
+import com.sensirion.libble.utils.RHTDataPoint;
 
-public interface LogDownloadListener extends NotificationListener {
+public interface RHTLogDownloadListener extends NotificationListener {
     /**
      * Sets the actual number of downloaded elements.
      *

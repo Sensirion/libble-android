@@ -44,11 +44,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private final String mAddress;
 
     //Listener list
+    private final Set<NotificationListener> mNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
     private final Set<PeripheralService> mServices = Collections.synchronizedSet(new HashSet<PeripheralService>());
     private volatile boolean mConfirmationOperationRunning = false;
     private BluetoothGatt mBluetoothGatt;
     private int mReceivedSignalStrengthIndication;
     private boolean mIsConnected = false;
+
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
         @Override
         public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
@@ -83,11 +85,14 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         public void onServicesDiscovered(@NonNull final BluetoothGatt gatt, final int status) {
             super.onServicesDiscovered(gatt, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                for (BluetoothGattService service : gatt.getServices()) {
+                for (final BluetoothGattService service : gatt.getServices()) {
                     mServices.add(PeripheralServiceFactory.getInstance().createServiceFor(Peripheral.this, service));
                 }
+                for (final NotificationListener listener : mNotificationListeners) {
+                    registerPeripheralListener(listener);
+                }
             } else {
-                Log.w(TAG, "onServicesDiscovered failed with status: " + status);
+                Log.w(TAG, String.format("onServicesDiscovered -> Failed with status: " + status));
             }
         }
 
@@ -102,14 +107,14 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                     mLastCharacteristicsUsedQueue.add(characteristic);
                 }
             } else {
-                Log.w(TAG, "onCharacteristicRead of " + characteristic.getUuid() + " failed with a status of: " + status);
+                Log.w(TAG, String.format("onCharacteristicRead -> Characteristic %s failed with the following status: %d", characteristic.getUuid(), status));
             }
         }
 
         @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        public void onCharacteristicChanged(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            for (PeripheralService service : mServices) {
+            for (final PeripheralService service : mServices) {
                 if (service instanceof NotificationService) {
                     ((NotificationService) service).onChangeNotification(characteristic);
                 }
@@ -118,7 +123,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         }
 
         @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+        public void onCharacteristicWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
             super.onCharacteristicChanged(gatt, characteristic);
             Log.d(TAG, String.format("On characteristic write %s with value %d with status %d", characteristic.getUuid(), characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0), status));
             if (mConfirmationOperationRunning) {
@@ -252,7 +257,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     public void readCharacteristic(final BluetoothGattCharacteristic characteristic) {
         mBleStackProtector.addReadCharacteristic(characteristic);
-
         mBleStackProtector.execute(mBluetoothGatt);
     }
 
@@ -358,7 +362,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * <code>null</code> if no service was able to parse it.
      */
     public Object getCharacteristicValue(final String characteristicName) {
-        for (PeripheralService<?> service : mServices) {
+        for (final PeripheralService<?> service : mServices) {
             final Object value = service.getCharacteristicValue(characteristicName);
             if (value == null) {
                 continue;
@@ -407,7 +411,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param enabled <code>true</code> if notifications wants to be enabled - <code>false</code> otherwise.
      */
     public void setAllNotificationsEnabled(final boolean enabled) {
-        for (PeripheralService service : mServices) {
+        for (final PeripheralService service : mServices) {
             if (service instanceof NotificationService) {
                 ((NotificationService) service).setNotificationsEnabled(enabled);
             }
@@ -437,8 +441,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return <code>true</code> if a valid service was found, <code>false</code> otherwise.
      */
     public boolean registerPeripheralListener(final NotificationListener listener, final String serviceName) {
+        mNotificationListeners.add(listener);
         boolean validServiceFound = false;
-        for (PeripheralService service : mServices) {
+        for (final PeripheralService service : mServices) {
             if (service instanceof NotificationService) {
                 if (serviceName == null) {
                     ((NotificationService) service).registerNotificationListener(listener);
@@ -461,11 +466,12 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *                 want to listen for notifications anymore.
      */
     public void unregisterPeripheralListener(final NotificationListener listener) {
-        for (PeripheralService service : mServices) {
+        for (final PeripheralService service : mServices) {
             if (service instanceof NotificationService) {
                 ((NotificationService) service).unregisterNotificationListener(listener);
             }
         }
+        mNotificationListeners.remove(listener);
     }
 
     /**
@@ -484,7 +490,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     public List<String> getDiscoveredServicesNames() {
         final List<String> serviceNames = new LinkedList<>();
-        for (PeripheralService service : mServices) {
+        for (final PeripheralService service : mServices) {
             serviceNames.add(service.getClass().getSimpleName());
         }
         return serviceNames;

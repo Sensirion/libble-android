@@ -51,7 +51,7 @@ public class PeripheralService<CharacteristicValueType> {
      * characteristic, but it's not compulsory to do that.
      *
      * @param characteristicName of the characteristic wanted.
-     * @return 'Object' with the given characteristic
+     * @return {@link java.lang.Object} with the given characteristic
      */
     public CharacteristicValueType getCharacteristicValue(final String characteristicName) {
         return null;

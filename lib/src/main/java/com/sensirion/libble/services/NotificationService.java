@@ -15,11 +15,9 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
     private static final String TAG = NotificationService.class.getSimpleName();
 
     protected final List<ListenerType> mListeners = Collections.synchronizedList(new LinkedList<ListenerType>());
-
+    protected boolean mNotificationsAreEnabled = false;
+    protected boolean mIsRequestingNotifications = false;
     private BluetoothGattCharacteristic mNotifyCharacteristic;
-
-    private boolean mNotificationsAreEnabled = false;
-    private boolean mIsRequestingNotifications = false;
 
     protected NotificationService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
@@ -113,7 +111,6 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
             setNotificationsEnabled(false);
         }
     }
-
 
     /**
      * This method will normally only be called from {@link com.sensirion.libble.services.NotificationService}

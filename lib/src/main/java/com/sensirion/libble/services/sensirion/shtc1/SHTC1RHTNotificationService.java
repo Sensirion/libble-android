@@ -5,36 +5,33 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 
+import com.sensirion.libble.listeners.RHTListener;
 import com.sensirion.libble.peripherals.Peripheral;
 import com.sensirion.libble.services.NotificationService;
-import com.sensirion.libble.services.sensirion.common.RHTDataPoint;
-import com.sensirion.libble.services.sensirion.common.RHTListener;
+import com.sensirion.libble.utils.RHTDataPoint;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
 import java.util.UUID;
 
-public class HumigadgetRHTNotificationService extends NotificationService<RHTDataPoint, RHTListener> {
+public class SHTC1RHTNotificationService extends NotificationService<RHTDataPoint, RHTListener> {
 
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
-
     public static final String RHT_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
-
-    public static final String PREFIX = HumigadgetRHTNotificationService.class.getName();
-    public static final String RHT_CHARACTERISTIC_READ_NAME = PREFIX + ".getRHTData";
+    private static final String TAG = SHTC1RHTNotificationService.class.getSimpleName();
+    private static final String SENSOR_NAME = "SHTC1";
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";
 
-    private static final String TAG = HumigadgetRHTNotificationService.class.getSimpleName();
-
     private static final short TIMEOUT_MS = 1100;
+
     private static final byte MAX_NUMBER_REQUESTS = 4;
 
     private final BluetoothGattCharacteristic mHumidityTemperatureCharacteristic;
 
     private RHTDataPoint mLastDatapoint;
 
-    public HumigadgetRHTNotificationService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
+    public SHTC1RHTNotificationService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
         mHumidityTemperatureCharacteristic = getCharacteristicFor(RHT_CHARACTERISTIC_UUID);
         peripheral.readCharacteristic(mHumidityTemperatureCharacteristic);
@@ -76,7 +73,7 @@ public class HumigadgetRHTNotificationService extends NotificationService<RHTDat
         final Iterator<RHTListener> iterator = super.mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().onNewRHTValues(mPeripheral, mLastDatapoint);
+                iterator.next().onNewRHTValues(mPeripheral, mLastDatapoint, SENSOR_NAME);
             } catch (final Exception e) {
                 Log.e(TAG, "notifyListeners -> The following exception was produced: ", e);
                 iterator.remove();
@@ -114,11 +111,11 @@ public class HumigadgetRHTNotificationService extends NotificationService<RHTDat
      * Return the last HUMIGADGET_RHT_NOTIFICATION_SERVICE data in case it's known.
      *
      * @param characteristicName name of the characteristic.
-     * @return an {@link com.sensirion.libble.services.sensirion.common.RHTDataPoint} with the latest received characteristic - <code>null</code> otherwise.
+     * @return an {@link com.sensirion.libble.utils.RHTDataPoint} with the latest received characteristic - <code>null</code> otherwise.
      */
     @Override
     public RHTDataPoint getCharacteristicValue(final String characteristicName) {
-        if (characteristicName.equals(RHT_CHARACTERISTIC_READ_NAME)) {
+        if (characteristicName.equals(RHTListener.READ_LATEST_RHT_DATA_POINT)) {
             if (mLastDatapoint == null) {
                 mPeripheral.forceReadCharacteristic(mHumidityTemperatureCharacteristic, TIMEOUT_MS, MAX_NUMBER_REQUESTS);
                 if (mLastDatapoint == null) {

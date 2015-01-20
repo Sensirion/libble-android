@@ -6,9 +6,9 @@ import android.util.Log;
 
 import com.sensirion.libble.peripherals.Peripheral;
 import com.sensirion.libble.services.generic.BatteryPeripheralService;
-import com.sensirion.libble.services.sensirion.shtc1.HumigadgetConnectionSpeedService;
-import com.sensirion.libble.services.sensirion.shtc1.HumigadgetLoggingService;
-import com.sensirion.libble.services.sensirion.shtc1.HumigadgetRHTNotificationService;
+import com.sensirion.libble.services.sensirion.shtc1.SHTC1ConnectionSpeedService;
+import com.sensirion.libble.services.sensirion.shtc1.SHTC1LoggingService;
+import com.sensirion.libble.services.sensirion.shtc1.SHTC1RHTNotificationService;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -26,9 +26,9 @@ public class PeripheralServiceFactory {
 
     private PeripheralServiceFactory() {
         registerServiceImplementation(BatteryPeripheralService.SERVICE_UUID, BatteryPeripheralService.class);
-        registerServiceImplementation(HumigadgetRHTNotificationService.SERVICE_UUID, HumigadgetRHTNotificationService.class);
-        registerServiceImplementation(HumigadgetLoggingService.SERVICE_UUID, HumigadgetLoggingService.class);
-        registerServiceImplementation(HumigadgetConnectionSpeedService.SERVICE_UUID, HumigadgetConnectionSpeedService.class);
+        registerServiceImplementation(SHTC1RHTNotificationService.SERVICE_UUID, SHTC1RHTNotificationService.class);
+        registerServiceImplementation(SHTC1LoggingService.SERVICE_UUID, SHTC1LoggingService.class);
+        registerServiceImplementation(SHTC1ConnectionSpeedService.SERVICE_UUID, SHTC1ConnectionSpeedService.class);
     }
 
     public static PeripheralServiceFactory getInstance() {
@@ -65,7 +65,8 @@ public class PeripheralServiceFactory {
      * Let's you add your own specific service implementations that are created on app-level.
      * Make sure that these classes extend {@link com.sensirion.libble.services.PeripheralService}.
      *
-     * @param newService for being checked.
+     * @param uuid of the service.
+     * @param newService class that is going to be instanciate.
      */
     public void registerServiceImplementation(@NonNull final String uuid, @NonNull final Class<? extends PeripheralService> newService) {
         if (mServiceLookUp.containsKey(uuid)) {

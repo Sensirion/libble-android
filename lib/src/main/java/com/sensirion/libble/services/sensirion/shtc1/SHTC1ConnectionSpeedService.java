@@ -10,14 +10,14 @@ import com.sensirion.libble.services.PeripheralService;
 import java.util.Arrays;
 import java.util.List;
 
-public class HumigadgetConnectionSpeedService extends PeripheralService<Boolean> {
+public class SHTC1ConnectionSpeedService extends PeripheralService<Boolean> {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000fa10-0000-1000-8000-00805f9b34fb";
 
     //CLASS TAGS
-    private static final String TAG = HumigadgetConnectionSpeedService.class.getSimpleName();
-    private static final String PREFIX = HumigadgetConnectionSpeedService.class.getName();
+    private static final String TAG = SHTC1ConnectionSpeedService.class.getSimpleName();
+    private static final String PREFIX = SHTC1ConnectionSpeedService.class.getName();
 
     //CHARACTERISTICS value NAMES
     public static final String READ_NOTIFICATION_SPEED_NAME = PREFIX + ".getNotificationSpeed";
@@ -44,7 +44,7 @@ public class HumigadgetConnectionSpeedService extends PeripheralService<Boolean>
     //NOTIFICATION SPEED LEVEL
     private Byte mNotificationSpeedLevel = null;
 
-    public HumigadgetConnectionSpeedService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
+    public SHTC1ConnectionSpeedService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
         mNotificationSpeedCharacteristic = getCharacteristicFor(NOTIFICATION_CHARACTERISTIC_UUID);
     }
@@ -92,7 +92,7 @@ public class HumigadgetConnectionSpeedService extends PeripheralService<Boolean>
     }
 
     /**
-     * Sets the notification speed using {@link HumigadgetConnectionSpeedService.CONNECTION_SPEED}.
+     * Sets the notification speed using {@link SHTC1ConnectionSpeedService.CONNECTION_SPEED}.
      *
      * @param connectionSpeed that wants to be set in the device.
      * @return <code>true</code> if the connection speed was set in the device - <code>false</code> otherwise.

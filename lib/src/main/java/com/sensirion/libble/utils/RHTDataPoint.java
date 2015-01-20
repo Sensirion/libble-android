@@ -1,4 +1,4 @@
-package com.sensirion.libble.services.sensirion.common;
+package com.sensirion.libble.utils;
 
 /**
  * Convenience class for storing the obtained humidity and temperature.
