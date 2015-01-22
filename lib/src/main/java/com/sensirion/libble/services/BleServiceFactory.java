@@ -4,11 +4,11 @@ import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.Peripheral;
-import com.sensirion.libble.services.generic.BatteryPeripheralService;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.services.generic.BatteryService;
 import com.sensirion.libble.services.sensirion.shtc1.SHTC1ConnectionSpeedService;
 import com.sensirion.libble.services.sensirion.shtc1.SHTC1LoggingService;
-import com.sensirion.libble.services.sensirion.shtc1.SHTC1RHTNotificationService;
+import com.sensirion.libble.services.sensirion.shtc1.SHTC1RHTService;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -16,44 +16,44 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PeripheralServiceFactory {
+public class BleServiceFactory {
 
-    private static final String TAG = PeripheralServiceFactory.class.getSimpleName();
+    private static final String TAG = BleServiceFactory.class.getSimpleName();
 
-    private static PeripheralServiceFactory mInstance = new PeripheralServiceFactory();
+    private static BleServiceFactory mInstance = new BleServiceFactory();
 
-    private final Map<String, Class<? extends PeripheralService>> mServiceLookUp = Collections.synchronizedMap(new HashMap<String, Class<? extends PeripheralService>>());
+    private final Map<String, Class<? extends BleService>> mServiceLookUp = Collections.synchronizedMap(new HashMap<String, Class<? extends BleService>>());
 
-    private PeripheralServiceFactory() {
-        registerServiceImplementation(BatteryPeripheralService.SERVICE_UUID, BatteryPeripheralService.class);
-        registerServiceImplementation(SHTC1RHTNotificationService.SERVICE_UUID, SHTC1RHTNotificationService.class);
+    private BleServiceFactory() {
+        registerServiceImplementation(BatteryService.SERVICE_UUID, BatteryService.class);
+        registerServiceImplementation(SHTC1RHTService.SERVICE_UUID, SHTC1RHTService.class);
         registerServiceImplementation(SHTC1LoggingService.SERVICE_UUID, SHTC1LoggingService.class);
         registerServiceImplementation(SHTC1ConnectionSpeedService.SERVICE_UUID, SHTC1ConnectionSpeedService.class);
     }
 
-    public static PeripheralServiceFactory getInstance() {
+    public static BleServiceFactory getInstance() {
         return mInstance;
     }
 
     /**
-     * Wraps a given {@link android.bluetooth.BluetoothGattService} to a {@link PeripheralService}
+     * Wraps a given {@link android.bluetooth.BluetoothGattService} to a {@link BleService}
      *
-     * @param parent  {@link com.sensirion.libble.peripherals.Peripheral} that discovered the service.
+     * @param parent  {@link com.sensirion.libble.devices.Peripheral} that discovered the service.
      * @param service {@link android.bluetooth.BluetoothGattService} that should be wrapped.
-     * @return {@link PeripheralService} with the service class with the same lookup UUID as the BluetoothGattService.
+     * @return {@link BleService} with the service class with the same lookup UUID as the BluetoothGattService.
      */
-    public PeripheralService createServiceFor(@NonNull final Peripheral parent, @NonNull final BluetoothGattService service) {
+    public BleService createServiceFor(@NonNull final Peripheral parent, @NonNull final BluetoothGattService service) {
         final String uuid = service.getUuid().toString();
-        final Class c = mServiceLookUp.get(uuid);
+        final Class serviceClass = mServiceLookUp.get(uuid);
 
-        if (c == null) {
+        if (serviceClass == null) {
             Log.w(TAG, String.format("createServiceFor() -> Create generic service with uuid: %s", uuid));
-            return new PeripheralService(parent, service);
+            return new BleService(parent, service);
         }
 
-        Log.i(TAG, String.format("createServiceFor -> Create known service with uuid %s from class %s", uuid, c.getSimpleName()));
+        Log.i(TAG, String.format("createServiceFor -> Create known service with uuid %s from class %s", uuid, serviceClass.getSimpleName()));
         try {
-            Constructor<? extends PeripheralService> constructor = c.getDeclaredConstructor(Peripheral.class, BluetoothGattService.class);
+            final Constructor<? extends BleService> constructor = serviceClass.getDeclaredConstructor(Peripheral.class, BluetoothGattService.class);
             return constructor.newInstance(parent, service);
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             Log.e(TAG, "createServiceFor -> During the creation of a service the following exception was thrown -> ", e);
@@ -63,12 +63,12 @@ public class PeripheralServiceFactory {
 
     /**
      * Let's you add your own specific service implementations that are created on app-level.
-     * Make sure that these classes extend {@link com.sensirion.libble.services.PeripheralService}.
+     * Make sure that these classes extend {@link BleService}.
      *
-     * @param uuid of the service.
-     * @param newService class that is going to be instanciate.
+     * @param uuid       of the service.
+     * @param newService class that is going to be instantiate.
      */
-    public void registerServiceImplementation(@NonNull final String uuid, @NonNull final Class<? extends PeripheralService> newService) {
+    public void registerServiceImplementation(@NonNull final String uuid, @NonNull final Class<? extends BleService> newService) {
         if (mServiceLookUp.containsKey(uuid)) {
             Log.w(TAG, String.format("registerServiceImplementation -> The service with UUID %s was replaced by another service version.", uuid));
             mServiceLookUp.remove(uuid);

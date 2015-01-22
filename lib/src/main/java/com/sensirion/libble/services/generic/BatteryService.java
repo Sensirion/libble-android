@@ -4,20 +4,20 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.Peripheral;
-import com.sensirion.libble.services.PeripheralService;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.services.BleService;
 
-public class BatteryPeripheralService extends PeripheralService<Integer> {
+public class BatteryService extends BleService<Integer> {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";
     //NAMED CHARACTERISTIC NAME
-    public static final String READ_BATTERY_CHARACTERISTIC_VALUE_NAME = BatteryPeripheralService.class.getName() + ".getBattery";
+    public static final String READ_BATTERY_CHARACTERISTIC_VALUE_NAME = BatteryService.class.getName() + ".getBattery";
     //FORCE READING CONSTANTS
     private static final int MAX_WAITING_TIME_BETWEEN_READS_MS = 75;
     private static final int MAX_READ_TRIES = 3000 / MAX_WAITING_TIME_BETWEEN_READS_MS;
     //CLASS TAG
-    private static final String TAG = BatteryPeripheralService.class.getSimpleName();
+    private static final String TAG = BatteryService.class.getSimpleName();
     //UUIDs
     private static final String UUID_BATTERY_LEVEL_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb";
     //CHARACTERISTICS
@@ -25,7 +25,7 @@ public class BatteryPeripheralService extends PeripheralService<Integer> {
     //BATTERY_SERVICE LEVEL
     private Integer mBatteryLevel = null;
 
-    public BatteryPeripheralService(Peripheral parent, BluetoothGattService bluetoothGattService) {
+    public BatteryService(Peripheral parent, BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
         mBatteryLevelCharacteristic = getCharacteristicFor(UUID_BATTERY_LEVEL_CHARACTERISTIC);
         parent.readCharacteristic(mBatteryLevelCharacteristic);

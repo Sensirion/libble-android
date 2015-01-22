@@ -5,10 +5,10 @@ import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.sensirion.libble.listeners.RHTLogDownloadListener;
-import com.sensirion.libble.peripherals.Peripheral;
-import com.sensirion.libble.services.NotificationListener;
-import com.sensirion.libble.services.PeripheralService;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.listeners.NotificationListener;
+import com.sensirion.libble.listeners.services.RHTLogDownloadListener;
+import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.utils.RHTDataPoint;
 
 import java.nio.ByteBuffer;
@@ -19,7 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-public class SHTC1LoggingService extends PeripheralService {
+public class SHTC1LoggingService extends BleService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
 

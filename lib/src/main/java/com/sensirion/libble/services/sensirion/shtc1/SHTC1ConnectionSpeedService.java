@@ -4,13 +4,13 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.Peripheral;
-import com.sensirion.libble.services.PeripheralService;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.services.BleService;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class SHTC1ConnectionSpeedService extends PeripheralService<Boolean> {
+public class SHTC1ConnectionSpeedService extends BleService<Boolean> {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000fa10-0000-1000-8000-00805f9b34fb";

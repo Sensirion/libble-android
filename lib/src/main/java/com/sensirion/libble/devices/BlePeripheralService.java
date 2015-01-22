@@ -1,4 +1,4 @@
-package com.sensirion.libble.peripherals;
+package com.sensirion.libble.devices;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
@@ -16,6 +17,8 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.radiusnetworks.bluetooth.BluetoothCrashResolver;
+import com.sensirion.libble.listeners.devices.BleDeviceStateListener;
+import com.sensirion.libble.listeners.devices.BleScanListener;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,6 +39,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     private static final String TAG = BlePeripheralService.class.getSimpleName();
     private static final String PREFIX = BlePeripheralService.class.getName();
     //Broadcast actions
+    public static final String ACTION_PERIPHERAL_SERVICE_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_SERVICE_DISCOVERY";
     public static final String ACTION_PERIPHERAL_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_DISCOVERY";
     public static final String ACTION_PERIPHERAL_CONNECTION_CHANGED = PREFIX + "/ACTION_PERIPHERAL_CONNECTION_CHANGED";
     public static final String ACTION_SCANNING_STARTED = PREFIX + "/ACTION_SCANNING_STARTED";
@@ -69,7 +73,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         if (mDiscoveredPeripherals.containsKey(deviceAddress)) {
             Log.d(TAG, String.format("onLeScan() -> Device %s has a rssi of %d.", deviceAddress, rssi));
             peripheral = mDiscoveredPeripherals.get(deviceAddress);
-            mDiscoveredPeripherals.get(deviceAddress).setReceivedSignalStrengthIndication(rssi);
+            mDiscoveredPeripherals.get(deviceAddress).setRSSI(rssi);
         } else {
             peripheral = new Peripheral(BlePeripheralService.this, device, rssi);
             mDiscoveredPeripherals.put(deviceAddress, peripheral);
@@ -97,6 +101,11 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         notifyPeripheralConnectionChanged(peripheral);
     }
 
+    public synchronized void onPeripheralServiceDiscovery(@NonNull final Peripheral peripheral) {
+        sendLocalBroadcast(ACTION_PERIPHERAL_SERVICE_DISCOVERY, EXTRA_PERIPHERAL_ADDRESS, peripheral.getAddress());
+        notifyPeripheralServiceDiscovery(peripheral);
+    }
+
     private void notifyPeripheralConnectionChanged(@NonNull final Peripheral peripheral) {
         final Iterator<BleDeviceStateListener> itr = mPeripheralStateListeners.iterator();
         while (itr.hasNext()) {
@@ -122,6 +131,19 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
                 listener.onDeviceDiscovered(peripheral);
             } catch (final Exception e) {
                 Log.e(TAG, "notifyDiscoveredPeripheralChanged -> The following error was produced when notifying the peripheral states: ", e);
+                itr.remove();
+            }
+        }
+    }
+
+    private void notifyPeripheralServiceDiscovery(@NonNull final Peripheral peripheral) {
+        final Iterator<BleDeviceStateListener> itr = mPeripheralStateListeners.iterator();
+        while (itr.hasNext()) {
+            final BleDeviceStateListener listener = itr.next();
+            try {
+                listener.onDeviceAllServicesDiscovered(peripheral);
+            } catch (final Exception e) {
+                Log.e(TAG, "notifyDiscoveredPeripheralChanged -> The following error was produced when notifying the discovery of the peripheral services. ", e);
                 itr.remove();
             }
         }
@@ -254,7 +276,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         mBluetoothSharingCrashResolver = new BluetoothCrashResolver(this);
         mBluetoothSharingCrashResolver.start();
 
-        final Handler handler = new Handler();
+        final Handler handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -338,9 +360,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     /**
-     * Get all discovered {@link com.sensirion.libble.peripherals.BleDevice}.
+     * Get all discovered {@link com.sensirion.libble.devices.BleDevice}.
      *
-     * @return Iterable of {@link com.sensirion.libble.peripherals.BleDevice}
+     * @return Iterable of {@link com.sensirion.libble.devices.BleDevice}
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals() {
         return new HashSet<BleDevice>(mDiscoveredPeripherals.values());
@@ -350,7 +372,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * Get all discovered {@link BleDevice} with valid names for the application.
      *
      * @param validDeviceNames List of devices names.
-     * @return Iterable of {@link com.sensirion.libble.peripherals.BleDevice}
+     * @return Iterable of {@link com.sensirion.libble.devices.BleDevice}
      */
     public synchronized Iterable<? extends BleDevice> getDiscoveredPeripherals(@Nullable final List<String> validDeviceNames) {
         final Set<BleDevice> discoveredPeripherals = new HashSet<BleDevice>(mDiscoveredPeripherals.values());
@@ -390,7 +412,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * Returns the {@link BleDevice} belonging to the given address
      *
      * @param address MAC-Address of the desired {@link BleDevice}
-     * @return Connected device as {@link com.sensirion.libble.peripherals.BleDevice} - <code>null</code> if the device is not connected
+     * @return Connected device as {@link com.sensirion.libble.devices.BleDevice} - <code>null</code> if the device is not connected
      */
     public BleDevice getConnectedDevice(@NonNull final String address) {
         return mConnectedPeripherals.get(address);
@@ -432,7 +454,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      */
     public synchronized void registerPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
         if (mPeripheralStateListeners.contains(listener)) {
-            Log.w(TAG, String.format("registerPeripheralStateListener -> Listener %s was already added to the listener list", listener));
+            Log.w(TAG, String.format("registerDeviceStateListener -> Listener %s was already added to the listener list", listener));
         } else {
             mPeripheralStateListeners.add(listener);
         }
@@ -443,9 +465,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
-    public synchronized void registerPeripheralScanListener(@NonNull final BleScanListener listener) {
+    public synchronized void registerScanListener(@NonNull final BleScanListener listener) {
         if (mPeripheralScanListeners.contains(listener)) {
-            Log.w(TAG, String.format("registerPeripheralScanListener -> Listener %s was already added to the listener list", listener));
+            Log.w(TAG, String.format("registerScanListener -> Listener %s was already added to the listener list", listener));
         } else {
             mPeripheralScanListeners.add(listener);
         }
@@ -459,9 +481,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     public synchronized void unregisterPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
         if (mPeripheralStateListeners.contains(listener)) {
             mPeripheralStateListeners.remove(listener);
-            Log.i(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was removed from the list.", listener));
+            Log.i(TAG, String.format("unregisterDeviceStateListener -> Listener %s was removed from the list.", listener));
         } else {
-            Log.w(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was already removed from the list.", listener));
+            Log.w(TAG, String.format("unregisterDeviceStateListener -> Listener %s was already removed from the list.", listener));
         }
     }
 
@@ -470,12 +492,12 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
-    public synchronized void unregisterPeripheralScanListener(@NonNull final BleScanListener listener) {
+    public synchronized void unregisterScanListener(@NonNull final BleScanListener listener) {
         if (mPeripheralScanListeners.contains(listener)) {
             mPeripheralScanListeners.remove(listener);
-            Log.i(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was removed from the list.", listener));
+            Log.i(TAG, String.format("unregisterDeviceStateListener -> Listener %s was removed from the list.", listener));
         } else {
-            Log.w(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was already removed from the list.", listener));
+            Log.w(TAG, String.format("unregisterDeviceStateListener -> Listener %s was already removed from the list.", listener));
         }
     }
 
@@ -484,17 +506,17 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * disconnection result is reported asynchronously through the
      * {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)} callback.
      */
-    public synchronized void disconnect(@NonNull final String address) {
+    public synchronized void disconnect(@NonNull final String deviceAddress) {
         checkBluetooth();
-        if (address.trim().isEmpty()) {
+        if (deviceAddress.trim().isEmpty()) {
             Log.w(TAG, "disconnect() -> unspecified address.");
             return;
         }
-        if (mConnectedPeripherals.containsKey(address)) {
-            mConnectedPeripherals.get(address).disconnect();
-            mConnectedPeripherals.remove(address);
+        if (mConnectedPeripherals.containsKey(deviceAddress)) {
+            mConnectedPeripherals.get(deviceAddress).disconnect();
+            mConnectedPeripherals.remove(deviceAddress);
         } else {
-            Log.w(TAG, String.format("disconnect() -> Device with address %s was not found.", address));
+            Log.w(TAG, String.format("disconnect() -> Device with address %s was not found.", deviceAddress));
         }
     }
 

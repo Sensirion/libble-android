@@ -1,4 +1,4 @@
-package com.sensirion.libble.peripherals;
+package com.sensirion.libble.devices;
 
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -11,10 +11,10 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.sensirion.libble.services.NotificationListener;
+import com.sensirion.libble.listeners.NotificationListener;
+import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.BleServiceFactory;
 import com.sensirion.libble.services.NotificationService;
-import com.sensirion.libble.services.PeripheralService;
-import com.sensirion.libble.services.PeripheralServiceFactory;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Represents a remote piece of HW (SmartGadget) that can have 1-N {@link com.sensirion.libble.services.PeripheralService}
+ * Represents a remote piece of HW (SmartGadget) that can have 1-N {@link com.sensirion.libble.services.BleService}
  */
 
 public class Peripheral implements BleDevice, Comparable<Peripheral> {
@@ -45,7 +45,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     //Listener list
     private final Set<NotificationListener> mNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
-    private final Set<PeripheralService> mServices = Collections.synchronizedSet(new HashSet<PeripheralService>());
+    private final Set<BleService> mServices = Collections.synchronizedSet(new HashSet<BleService>());
     private volatile boolean mConfirmationOperationRunning = false;
     private BluetoothGatt mBluetoothGatt;
     private int mReceivedSignalStrengthIndication;
@@ -86,11 +86,12 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             super.onServicesDiscovered(gatt, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 for (final BluetoothGattService service : gatt.getServices()) {
-                    mServices.add(PeripheralServiceFactory.getInstance().createServiceFor(Peripheral.this, service));
+                    mServices.add(BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service));
                 }
                 for (final NotificationListener listener : mNotificationListeners) {
-                    registerPeripheralListener(listener);
+                    registerDeviceListener(listener);
                 }
+                mParent.onPeripheralServiceDiscovery(Peripheral.this);
             } else {
                 Log.w(TAG, String.format("onServicesDiscovered -> Failed with status: " + status));
             }
@@ -100,7 +101,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         public void onCharacteristicRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                for (PeripheralService service : mServices) {
+                for (BleService service : mServices) {
                     service.onCharacteristicRead(characteristic);
                 }
                 if (mConfirmationOperationRunning) {
@@ -114,7 +115,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         @Override
         public void onCharacteristicChanged(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            for (final PeripheralService service : mServices) {
+            for (final BleService service : mServices) {
                 if (service instanceof NotificationService) {
                     ((NotificationService) service).onChangeNotification(characteristic);
                 }
@@ -167,8 +168,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         return mReceivedSignalStrengthIndication;
     }
 
-    public void setReceivedSignalStrengthIndication(int receivedSignalStrengthIndication) {
-        mReceivedSignalStrengthIndication = receivedSignalStrengthIndication;
+    public void setRSSI(final int RSSI) {
+        mReceivedSignalStrengthIndication = RSSI;
     }
 
     @Override
@@ -176,13 +177,22 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         return mAdvertisedName;
     }
 
+    @Override
     public boolean isConnected() {
         return mIsConnected;
     }
 
-    @SuppressWarnings("unused")
-    public <T extends PeripheralService> T getPeripheralService(final Class<T> type) {
-        for (final PeripheralService service : mServices) {
+    /**
+     * NOTE: Returns the first service it founds with of the given type.
+     * Obtain a peripheral service in case the peripheral haves it.
+     *
+     * @param type service class that the user wants to obtain.
+     * @param <T>  Class of the service.
+     * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given class.
+     */
+    @Override
+    public <T extends BleService> T getPeripheralService(final Class<T> type) {
+        for (final BleService service : mServices) {
             if (service.getClass().equals(type)) {
                 return (T) service;
             }
@@ -192,12 +202,14 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Asks for a service with a particular name.
+     * NOTE: Returns the first service it founds with the given name.
      *
      * @param serviceName name of the service.
-     * @return {@link com.sensirion.libble.services.PeripheralService}
+     * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given name
      */
-    public PeripheralService getPeripheralService(final String serviceName) {
-        for (PeripheralService service : mServices) {
+    @Override
+    public BleService getPeripheralService(final String serviceName) {
+        for (BleService service : mServices) {
             if (service.isExplicitService(serviceName)) {
                 return service;
             }
@@ -206,14 +218,29 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Obtains the list of the discovered services.
+     * Obtains a list with the discovered services.
      *
      * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
      */
-    @SuppressWarnings("unused")
-    public Iterable<String> getDiscoveredPeripheralServices() {
+    @Override
+    public Iterable<BleService> getDiscoveredPeripheralServices() {
+        final List<BleService> discoveredBleServices = new LinkedList<>();
+        for (final BleService service : mServices) {
+            discoveredBleServices.add(service);
+        }
+
+        return discoveredBleServices;
+    }
+
+    /**
+     * Obtains a list with the name of the discovered services.
+     *
+     * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
+     */
+    @Override
+    public Iterable<String> getDiscoveredPeripheralServicesNames() {
         final Set<String> discoveredServices = new HashSet<>();
-        for (PeripheralService service : mServices) {
+        for (final BleService service : mServices) {
             discoveredServices.add(String.format("%s %s", service.getClass().getSimpleName(), service.getUUIDString()));
         }
         return discoveredServices;
@@ -354,15 +381,17 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         return false;
     }
 
+
     /**
      * Ask for the a characteristic of a service
+     * NOTE: It returns the first characteristic it founds.
      *
      * @param characteristicName name of the characteristic.
-     * @return {@link java.lang.Object} with the characteristic parsed by the service
-     * <code>null</code> if no service was able to parse it.
+     * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
      */
-    public Object getCharacteristicValue(final String characteristicName) {
-        for (final PeripheralService<?> service : mServices) {
+    @Override
+    public Object getCharacteristicValue(@NonNull final String characteristicName) {
+        for (final BleService<?> service : mServices) {
             final Object value = service.getCharacteristicValue(characteristicName);
             if (value == null) {
                 continue;
@@ -410,8 +439,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *
      * @param enabled <code>true</code> if notifications wants to be enabled - <code>false</code> otherwise.
      */
+    @Override
     public void setAllNotificationsEnabled(final boolean enabled) {
-        for (final PeripheralService service : mServices) {
+        for (final BleService service : mServices) {
             if (service instanceof NotificationService) {
                 ((NotificationService) service).setNotificationsEnabled(enabled);
             }
@@ -426,8 +456,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *                 wants to listen for notifications.
      * @return <code>true</code> if a valid service was found, <code>false</code> otherwise.
      */
-    public boolean registerPeripheralListener(final NotificationListener listener) {
-        return registerPeripheralListener(listener, null);
+    @Override
+    public boolean registerDeviceListener(final NotificationListener listener) {
+        return registerDeviceListener(listener, null);
     }
 
     /**
@@ -440,10 +471,11 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *                    name of the service in case we want to listen to a particular service.
      * @return <code>true</code> if a valid service was found, <code>false</code> otherwise.
      */
-    public boolean registerPeripheralListener(final NotificationListener listener, final String serviceName) {
+    @Override
+    public boolean registerDeviceListener(final NotificationListener listener, final String serviceName) {
         mNotificationListeners.add(listener);
         boolean validServiceFound = false;
-        for (final PeripheralService service : mServices) {
+        for (final BleService service : mServices) {
             if (service instanceof NotificationService) {
                 if (serviceName == null) {
                     ((NotificationService) service).registerNotificationListener(listener);
@@ -465,8 +497,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param listener from outside the library that doesn't
      *                 want to listen for notifications anymore.
      */
-    public void unregisterPeripheralListener(final NotificationListener listener) {
-        for (final PeripheralService service : mServices) {
+    @Override
+    public void unregisterDeviceListener(final NotificationListener listener) {
+        for (final BleService service : mServices) {
             if (service instanceof NotificationService) {
                 ((NotificationService) service).unregisterNotificationListener(listener);
             }
@@ -479,6 +512,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *
      * @return number of discovered services.
      */
+    @Override
     public int getNumberOfDiscoveredServices() {
         return mServices.size();
     }
@@ -488,9 +522,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *
      * @return {@link java.util.List} with the services names. (Simple names)
      */
+    @Override
     public List<String> getDiscoveredServicesNames() {
         final List<String> serviceNames = new LinkedList<>();
-        for (final PeripheralService service : mServices) {
+        for (final BleService service : mServices) {
             serviceNames.add(service.getClass().getSimpleName());
         }
         return serviceNames;

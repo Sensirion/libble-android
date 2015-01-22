@@ -1,4 +1,4 @@
-package com.sensirion.libble.services;
+package com.sensirion.libble.listeners;
 
 /**
  * This is a contract for all other interfaces (that represent a

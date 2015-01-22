@@ -1,4 +1,4 @@
-package com.sensirion.libble.peripherals;
+package com.sensirion.libble.devices;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;

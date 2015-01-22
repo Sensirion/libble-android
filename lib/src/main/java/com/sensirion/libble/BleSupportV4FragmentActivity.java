@@ -6,22 +6,20 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.BleDevice;
-import com.sensirion.libble.peripherals.BleDeviceStateListener;
-import com.sensirion.libble.peripherals.BleScanListener;
-import com.sensirion.libble.peripherals.Peripheral;
-import com.sensirion.libble.services.NotificationListener;
-import com.sensirion.libble.services.PeripheralService;
+import com.sensirion.libble.devices.BleDevice;
+import com.sensirion.libble.listeners.NotificationListener;
+import com.sensirion.libble.listeners.devices.BleDeviceStateListener;
+import com.sensirion.libble.listeners.devices.BleScanListener;
+import com.sensirion.libble.services.BleService;
 
 import java.util.List;
 import java.util.UUID;
 
 /**
- * This is the Activity all apps using the library can extend
+ * This is the the support FragmentActivity v4 all apps using the library can extend
  * instead of extending standard support FragmentActivity v4.
  * This is a convenience class and simplifies use of the library.
  */
-
 public abstract class BleSupportV4FragmentActivity extends android.support.v4.app.FragmentActivity {
 
     private static final String TAG = BleSupportV4FragmentActivity.class.getSimpleName();
@@ -29,7 +27,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     private BleManager mBleManager = BleManager.getInstance();
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mBleManager.init(getApplicationContext());
     }
@@ -57,7 +55,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
-     * Ask if the peripheral service is scanning.
+     * Ask if the local device is scanning for new devices.
      *
      * @return <code>true</code> if it's scanning - <code>false</code> otherwise.
      */
@@ -84,7 +82,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      */
     @SuppressWarnings("unused")
     public synchronized boolean startScanning(final long scanDurationMs) {
-        return startScanning(null, scanDurationMs);
+        return mBleManager.startScanning(scanDurationMs);
     }
 
     /**
@@ -96,7 +94,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      */
     @SuppressWarnings("unused")
     public boolean startScanning(@Nullable final UUID[] deviceUUIDs) {
-        return startScanning(deviceUUIDs, null);
+        return mBleManager.startScanning(deviceUUIDs);
     }
 
     /**
@@ -121,7 +119,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
-     * Get all discovered {@link com.sensirion.libble.peripherals.BleDevice}.
+     * Get all discovered {@link com.sensirion.libble.devices.BleDevice}.
      *
      * @return Iterable
      */
@@ -131,24 +129,56 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
-     * Get all discovered {@link com.sensirion.libble.peripherals.BleDevice} with valid names for the application.
+     * Get all discovered {@link com.sensirion.libble.devices.BleDevice} with valid names for the application.
      *
      * @param deviceNames List of devices names.
      * @return Iterable
      */
     @SuppressWarnings("unused")
-    public Iterable<? extends BleDevice> getDiscoveredBleDevices(final List<String> deviceNames) {
+    public Iterable<? extends BleDevice> getDiscoveredBleDevices(@NonNull final List<String> deviceNames) {
         return mBleManager.getDiscoveredBleDevices(deviceNames);
     }
 
     /**
-     * Get all connected {@link com.sensirion.libble.peripherals.BleDevice}.
+     * Get all connected {@link com.sensirion.libble.devices.BleDevice}.
      *
      * @return Iterable
      */
     @SuppressWarnings("unused")
     public Iterable<? extends BleDevice> getConnectedBleDevices() {
         return mBleManager.getConnectedBleDevices();
+    }
+
+    /**
+     * Returns the {@link com.sensirion.libble.devices.BleDevice} belonging to the given address
+     *
+     * @param deviceAddress MAC-Address of the desired {@link com.sensirion.libble.devices.BleDevice}
+     * @return Connected device as {@link com.sensirion.libble.devices.BleDevice}
+     * or NULL if the device is not connected
+     */
+    @SuppressWarnings("unused")
+    public BleDevice getConnectedDevice(@NonNull final String deviceAddress) {
+        return mBleManager.getConnectedDevice(deviceAddress);
+    }
+
+    /**
+     * Tries to establish a connection to a selected device (by address)
+     *
+     * @param deviceAddress MAC-Address of the device that should be connected.
+     */
+    @SuppressWarnings("unused")
+    public boolean connectDevice(@NonNull final String deviceAddress) {
+        return mBleManager.connectDevice(deviceAddress);
+    }
+
+    /**
+     * Tries to disconnect a selected device (by address)
+     *
+     * @param deviceAddress MAC-Address of the device that should be disconnected
+     */
+    @SuppressWarnings("unused")
+    public void disconnectDevice(@NonNull final String deviceAddress) {
+        mBleManager.disconnectDevice(deviceAddress);
     }
 
     /**
@@ -162,100 +192,58 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
-     * Returns the {@link com.sensirion.libble.peripherals.BleDevice} belonging to the given address
-     *
-     * @param address MAC-Address of the desired {@link com.sensirion.libble.peripherals.BleDevice}
-     * @return Connected device as {@link com.sensirion.libble.peripherals.BleDevice}
-     * or <code>null</code> if the device is not connected
-     */
-    @SuppressWarnings("unused")
-    public BleDevice getConnectedDevice(final String address) {
-        return mBleManager.getConnectedDevice(address);
-    }
-
-    /**
      * Checks if a device is connected.
      *
      * @param deviceAddress of the device.
      * @return <code>true</code> if connected - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    public boolean isDeviceConnected(final String deviceAddress) {
+    public boolean isDeviceConnected(@NonNull final String deviceAddress) {
         return mBleManager.isDeviceConnected(deviceAddress);
     }
 
+
     /**
-     * Tries to establish a connection toa selected peripheral (by address)
+     * Register a listener in all connected devices.
      *
-     * @param address MAC-Address of the peripheral that should be connected
+     * @param listener pretending to listen for notifications in all devices.
      */
     @SuppressWarnings("unused")
-    public boolean connectPeripheral(final String address) {
-        return mBleManager.connectPeripheral(address);
+    public void registerDeviceListenerToAllConnected(@NonNull final NotificationListener listener) {
+        mBleManager.registerDeviceListenerToAllConnected(listener);
     }
 
     /**
-     * Tries to disconnect a selected peripheral (by address)
+     * Registers a listener in a connected devices.
      *
-     * @param address MAC-Address of the peripheral that should be disconnected
+     * @param listener pretending to listen for notifications of a devices.
+     * @param address  address of the devices we want to listen to,
+     *                 <code>null</code> if we want to register a listener to all connected devices.
      */
     @SuppressWarnings("unused")
-    public void disconnectPeripheral(final String address) {
-        mBleManager.disconnectPeripheral(address);
+    public void registerDeviceListener(@NonNull final NotificationListener listener, @Nullable final String address) {
+        mBleManager.registerDeviceListener(listener, address);
     }
 
     /**
-     * Looks for a connected peripheral.
-     *
-     * @param deviceAddress of the peripheral.
-     * @return the {@link com.sensirion.libble.peripherals.Peripheral} with the given address
-     */
-    @SuppressWarnings("unused")
-    public Peripheral getConnectedPeripheral(final String deviceAddress) {
-        return mBleManager.getConnectedPeripheral(deviceAddress);
-    }
-
-    /**
-     * Register a listener in all connected peripherals.
-     *
-     * @param listener pretending to listen for notifications in all peripherals.
-     */
-    @SuppressWarnings("unused")
-    public void registerPeripheralListenerToAllConnected(final NotificationListener listener) {
-        mBleManager.registerPeripheralListenerToAllConnected(listener);
-    }
-
-    /**
-     * Registers a listener in a connected peripheral.
-     *
-     * @param address  address of the peripheral we want to listen to,
-     *                 null if we want to register a listener to all connected devices.
-     * @param listener pretending to listen for notifications of a peripheral.
-     */
-    @SuppressWarnings("unused")
-    public void registerPeripheralListener(final NotificationListener listener, final String address) {
-        mBleManager.registerPeripheralListener(listener, address);
-    }
-
-    /**
-     * Unregister a listener from all connected peripherals.
+     * Unregister a listener from all connected devices.
      *
      * @param listener that does not want to get notifications any more.
      */
     @SuppressWarnings("unused")
-    public void unregisterPeripheralListenerFromAllConnected(final NotificationListener listener) {
-        mBleManager.unregisterPeripheralListenerFromAllConnected(listener);
+    public void unregisterDeviceListenerFromAllConnected(@NonNull final NotificationListener listener) {
+        mBleManager.unregisterDeviceListenerFromAllConnected(listener);
     }
 
     /**
-     * Unregister a listener from a connected peripheral.
+     * Unregister a listener from a connected devices.
      *
-     * @param listener that wants to unregister from the notifications of a peripheral.
-     * @param address  of the peripheral you don't want to get notifications from anymore.
+     * @param listener      that wants to unregister from the notifications of a device.
+     * @param deviceAddress of the device you don't want to get notifications from anymore.
      */
     @SuppressWarnings("unused")
-    public void unregisterPeripheralListener(final String address, final NotificationListener listener) {
-        mBleManager.unregisterPeripheralListener(listener, address);
+    public void unregisterDeviceListener(@NonNull final String deviceAddress, @NonNull final NotificationListener listener) {
+        mBleManager.unregisterDeviceListener(listener, deviceAddress);
     }
 
     /**
@@ -269,11 +257,11 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     /**
      * Request the user to enable bluetooth in case it's disabled.
      *
-     * @param context of the requesting activity.
+     * @param ctx of the requesting activity.
      */
     @SuppressWarnings("unused")
-    public void requestEnableBluetooth(final Context context) {
-        mBleManager.requestEnableBluetooth(context);
+    public void requestEnableBluetooth(@NonNull final Context ctx) {
+        mBleManager.requestEnableBluetooth(ctx);
     }
 
     /**
@@ -289,77 +277,78 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     /**
      * Counts the number of services.
      *
-     * @param address of the peripheral.
+     * @param deviceAddress of the device.
      * @return number of discovered services.
      */
     @SuppressWarnings("unused")
-    public int getNumberOfDiscoveredServices(final String address) {
-        return mBleManager.getNumberOfDiscoveredServices(address);
+    public int getNumberOfDiscoveredServices(final String deviceAddress) {
+        return mBleManager.getNumberOfDiscoveredServices(deviceAddress);
     }
 
     /**
      * Obtains the names of each discovered service.
      *
-     * @param address of the peripheral.
+     * @param address of the device.
      * @return {@link java.util.LinkedList} with the services names.
      */
     @SuppressWarnings("unused")
-    public List<String> getDiscoveredServicesNames(final String address) {
+    public List<String> getDiscoveredServicesNames(@NonNull final String address) {
         return mBleManager.getDiscoveredServicesNames(address);
     }
-
 
     /**
      * Asks for a service with a particular name.
      *
-     * @param deviceAddress of the peripheral.
+     * @param deviceAddress of the device.
      * @param serviceName   name of the service.
-     * @return {@link com.sensirion.libble.services.PeripheralService}
+     * @return {@link com.sensirion.libble.services.BleService}
      */
     @SuppressWarnings("unused")
-    public PeripheralService getServiceWithName(final String deviceAddress, final String serviceName) {
+    public BleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
         return mBleManager.getServiceWithName(deviceAddress, serviceName);
     }
 
     /**
      * Ask for the a characteristic of a service
+     * NOTE: It returns the first characteristic it founds.
      *
+     * @param deviceAddress      of the device we want to listen for a characteristic.
      * @param characteristicName name of the characteristic.
      * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
      */
     @SuppressWarnings("unused")
-    public Object getCharacteristicValue(final String deviceAddress, final String characteristicName) {
+    public Object getCharacteristicValue(@NonNull final String deviceAddress, @NonNull final String characteristicName) {
         return mBleManager.getCharacteristicValue(deviceAddress, characteristicName);
     }
 
     /**
-     * Adds a listener to the peripheral state change notifying list.
+     * Adds a listener to the device state change notifying list.
      *
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
     @SuppressWarnings("unused")
-    public synchronized void registerPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
-        mBleManager.registerPeripheralStateListener(listener);
+    public synchronized void registerDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
+        mBleManager.registerDeviceStateListener(listener);
     }
 
     /**
-     * Adds a listener to the peripheral scan state change notifying list.
+     * Adds a listener to the scan state change notifying list.
      *
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
     @SuppressWarnings("unused")
-    public synchronized void registerPeripheralScanListener(@NonNull final BleScanListener listener) {
-        mBleManager.registerPeripheralScanListener(listener);
+    public synchronized void registerScanListener(@NonNull final BleScanListener listener) {
+        mBleManager.registerScanListener(listener);
     }
 
     /**
-     * Removes a listener from the peripheral state change notifying list.
+     * Removes a listener from the device state change notifying list.
      *
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
     @SuppressWarnings("unused")
-    public synchronized void unregisterPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
-        mBleManager.unregisterPeripheralStateListener(listener);
+    public synchronized void unregisterDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
+        mBleManager.unregisterDeviceStateListener(listener);
     }
 
     /**
@@ -368,8 +357,8 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
     @SuppressWarnings("unused")
-    public synchronized void unregisterPeripheralScanListener(@NonNull final BleScanListener listener) {
-        mBleManager.unregisterPeripheralScanListener(listener);
+    public synchronized void unregisterScanListener(@NonNull final BleScanListener listener) {
+        mBleManager.unregisterScanListener(listener);
     }
 
     @SuppressWarnings("unused")

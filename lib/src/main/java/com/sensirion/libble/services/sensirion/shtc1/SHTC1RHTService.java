@@ -5,8 +5,8 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 
-import com.sensirion.libble.listeners.RHTListener;
-import com.sensirion.libble.peripherals.Peripheral;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.listeners.services.RHTListener;
 import com.sensirion.libble.services.NotificationService;
 import com.sensirion.libble.utils.RHTDataPoint;
 
@@ -15,12 +15,14 @@ import java.nio.ByteOrder;
 import java.util.Iterator;
 import java.util.UUID;
 
-public class SHTC1RHTNotificationService extends NotificationService<RHTDataPoint, RHTListener> {
+public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListener> {
 
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
     public static final String RHT_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
-    private static final String TAG = SHTC1RHTNotificationService.class.getSimpleName();
+    private static final String TAG = SHTC1RHTService.class.getSimpleName();
+
     private static final String SENSOR_NAME = "SHTC1";
+
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";
 
     private static final short TIMEOUT_MS = 1100;
@@ -31,23 +33,11 @@ public class SHTC1RHTNotificationService extends NotificationService<RHTDataPoin
 
     private RHTDataPoint mLastDatapoint;
 
-    public SHTC1RHTNotificationService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
+    public SHTC1RHTService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
         mHumidityTemperatureCharacteristic = getCharacteristicFor(RHT_CHARACTERISTIC_UUID);
         peripheral.readCharacteristic(mHumidityTemperatureCharacteristic);
         bluetoothGattService.addCharacteristic(mHumidityTemperatureCharacteristic);
-    }
-
-    private static RHTDataPoint convertToHumanReadableValues(final byte[] rawData) {
-        final short[] humidityAndTemperature = new short[2];
-
-        ByteBuffer.wrap(rawData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
-
-        final float temperature = ((float) humidityAndTemperature[0]) / 100f;
-        final float humidity = ((float) humidityAndTemperature[1]) / 100f;
-        final long timestamp = System.currentTimeMillis();
-
-        return new RHTDataPoint(temperature, humidity, timestamp);
     }
 
     /**
@@ -67,6 +57,18 @@ public class SHTC1RHTNotificationService extends NotificationService<RHTDataPoin
             return true;
         }
         return false;
+    }
+
+    private static RHTDataPoint convertToHumanReadableValues(final byte[] rawData) {
+        final short[] humidityAndTemperature = new short[2];
+
+        ByteBuffer.wrap(rawData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
+
+        final float temperature = ((float) humidityAndTemperature[0]) / 100f;
+        final float humidity = ((float) humidityAndTemperature[1]) / 100f;
+        final long timestamp = System.currentTimeMillis();
+
+        return new RHTDataPoint(temperature, humidity, timestamp);
     }
 
     private void notifyListeners() {
@@ -91,7 +93,7 @@ public class SHTC1RHTNotificationService extends NotificationService<RHTDataPoin
     public void setCharacteristicNotification(final BluetoothGattCharacteristic characteristic, final boolean enabled) {
         mPeripheral.setCharacteristicNotification(characteristic, enabled);
         if (UUID.fromString(RHT_CHARACTERISTIC_UUID).equals(characteristic.getUuid())) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(RHT_DESCRIPTOR_UUID));
+            final BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(RHT_DESCRIPTOR_UUID));
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             mPeripheral.writeDescriptor(descriptor);
         } else {

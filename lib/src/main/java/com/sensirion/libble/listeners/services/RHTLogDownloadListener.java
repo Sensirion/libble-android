@@ -1,7 +1,7 @@
-package com.sensirion.libble.listeners;
+package com.sensirion.libble.listeners.services;
 
-import com.sensirion.libble.peripherals.BleDevice;
-import com.sensirion.libble.services.NotificationListener;
+import com.sensirion.libble.devices.BleDevice;
+import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.utils.RHTDataPoint;
 
 public interface RHTLogDownloadListener extends NotificationListener {

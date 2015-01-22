@@ -4,7 +4,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.Peripheral;
+import com.sensirion.libble.devices.Peripheral;
 
 import java.util.UUID;
 
@@ -12,12 +12,12 @@ import java.util.UUID;
  * Represents a {@link android.bluetooth.BluetoothGattService} as defined in org.bluetooth.service.*
  * or a proprietary implementation.
  */
-public class PeripheralService<CharacteristicValueType> {
+public class BleService<CharacteristicValueType> {
 
     protected final Peripheral mPeripheral;
     protected final BluetoothGattService mBluetoothGattService;
 
-    public PeripheralService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
+    public BleService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
         mPeripheral = parent;
         mBluetoothGattService = bluetoothGattService;
     }
@@ -64,8 +64,8 @@ public class PeripheralService<CharacteristicValueType> {
      * @return <code>true</code> if the service implementation is from the given type - <code>false</code> otherwise.
      */
     public boolean isExplicitService(final String serviceDescription) {
-        if (PeripheralService.class.getName().endsWith(serviceDescription)) {
-            Log.w(PeripheralService.class.getSimpleName(), "A generic service can't be retrieved.");
+        if (BleService.class.getName().endsWith(serviceDescription)) {
+            Log.w(BleService.class.getSimpleName(), "A generic service can't be retrieved.");
             return false; //A generic service can't be retrieved.
         }
         return this.getClass().getName().endsWith(serviceDescription);
@@ -82,8 +82,8 @@ public class PeripheralService<CharacteristicValueType> {
 
     @Override
     public boolean equals(final Object otherService) {
-        if (otherService instanceof PeripheralService) {
-            return ((PeripheralService) otherService).getClass().getSimpleName().equals(this.getClass().getSimpleName());
+        if (otherService instanceof BleService) {
+            return ((BleService) otherService).getClass().getSimpleName().equals(this.getClass().getSimpleName());
         } else if (otherService instanceof String) {
             return isExplicitService((String) otherService);
         }

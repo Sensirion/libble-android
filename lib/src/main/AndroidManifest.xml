@@ -11,7 +11,7 @@
 
     <application android:allowBackup="true">
         <service
-            android:name=".peripherals.BlePeripheralService"
+            android:name=".devices.BlePeripheralService"
             android:enabled="true" />
     </application>
 </manifest>

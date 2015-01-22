@@ -1,7 +1,7 @@
-package com.sensirion.libble.listeners;
+package com.sensirion.libble.listeners.services;
 
-import com.sensirion.libble.peripherals.BleDevice;
-import com.sensirion.libble.services.NotificationListener;
+import com.sensirion.libble.devices.BleDevice;
+import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.utils.RHTDataPoint;
 
 /**
@@ -14,9 +14,9 @@ public interface RHTListener extends NotificationListener {
     /**
      * Advices the listeners that the reading of a new datapoint was obtained.
      *
-     * @param device     {@link com.sensirion.libble.peripherals.BleDevice} that send the RHT_DATA.
+     * @param device     {@link com.sensirion.libble.devices.BleDevice} that send the RHT_DATA.
      * @param dataPoint  {@link com.sensirion.libble.utils.RHTDataPoint} with the RHT_DATA.
      * @param sensorName {@link java.lang.String} with the name of the sensor that send the RHT_DATA
      */
-    public void onNewRHTValues(BleDevice device, RHTDataPoint dataPoint, String sensorName);
+    void onNewRHTValues(BleDevice device, RHTDataPoint dataPoint, String sensorName);
 }

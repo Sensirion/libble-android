@@ -1,5 +1,7 @@
 package com.sensirion.libble.utils;
 
+import android.support.annotation.NonNull;
+
 /**
  * Convenience class for storing the obtained humidity and temperature.
  */
@@ -198,8 +200,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
     }
 
     @Override
-    @SuppressWarnings("NullableProblems")
-    public int compareTo(final RHTDataPoint anotherDatapoint) {
+    public int compareTo(@NonNull final RHTDataPoint anotherDatapoint) {
         if (anotherDatapoint.getTimestamp() - mTimestamp > 0) {
             return -1;
         }

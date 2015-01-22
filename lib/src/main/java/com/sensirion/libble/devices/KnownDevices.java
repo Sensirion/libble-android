@@ -1,4 +1,4 @@
-package com.sensirion.libble.peripherals;
+package com.sensirion.libble.devices;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,14 +7,15 @@ public enum KnownDevices {
 
     /**
      * Devices that returns Humidity and Temperature data.
-     * Notification interface: {@link com.sensirion.libble.listeners.RHTListener}
+     * Notification interface: {@link com.sensirion.libble.listeners.services.RHTListener}
      */
     RHT_GADGETS {
         @Override
         public List<String> getAdvertisedNames() {
-            final List<String> deviceNames = new ArrayList<>(2);
+            final List<String> deviceNames = new ArrayList<>(3);
             deviceNames.add("SHTC1 smart gadget");
             deviceNames.add("SHT31 Smart Gadget");
+            deviceNames.add("Smart Humigadget");
             return deviceNames;
         }
     };

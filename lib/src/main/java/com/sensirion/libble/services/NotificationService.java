@@ -2,22 +2,25 @@ package com.sensirion.libble.services;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.Peripheral;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.listeners.NotificationListener;
 
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-public abstract class NotificationService<CharacteristicValueType, ListenerType extends NotificationListener> extends PeripheralService<CharacteristicValueType> {
+public abstract class NotificationService<CharacteristicValueType, ListenerType extends NotificationListener> extends BleService<CharacteristicValueType> {
 
     private static final String TAG = NotificationService.class.getSimpleName();
 
     protected final List<ListenerType> mListeners = Collections.synchronizedList(new LinkedList<ListenerType>());
     protected boolean mNotificationsAreEnabled = false;
     protected boolean mIsRequestingNotifications = false;
-    private BluetoothGattCharacteristic mNotifyCharacteristic;
+
+    protected BluetoothGattCharacteristic mNotifyCharacteristic;
 
     protected NotificationService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
@@ -34,14 +37,14 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
             // it first so it doesn't update the data field on the user interface.
             if (mNotifyCharacteristic != null) {
                 mNotifyCharacteristic = null;
-                Log.i(TAG, String.format("Cleared active notification of UUID %s in peripheral with address: %s", gattCharacteristic.getUuid(), mPeripheral.getAddress()));
+                Log.i(TAG, String.format("registerNotification -> Cleared active notification of UUID %s in peripheral with address: %s", gattCharacteristic.getUuid(), mPeripheral.getAddress()));
                 setCharacteristicNotification(mNotifyCharacteristic, false);
                 mNotificationsAreEnabled = false;
             }
         }
         if ((charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
             mNotifyCharacteristic = gattCharacteristic;
-            Log.i(TAG, "Register notification for: " + gattCharacteristic.getUuid() + " in " + mPeripheral.getAddress());
+            Log.i(TAG, String.format("registerNotification -> In device %s the notification %s was registered.", getDeviceAddress(), gattCharacteristic.getUuid()));
             setCharacteristicNotification(gattCharacteristic, true);
             mNotificationsAreEnabled = true;
         }
@@ -78,7 +81,7 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
      * @param listener the new candidate object for being a listener of this class.
      * @return <code>true</code> in case it's a valid listener, <code>false</code> otherwise.
      */
-    public boolean registerNotificationListener(final NotificationListener listener) {
+    public boolean registerNotificationListener(@NonNull final NotificationListener listener) {
         final ListenerType validListener;
         try {
             validListener = (ListenerType) listener;
@@ -101,11 +104,8 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
      *
      * @param listener the listener that doesn't want to hear from a device anymore.
      */
-    public void unregisterNotificationListener(final NotificationListener listener) {
-        if (listener == null) {
-            Log.e(TAG, "Received a null listener in " + this.getClass().getSimpleName());
-            return;
-        }
+    public void unregisterNotificationListener(@NonNull final NotificationListener listener) {
+        //noinspection SuspiciousMethodCalls
         mListeners.remove(listener);
         if (mListeners.isEmpty() && mNotificationsAreEnabled) {
             setNotificationsEnabled(false);
