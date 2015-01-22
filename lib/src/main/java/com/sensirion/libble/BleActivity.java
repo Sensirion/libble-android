@@ -259,11 +259,11 @@ public abstract class BleActivity extends Activity {
     /**
      * Request the user to enable bluetooth in case it's disabled.
      *
-     * @param ctx of the requesting activity.
+     * @param context {@link android.content.Context} of the requesting activity.
      */
     @SuppressWarnings("unused")
-    public void requestEnableBluetooth(@NonNull final Context ctx) {
-        mBleManager.requestEnableBluetooth(ctx);
+    public void requestEnableBluetooth(@NonNull final Context context) {
+        mBleManager.requestEnableBluetooth(context);
     }
 
     /**

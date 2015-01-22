@@ -64,13 +64,13 @@ public class BleManager {
      * This method should be called immediately just after the first getInstance()
      * call in the application that wants to use the library.
      *
-     * @param ctx cannot be <code>null</code>
+     * @param context cannot be <code>null</code>
      */
-    public void init(@NonNull final Context ctx) {
+    public void init(@NonNull final Context context) {
         Log.i(TAG, "init() -> binding to BlePeripheralService");
-        final Intent intent = new Intent(ctx.getApplicationContext(), BlePeripheralService.class);
+        final Intent intent = new Intent(context.getApplicationContext(), BlePeripheralService.class);
 
-        if (ctx.getApplicationContext().bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
+        if (context.getApplicationContext().bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)) {
             Log.i(TAG, "init() -> successfully bound to BlePeripheralService!");
         } else {
             throw new IllegalStateException(String.format("%s: init() -> unable to bind to BlePeripheralService!", TAG));
@@ -80,12 +80,12 @@ public class BleManager {
     /**
      * This method should be called at the end of the execution of the implementing application.
      *
-     * @param ctx of the implementing application.
+     * @param context of the implementing application.
      */
-    public void release(@NonNull final Context ctx) {
+    public void release(@NonNull final Context context) {
         try {
             Log.w(TAG, "release() -> unbinding mServiceConnection");
-            ctx.getApplicationContext().unbindService(mServiceConnection);
+            context.getApplicationContext().unbindService(mServiceConnection);
         } catch (final Exception e) {
             Log.e(TAG, "An exception was produced when when trying to unbind from it.", e);
         }
@@ -376,15 +376,15 @@ public class BleManager {
     /**
      * Request the user to enable bluetooth in case it's disabled.
      *
-     * @param ctx of the requesting activity.
+     * @param context {@link android.content.Context} of the requesting activity.
      */
-    public void requestEnableBluetooth(@NonNull final Context ctx) {
+    public void requestEnableBluetooth(@NonNull final Context context) {
         if (isBluetoothEnabled()) {
             Log.d(TAG, "requestEnableBluetooth -> Bluetooth is enabled");
         } else {
             Log.d(TAG, "requestEnableBluetooth -> Enabling bluetooth.");
             final Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            ctx.startActivity(enableBtIntent);
+            context.startActivity(enableBtIntent);
         }
     }
 

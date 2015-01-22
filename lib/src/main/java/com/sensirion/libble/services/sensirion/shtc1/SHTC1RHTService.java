@@ -40,6 +40,18 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
         bluetoothGattService.addCharacteristic(mHumidityTemperatureCharacteristic);
     }
 
+    private static RHTDataPoint convertToHumanReadableValues(final byte[] rawData) {
+        final short[] humidityAndTemperature = new short[2];
+
+        ByteBuffer.wrap(rawData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
+
+        final float temperature = ((float) humidityAndTemperature[0]) / 100f;
+        final float humidity = ((float) humidityAndTemperature[1]) / 100f;
+        final long timestamp = System.currentTimeMillis();
+
+        return new RHTDataPoint(temperature, humidity, timestamp);
+    }
+
     /**
      * This method checks if this service is able to handle the characteristic.
      * In case it's able to manage the characteristic it reads it and advice to this service listeners.
@@ -57,18 +69,6 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
             return true;
         }
         return false;
-    }
-
-    private static RHTDataPoint convertToHumanReadableValues(final byte[] rawData) {
-        final short[] humidityAndTemperature = new short[2];
-
-        ByteBuffer.wrap(rawData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
-
-        final float temperature = ((float) humidityAndTemperature[0]) / 100f;
-        final float humidity = ((float) humidityAndTemperature[1]) / 100f;
-        final long timestamp = System.currentTimeMillis();
-
-        return new RHTDataPoint(temperature, humidity, timestamp);
     }
 
     private void notifyListeners() {
@@ -105,8 +105,8 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
      * Enables the characteristic notifications of the service.
      */
     @Override
-    public BluetoothGattCharacteristic readNotificationCharacteristic() {
-        return mHumidityTemperatureCharacteristic;
+    public void registerNotificationCharacteristics() {
+        registerNotification(mHumidityTemperatureCharacteristic);
     }
 
     /**
