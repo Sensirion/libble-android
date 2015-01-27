@@ -42,10 +42,10 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
                 mTemperatureInCelsius = temperature;
                 break;
             case FAHRENHEIT:
-                mTemperatureInCelsius = convertFahrenheitToCelsius(temperature);
+                mTemperatureInCelsius = TemperatureConverter.convertFahrenheitToCelsius(temperature);
                 break;
             case KELVIN:
-                mTemperatureInCelsius = convertKelvinToCelsius(temperature);
+                mTemperatureInCelsius = TemperatureConverter.convertKelvinToCelsius(temperature);
                 break;
             default:
                 throw new IllegalArgumentException(String.format("%s: Constructor: Temperature unit has to be %s.CELSIUS or %s.FAHRENHEIT or %s.KELVIN", TAG, TAG, TAG, TAG));
@@ -55,21 +55,6 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
         mTimestamp = timestamp;
     }
 
-    private static float convertCelsiusToFahrenheit(final float temperatureInCelsius) {
-        return (temperatureInCelsius * 9f / 5f + 32f);
-    }
-
-    private static float convertCelsiusToKelvin(final float temperatureInCelsius) {
-        return temperatureInCelsius + 273.15f;
-    }
-
-    private static float convertFahrenheitToCelsius(final float tempInFahrenheit) {
-        return (tempInFahrenheit - 32f) * 5f / 9f;
-    }
-
-    private static float convertKelvinToCelsius(final float temperatureInKelvin) {
-        return temperatureInKelvin - 273.15f;
-    }
 
     /**
      * Obtains the relative humidity of the datapoint.
@@ -96,7 +81,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getTemperatureFahrenheit() {
-        return convertCelsiusToFahrenheit(mTemperatureInCelsius);
+        return TemperatureConverter.convertCelsiusToFahrenheit(mTemperatureInCelsius);
     }
 
     /**
@@ -106,7 +91,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getTemperatureKelvin() {
-        return convertCelsiusToKelvin(mTemperatureInCelsius);
+        return TemperatureConverter.convertCelsiusToKelvin(mTemperatureInCelsius);
     }
 
     /**
@@ -127,7 +112,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getDewPointFahrenheit() {
-        return convertCelsiusToFahrenheit(getDewPointCelsius());
+        return TemperatureConverter.convertCelsiusToFahrenheit(getDewPointCelsius());
     }
 
     /**
@@ -137,7 +122,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getDewPointKelvin() {
-        return convertCelsiusToKelvin(getDewPointCelsius());
+        return TemperatureConverter.convertCelsiusToKelvin(getDewPointCelsius());
     }
 
     /**
@@ -150,7 +135,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getHeatIndexCelsius() {
-        return convertFahrenheitToCelsius(getHeatIndexFahrenheit());
+        return TemperatureConverter.convertFahrenheitToCelsius(getHeatIndexFahrenheit());
     }
 
     /**
@@ -162,7 +147,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      * @return {@link java.lang.Float} with the Heat Index in Fahrenheit.
      */
     public float getHeatIndexFahrenheit() {
-        final float temperatureInFahrenheit = convertCelsiusToFahrenheit(mTemperatureInCelsius);
+        final float temperatureInFahrenheit = TemperatureConverter.convertCelsiusToFahrenheit(mTemperatureInCelsius);
         return HeatIndexCalculator.calcHeatIndexInFahrenheit(temperatureInFahrenheit, mRelativeHumidity);
     }
 
@@ -176,7 +161,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getHeatIndexKelvin() {
-        return convertCelsiusToKelvin(getHeatIndexCelsius());
+        return TemperatureConverter.convertKelvinToCelsius(getHeatIndexCelsius());
     }
 
     /**
