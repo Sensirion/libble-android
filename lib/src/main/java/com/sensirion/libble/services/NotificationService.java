@@ -89,19 +89,17 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
      * @return <code>true</code> in case it's a valid listener, <code>false</code> otherwise.
      */
     public boolean registerNotificationListener(@NonNull final NotificationListener listener) {
-        final ListenerType validListener;
         try {
-            validListener = (ListenerType) listener;
-        } catch (ClassCastException e) {
+            mListeners.remove(listener);
+            return true;
+        } catch (final ClassCastException cce) {
+            Log.e(TAG, "unregisterNotificationListener -> The following error was produced when trying to remove the notification listener -> ", cce);
             return false;
+        } finally {
+            if (mListeners.isEmpty() && mNotificationsAreEnabled) {
+                setNotificationsEnabled(false);
+            }
         }
-        mListeners.add(validListener);
-        Log.d(TAG, String.format("Registered %s notification in peripheral %s.", listener.getClass().getSimpleName(), mPeripheral.getAddress()));
-
-        if (mIsRequestingNotifications && mListeners.size() >= 1) {
-            setNotificationsEnabled(true);
-        }
-        return true;
     }
 
     /**
@@ -115,9 +113,10 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
             mListeners.remove(listener);
         } catch (final ClassCastException cce) {
             Log.e(TAG, "unregisterNotificationListener -> The following error was produced when trying to remove the notification listener -> ", cce);
-        }
-        if (mListeners.isEmpty() && mNotificationsAreEnabled) {
-            setNotificationsEnabled(false);
+        } finally {
+            if (mListeners.isEmpty() && mNotificationsAreEnabled) {
+                setNotificationsEnabled(false);
+            }
         }
     }
 

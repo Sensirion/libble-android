@@ -57,7 +57,6 @@ public class SHTC1ConnectionSpeedService extends BleService<Boolean> {
      */
     @Override
     public Boolean getCharacteristicValue(final String characteristicName) {
-        Log.i(TAG, String.format("Requested battery level in peripheral %s.", mPeripheral.getAddress()));
         if (characteristicName.equals(READ_NOTIFICATION_SPEED_NAME)) {
             return isNotificationSpeedValueSetHigh();
         }
