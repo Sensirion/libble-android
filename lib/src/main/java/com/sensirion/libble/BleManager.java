@@ -17,8 +17,11 @@ import com.sensirion.libble.listeners.devices.BleDeviceStateListener;
 import com.sensirion.libble.listeners.devices.BleScanListener;
 import com.sensirion.libble.services.BleService;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class BleManager {
@@ -31,11 +34,23 @@ public class BleManager {
 
     private BlePeripheralService mBlePeripheralService;
 
+    private final Set<NotificationListener> mNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
+
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(final ComponentName name, final IBinder service) {
             Log.i(TAG, "onServiceConnected() -> connected to BlePeripheralService");
             mBlePeripheralService = ((BlePeripheralService.LocalBinder) service).getService();
+
+            for (final NotificationListener listener: mNotificationListeners){
+                if (listener instanceof BleDeviceStateListener) {
+                    mBlePeripheralService.registerPeripheralStateListener((BleDeviceStateListener)listener);
+                }
+                if(listener instanceof BleScanListener) {
+                    mBlePeripheralService.registerScanListener((BleScanListener)listener);
+                }
+            }
+            mNotificationListeners.clear();
 
             if (mShouldStartScanning) {
                 Log.i(TAG, "onServiceConnected() -> re-trigger startScanning()");
@@ -399,7 +414,6 @@ public class BleManager {
             Log.w(TAG, "isDeviceConnected -> not connected to BlePeripheralService");
             return false;
         }
-
         for (final BleDevice device : mBlePeripheralService.getConnectedPeripherals()) {
             if (device.getAddress().equals(deviceAddress)) {
                 return true;
@@ -457,7 +471,12 @@ public class BleManager {
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
     public synchronized void registerDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
-        mBlePeripheralService.registerPeripheralStateListener(listener);
+        if (mBlePeripheralService == null){
+            Log.w(TAG, "registerScanListener -> Peripheral Service is not enabled yet.");
+            mNotificationListeners.add(listener);
+        } else {
+            mBlePeripheralService.registerPeripheralStateListener(listener);
+        }
     }
 
     /**
@@ -466,7 +485,12 @@ public class BleManager {
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
     public synchronized void registerScanListener(@NonNull final BleScanListener listener) {
-        mBlePeripheralService.registerScanListener(listener);
+        if (mBlePeripheralService == null){
+            Log.w(TAG, "registerScanListener -> Peripheral Service is not enabled yet.");
+            mNotificationListeners.add(listener);
+        } else {
+            mBlePeripheralService.registerScanListener(listener);
+        }
     }
 
     /**
@@ -475,7 +499,9 @@ public class BleManager {
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
     public synchronized void unregisterDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
-        mBlePeripheralService.unregisterPeripheralStateListener(listener);
+        if (mBlePeripheralService != null) {
+            mBlePeripheralService.unregisterPeripheralStateListener(listener);
+        }
     }
 
     /**
@@ -484,6 +510,8 @@ public class BleManager {
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
     public synchronized void unregisterScanListener(@NonNull final BleScanListener listener) {
-        mBlePeripheralService.unregisterScanListener(listener);
+        if (mBlePeripheralService != null) {
+            mBlePeripheralService.unregisterScanListener(listener);
+        }
     }
 }
