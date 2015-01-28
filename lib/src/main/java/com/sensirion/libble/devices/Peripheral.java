@@ -88,6 +88,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                 for (final BluetoothGattService service : gatt.getServices()) {
                     mServices.add(BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service));
                 }
+                if (mNotificationListeners.size() > 0) {
+                    setAllNotificationsEnabled(true);
+                }
                 for (final NotificationListener listener : mNotificationListeners) {
                     registerDeviceListener(listener);
                 }

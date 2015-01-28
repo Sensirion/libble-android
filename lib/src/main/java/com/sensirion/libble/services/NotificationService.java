@@ -98,7 +98,7 @@ public abstract class NotificationService<CharacteristicValueType, ListenerType 
         mListeners.add(validListener);
         Log.d(TAG, String.format("Registered %s notification in peripheral %s.", listener.getClass().getSimpleName(), mPeripheral.getAddress()));
 
-        if (mIsRequestingNotifications && mListeners.size() == 1) {
+        if (mIsRequestingNotifications && mListeners.size() >= 1) {
             setNotificationsEnabled(true);
         }
         return true;
