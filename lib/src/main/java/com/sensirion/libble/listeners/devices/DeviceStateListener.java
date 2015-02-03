@@ -6,7 +6,7 @@ import com.sensirion.libble.listeners.NotificationListener;
 /**
  * This listener tells the user when a device state changes.
  */
-public interface BleDeviceStateListener extends NotificationListener {
+public interface DeviceStateListener extends NotificationListener {
     /**
      * NOTE: The services and characteristics of this device are not connected yet.
      * NOTE: The connected device is removed from the library internal discovered list.

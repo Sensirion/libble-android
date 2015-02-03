@@ -3,12 +3,14 @@ package com.sensirion.libble.services.sensirion.shtc1;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.listeners.services.RHTLogDownloadListener;
-import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.listeners.history.HistoryListener;
+import com.sensirion.libble.listeners.services.RHTListener;
+import com.sensirion.libble.services.HistoryService;
 import com.sensirion.libble.utils.RHTDataPoint;
 
 import java.nio.ByteBuffer;
@@ -19,14 +21,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-public class SHTC1LoggingService extends BleService {
+public class SHTC1HistoryService extends HistoryService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
 
     private static final int TIMEOUT_DOWNLOAD_DATA_MS = 7500;
     private static final int MAX_CONSECUTIVE_TRIES = 10;
-
-    private static final String TAG = SHTC1LoggingService.class.getSimpleName();
 
     private static final String START_STOP_UUID = "0000fa21-0000-1000-8000-00805f9b34fb";
     private static final String LOGGING_INTERVAL_UUID = "0000fa22-0000-1000-8000-00805f9b34fb";
@@ -41,9 +41,9 @@ public class SHTC1LoggingService extends BleService {
     private static final int GADGET_RINGBUFFER_SIZE = 16384;
 
     private static final int MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 1300;
-    private static final int SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS = 5;
+    private static final int SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS = 50;
 
-    private final List<RHTLogDownloadListener> mListeners = Collections.synchronizedList(new LinkedList<RHTLogDownloadListener>());
+    private final List<RHTListener> mRHTHistoryListeners = Collections.synchronizedList(new LinkedList<RHTListener>());
 
     private final BluetoothGattCharacteristic mStartStopCharacteristic;
     private final BluetoothGattCharacteristic mIntervalCharacteristic;
@@ -68,28 +68,20 @@ public class SHTC1LoggingService extends BleService {
 
     private volatile boolean mDownloadInProgress = false;
 
-    public SHTC1LoggingService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
+    public SHTC1HistoryService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
-        mStartStopCharacteristic = super.getCharacteristicFor(START_STOP_UUID);
-        mIntervalCharacteristic = super.getCharacteristicFor(LOGGING_INTERVAL_UUID);
-        mCurrentPointerCharacteristic = super.getCharacteristicFor(CURRENT_POINTER_UUID);
-        mStartPointerCharacteristic = super.getCharacteristicFor(START_POINTER_UUID);
-        mEndPointerCharacteristic = super.getCharacteristicFor(END_POINTER_UUID);
-        mLoggedDataCharacteristic = super.getCharacteristicFor(LOGGED_DATA_UUID);
-        mUserDataCharacteristic = super.getCharacteristicFor(USER_DATA_UUID);
+        mStartStopCharacteristic = super.getCharacteristic(START_STOP_UUID);
+        mIntervalCharacteristic = super.getCharacteristic(LOGGING_INTERVAL_UUID);
+        mCurrentPointerCharacteristic = super.getCharacteristic(CURRENT_POINTER_UUID);
+        mStartPointerCharacteristic = super.getCharacteristic(START_POINTER_UUID);
+        mEndPointerCharacteristic = super.getCharacteristic(END_POINTER_UUID);
+        mLoggedDataCharacteristic = super.getCharacteristic(LOGGED_DATA_UUID);
+        mUserDataCharacteristic = super.getCharacteristic(USER_DATA_UUID);
         addCharacteristicsTo(bluetoothGattService);
+        prepareCharacteristics();
     }
 
-    /**
-     * Ask for the Epoch time. (Unix time in seconds)
-     *
-     * @return <code>int</code> with the epochTime time.
-     */
-    private static int getEpochTime() {
-        return (int) (System.currentTimeMillis() / 1000l);
-    }
-
-    private void addCharacteristicsTo(final BluetoothGattService bluetoothGattService) {
+    private void addCharacteristicsTo(@NonNull final BluetoothGattService bluetoothGattService) {
         bluetoothGattService.addCharacteristic(mStartStopCharacteristic);
         bluetoothGattService.addCharacteristic(mIntervalCharacteristic);
         bluetoothGattService.addCharacteristic(mCurrentPointerCharacteristic);
@@ -99,45 +91,49 @@ public class SHTC1LoggingService extends BleService {
         bluetoothGattService.addCharacteristic(mUserDataCharacteristic);
     }
 
-    @Override
-    public boolean onCharacteristicRead(final BluetoothGattCharacteristic characteristic) {
-        super.onCharacteristicRead(characteristic);
+    private void prepareCharacteristics() {
+        mPeripheral.readCharacteristic(mStartStopCharacteristic);
+        mPeripheral.readCharacteristic(mIntervalCharacteristic);
+        mPeripheral.readCharacteristic(mCurrentPointerCharacteristic);
+        mPeripheral.readCharacteristic(mStartPointerCharacteristic);
+        mPeripheral.readCharacteristic(mEndPointerCharacteristic);
+        mPeripheral.readCharacteristic(mUserDataCharacteristic);
+    }
 
-        if (characteristic == null) {
-            Log.e(TAG, "onCharacteristicRead -> Received a null characteristic");
-            return false;
-        }
+    @Override
+    public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic characteristic) {
+        super.onCharacteristicUpdate(characteristic);
 
         final String characteristicUUID = characteristic.getUuid().toString();
 
         switch (characteristicUUID) {
             case START_STOP_UUID:
                 mLoggingIsEnabled = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 1;
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s logging is %s", mPeripheral.getAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s logging is %s", mPeripheral.getAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
                 break;
             case LOGGING_INTERVAL_UUID:
                 mInterval = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s interval it's at %d seconds.", mPeripheral.getAddress(), mInterval));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s interval it's at %d seconds.", mPeripheral.getAddress(), mInterval));
                 break;
             case CURRENT_POINTER_UUID:
                 mCurrentPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s current pointer is: %d", mPeripheral.getAddress(), mCurrentPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s current pointer is: %d", mPeripheral.getAddress(), mCurrentPointer));
                 break;
             case START_POINTER_UUID:
                 mStartPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s start pointer is: %d", mPeripheral.getAddress(), mStartPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s start pointer is: %d", mPeripheral.getAddress(), mStartPointer));
                 break;
             case END_POINTER_UUID:
                 mEndPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s end pointer is: %d", mPeripheral.getAddress(), mEndPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s end pointer is: %d", mPeripheral.getAddress(), mEndPointer));
                 break;
             case LOGGED_DATA_UUID:
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s received a log.", mPeripheral.getAddress()));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received a log.", mPeripheral.getAddress()));
                 parseLoggedData(characteristic);
                 break;
             case USER_DATA_UUID:
                 mPeripheralEpoch = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mPeripheralEpoch));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mPeripheralEpoch));
                 break;
             default:
                 return false;
@@ -152,11 +148,11 @@ public class SHTC1LoggingService extends BleService {
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
     public synchronized boolean synchronizeData() {
-        if (isGadgetLoggingEnabled() == null) {
+        if (checkGadgetLoggingState() == null) {
             Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the enabling state of the device.");
             return false;
         }
-        if (getInterval() == null) {
+        if (getDownloadIntervalSeconds() == null) {
             Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the interval of the device.");
             return false;
         }
@@ -182,10 +178,10 @@ public class SHTC1LoggingService extends BleService {
     /**
      * This method checks if logging is enabled or disabled.
      *
-     * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled.
+     * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled - <code>null</code> if the state is unknown.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public Boolean isGadgetLoggingEnabled() {
+    private Boolean checkGadgetLoggingState() {
         if (mLoggingIsEnabled == null) {
             super.mPeripheral.forceReadCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         } else {
@@ -195,18 +191,54 @@ public class SHTC1LoggingService extends BleService {
     }
 
     /**
+     * This method checks if logging is enabled or disabled.
+     *
+     * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled.
+     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     */
+    @Override
+    public boolean isGadgetLoggingEnabled() {
+        checkGadgetLoggingState();
+        if (mLoggingIsEnabled == null) {
+            Log.e(TAG, String.format("isGadgetLoggingEnabled -> A problem was produced when trying to know is logging is enabled in device %s.", getAddress()));
+            return false;
+        }
+        return mLoggingIsEnabled;
+    }
+
+    /**
+     * Checks is the user can modify the logging state.
+     *
+     * @return <code>true</code> if the user can enable or disable logging - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean isLoggingStateEditable() {
+        return true;
+    }
+
+    /**
      * This method checks the logging interval.
      *
      * @return number if we know the interval - return <code>null</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public Integer getInterval() {
+    public Integer getDownloadIntervalSeconds() {
         if (mInterval == null) {
             super.mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         } else {
             super.mPeripheral.readCharacteristic(mIntervalCharacteristic);
         }
         return mInterval;
+    }
+
+    /**
+     * This method checks the logging interval.
+     *
+     * @return number if we know the interval - return <code>null</code> otherwise.
+     */
+    @Override
+    public Integer getDownloadIntervalMs() {
+        return getDownloadIntervalSeconds();
     }
 
     /**
@@ -275,7 +307,8 @@ public class SHTC1LoggingService extends BleService {
      * @param enable <code>true</code> for enabling logging - <code>false</code> for disabling it.
      * @return <code>true</code> if the action was completed correctly, <code>false</code> otherwise.
      */
-    public boolean setLoggingEnabled(boolean enable) {
+    @Override
+    public boolean setLoggingState(final boolean enable) {
         if (mDownloadInProgress && enable) {
             Log.e(TAG, "We can't enable logging while a download it's in progress.");
         }
@@ -290,10 +323,11 @@ public class SHTC1LoggingService extends BleService {
     /**
      * Sets the interval of the logging, can be done when logging it's ongoing.
      *
-     * @param interval in seconds for logging.
+     * @param intervalInMilliseconds that the device will adopt for logging.
      * @return <code>true</code> if the interval was set - <code>false</code> otherwise.
      */
-    public boolean setInterval(final int interval) {
+    @Override
+    public boolean setDownloadInterval(final int intervalInMilliseconds) {
         if (mLoggingIsEnabled) {
             Log.e(TAG, "setInterval -> We can't set the interval because logging it's enabled.");
             return false;
@@ -302,15 +336,17 @@ public class SHTC1LoggingService extends BleService {
             Log.e(TAG, "setInterval -> We can't set the interval because there's a download in progress");
             return false;
         }
-        if (interval == mInterval) {
-            Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", interval, mPeripheral.getAddress()));
+        final int intervalInSeconds = intervalInMilliseconds / 1000;
+
+        if (intervalInSeconds == mInterval) {
+            Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", intervalInSeconds, mPeripheral.getAddress()));
             return true;
         }
         // Prepares logging interval characteristic.
-        mIntervalCharacteristic.setValue(interval, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+        mIntervalCharacteristic.setValue(intervalInSeconds, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
         mPeripheral.forceWriteCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        return getInterval() == interval;
+        return getDownloadIntervalSeconds() == intervalInSeconds;
     }
 
     /**
@@ -330,7 +366,7 @@ public class SHTC1LoggingService extends BleService {
      * @return <code>true</code> if the start pointer was set - <code>false</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public boolean setStartPointer(final Integer userStartPoint) {
+    public boolean setStartPointer(@Nullable final Integer userStartPoint) {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         if (userStartPoint == null) {
             Log.d(TAG, "setStartPointer() -> userStartPoint == null, user wants all the data!");
@@ -397,7 +433,7 @@ public class SHTC1LoggingService extends BleService {
      * @return <code>true</code> if the end pointer was set - <code>false</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public boolean setEndPointer(final Integer endPointer) {
+    public boolean setEndPointer(@Nullable final Integer endPointer) {
         super.mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
 
         if (mCurrentPointer.equals(endPointer)) {
@@ -460,14 +496,14 @@ public class SHTC1LoggingService extends BleService {
                 return false;
             }
 
-            if (setLoggingEnabled(true)) {
+            if (setLoggingState(true)) {
                 Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was enabled", mPeripheral.getAddress()));
             } else {
                 Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
                 return false;
             }
         } else {
-            if (setLoggingEnabled(false)) {
+            if (setLoggingState(false)) {
                 Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was disabled", mPeripheral.getAddress()));
             } else {
                 Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
@@ -490,10 +526,11 @@ public class SHTC1LoggingService extends BleService {
     /**
      * Downloads all the data from the device.
      */
-    public synchronized void startDataDownload() {
-        if (mListeners.isEmpty()) {
+    @Override
+    public synchronized boolean startDataDownload() {
+        if (mRHTHistoryListeners.isEmpty()) {
             Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
-            return;
+            return false;
         }
 
         Executors.newSingleThreadExecutor().execute(new Runnable() {
@@ -511,6 +548,15 @@ public class SHTC1LoggingService extends BleService {
                 onDownloadComplete();
             }
         });
+        return true;
+    }
+
+    /**
+     * Downloads all the data from the device.
+     */
+    @Override
+    public synchronized boolean startDataDownload(final long oldestTimestampToDownload) {
+        return startDataDownload();
     }
 
     private void prepareDeviceToDownload(final boolean wasDeviceLoggingEnabled) {
@@ -547,7 +593,7 @@ public class SHTC1LoggingService extends BleService {
     }
 
     private int calculateValuesToDownload() {
-        final int totalNumberOfValues = getNumberElementsToLog();
+        final int totalNumberOfValues = getNumberLoggedElements();
         notifyTotalNumberElements(totalNumberOfValues);
         lastTimeLogged = System.currentTimeMillis();
         Log.i(TAG, String.format("calculateValuesToDownload -> The user has to download %d values.", totalNumberOfValues));
@@ -560,7 +606,7 @@ public class SHTC1LoggingService extends BleService {
      * @param characteristic characteristic we want to parse.
      * @return <code>true</code> if it was able to parse it - <code>false</code> otherwise.
      */
-    private boolean parseLoggedData(final BluetoothGattCharacteristic characteristic) {
+    private boolean parseLoggedData(@NonNull final BluetoothGattCharacteristic characteristic) {
         final byte[] rhtRawData = characteristic.getValue();
 
         if (isRawDatapointCorrupted(rhtRawData)) {
@@ -598,7 +644,7 @@ public class SHTC1LoggingService extends BleService {
         return true;
     }
 
-    private boolean isRawDatapointCorrupted(final byte[] rhtRawData) {
+    private boolean isRawDatapointCorrupted(@NonNull final byte[] rhtRawData) {
         if (rhtRawData.length == 0 || rhtRawData.length % DATA_POINT_SIZE > 0) {
             // The data received it's not valid, it has to have values and
             // the whole download has to be multiple of the data point size.
@@ -610,30 +656,12 @@ public class SHTC1LoggingService extends BleService {
     }
 
     /**
-     * Checks if the device has logged elements.
-     *
-     * @return <code>true</code> if the device has logged elements - <code>false</code> otherwise.
-     */
-    public boolean hasLoggedElements() {
-        return mCurrentPointer > 0;
-    }
-
-    /**
-     * Checks if the device has elements to log.
-     *
-     * @return <code>true</code> if the device has elements to log - <code>false</code> otherwise.
-     */
-    @SuppressWarnings("unused")
-    public boolean hasElementsToLog() {
-        return getCurrentPoint() - mStartPointer > 0;
-    }
-
-    /**
      * Obtains the number of elements to log
      *
      * @return <code>int</code> with the total number of elements to log.
      */
-    public int getNumberElementsToLog() {
+    @Override
+    public int getNumberLoggedElements() {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
 
         if (getCurrentPoint() == 0) {
@@ -653,13 +681,15 @@ public class SHTC1LoggingService extends BleService {
      *
      * @param newListener listener that wants to listen for notifications.
      */
-    public void registerDownloadListener(@NonNull final NotificationListener newListener) {
-        if (newListener instanceof RHTLogDownloadListener) {
-            mListeners.add((RHTLogDownloadListener) newListener);
-            Log.i(TAG, String.format("registerDownloadListener -> Peripheral %s received a new download listener: %s ", mPeripheral.getAddress(), newListener));
-        } else {
-            Log.i(TAG, String.format("registerDownloadListener -> The download listener received by the peripheral %s is not a %s", mPeripheral.getAddress(), RHTLogDownloadListener.class.getSimpleName()));
+    @Override
+    public boolean registerNotificationListener(@NonNull final NotificationListener newListener) {
+        boolean rhtListenerFound = false;
+        if (newListener instanceof RHTListener) {
+            mRHTHistoryListeners.add((RHTListener) newListener);
+            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new RHT history listener: %s ", getAddress(), newListener));
+            rhtListenerFound = true;
         }
+        return rhtListenerFound | super.registerNotificationListener(newListener);
     }
 
     /**
@@ -667,28 +697,46 @@ public class SHTC1LoggingService extends BleService {
      *
      * @param listenerForRemove listener that doesn't need the listen for notifications anymore.
      */
-    @SuppressWarnings("unused")
-    public void removeDownloadListener(@NonNull final NotificationListener listenerForRemove) {
-        if (listenerForRemove instanceof RHTLogDownloadListener) {
-            if (mListeners.contains(listenerForRemove)) {
-                mListeners.remove(listenerForRemove);
-                Log.i(TAG, String.format("removeDownloadListener -> Peripheral %s deleted %s listener from the list.", mPeripheral.getAddress(), listenerForRemove));
-            } else {
-                Log.w(TAG, String.format("removeDownloadListener -> Peripheral %s did not have the listener %s.", mPeripheral.getAddress(), listenerForRemove));
+    @Override
+    public boolean unregisterNotificationListener(@NonNull final NotificationListener listenerForRemove) {
+        boolean rhtListenerFound = false;
+        if (listenerForRemove instanceof RHTListener) {
+            if (mRHTHistoryListeners.contains(listenerForRemove)) {
+                mRHTHistoryListeners.remove(listenerForRemove);
+                Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the RHTListener list.", mPeripheral.getAddress(), listenerForRemove));
+                rhtListenerFound = true;
             }
         }
+        return rhtListenerFound | super.unregisterNotificationListener(listenerForRemove);
     }
 
     /**
      * Notifies download progress to the listeners.
      */
     private void onDatapointRead(final RHTDataPoint dataPoint) {
-        final Iterator<RHTLogDownloadListener> iterator = mListeners.iterator();
+        notifyDatapointRead(dataPoint);
+        notifyDownloadProgress();
+    }
+
+    private void notifyDatapointRead(final RHTDataPoint dataPoint) {
+        final Iterator<RHTListener> iterator = mRHTHistoryListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                final RHTLogDownloadListener listener = iterator.next();
+                final RHTListener listener = iterator.next();
+                listener.onNewHistoricalRHTValues(mPeripheral, dataPoint, getSensorName());
+            } catch (RuntimeException e) {
+                Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
+                iterator.remove();
+            }
+        }
+    }
+
+    private void notifyDownloadProgress() {
+        final Iterator<HistoryListener> iterator = mListeners.iterator();
+        while (iterator.hasNext()) {
+            try {
+                final HistoryListener listener = iterator.next();
                 listener.setDownloadProgress(mPeripheral, mExtractedDatapointsCounter);
-                listener.onNewDatapointDownloaded(mPeripheral, dataPoint);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
@@ -702,10 +750,10 @@ public class SHTC1LoggingService extends BleService {
      * @param numberElementsToDownload number of elements to download.
      */
     private void notifyTotalNumberElements(final int numberElementsToDownload) {
-        final Iterator<RHTLogDownloadListener> iterator = mListeners.iterator();
+        final Iterator<HistoryListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().setRequestedDatapointAmount(mPeripheral, numberElementsToDownload);
+                iterator.next().setAmountElementsToDownload(mPeripheral, numberElementsToDownload);
             } catch (RuntimeException e) {
                 Log.e(TAG, "notifyTotalNumberElements -> The following exception was produced when notifying the listeners: ", e);
                 iterator.remove();
@@ -717,7 +765,7 @@ public class SHTC1LoggingService extends BleService {
      * Notifies download progress to the listeners.
      */
     private void onDownloadFailure() {
-        final Iterator<RHTLogDownloadListener> iterator = mListeners.iterator();
+        final Iterator<HistoryListener> iterator = mListeners.iterator();
         Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.size()));
         while (iterator.hasNext()) {
             try {
@@ -733,7 +781,7 @@ public class SHTC1LoggingService extends BleService {
      * Notifies to the user that the application has finish downloading the logged data.
      */
     private void onDownloadComplete() {
-        final Iterator<RHTLogDownloadListener> iterator = mListeners.iterator();
+        final Iterator<HistoryListener> iterator = mListeners.iterator();
         Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.size()));
         while (iterator.hasNext()) {
             try {
@@ -749,14 +797,15 @@ public class SHTC1LoggingService extends BleService {
      * Deletes the data from the device.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public boolean deleteDataFromTheDevice() {
+    @Override
+    public boolean resetDeviceData() {
         final boolean initialLoggingState = mLoggingIsEnabled;
         if (mLoggingIsEnabled) {
             setGadgetLoggingEnabled(false);
         }
         setGadgetLoggingEnabled(true);
         if (initialLoggingState) {
-            Log.i(TAG, String.format("deleteDataFromTheDevice -> In device %s data was deleted.", getDeviceAddress()));
+            Log.i(TAG, String.format("resetDeviceData -> In device %s data was deleted.", getAddress()));
             return true;
         }
         return setGadgetLoggingEnabled(false);
@@ -769,5 +818,35 @@ public class SHTC1LoggingService extends BleService {
      */
     public boolean isDownloadInProgress() {
         return mDownloadInProgress;
+    }
+
+    @Override
+    public void registerDeviceCharacteristicNotifications() {
+        // This service does not receive direct notifications from the device.
+    }
+
+    /**
+     * Ask for the Epoch time. (Unix time in seconds)
+     *
+     * @return <code>int</code> with the epochTime time.
+     */
+    private int getEpochTime() {
+        return (int) (System.currentTimeMillis() / 1000l);
+    }
+
+    /**
+     * Obtains the sensor name of the logging service.
+     *
+     * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known.
+     */
+    private String getSensorName() {
+        switch (mPeripheral.getAdvertisedName()) {
+            case "SHTC1 smart gadget":
+                return "SHTC1";
+            case "SHT31 Smart Gadget":
+                return "SHT31";
+            default:
+                return null;
+        }
     }
 }

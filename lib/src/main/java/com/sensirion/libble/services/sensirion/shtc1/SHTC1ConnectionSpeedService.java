@@ -46,7 +46,7 @@ public class SHTC1ConnectionSpeedService extends BleService<Boolean> {
 
     public SHTC1ConnectionSpeedService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
-        mNotificationSpeedCharacteristic = getCharacteristicFor(NOTIFICATION_CHARACTERISTIC_UUID);
+        mNotificationSpeedCharacteristic = getCharacteristic(NOTIFICATION_CHARACTERISTIC_UUID);
     }
 
     /**

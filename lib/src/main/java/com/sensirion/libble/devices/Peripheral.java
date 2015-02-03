@@ -14,6 +14,7 @@ import android.util.Log;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.BleServiceFactory;
+import com.sensirion.libble.services.HistoryService;
 import com.sensirion.libble.services.NotificationService;
 
 import java.util.Collections;
@@ -25,7 +26,7 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Represents a remote piece of HW (SmartGadget) that can have 1-N {@link com.sensirion.libble.services.BleService}
+ * Represents a remote piece of Hardware that can have 1-N {@link com.sensirion.libble.services.BleService}
  */
 
 public class Peripheral implements BleDevice, Comparable<Peripheral> {
@@ -35,21 +36,22 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     // Force reading attributes.
     private static final byte INTERVAL_BETWEEN_CHECKS_MILLISECONDS = 25;
-    private final Queue<BluetoothGattCharacteristic> mLastCharacteristicsUsedQueue = new LinkedBlockingQueue<>();
-
+    private final Queue<Object> mLastActionUsedQueue = new LinkedBlockingQueue<>();
     //Peripheral attributes
-    private final BlePeripheralService mParent;
+    private final BlePeripheralService mPeripheralService;
     private final BluetoothDevice mBluetoothDevice;
     private final String mAdvertisedName;
     private final String mAddress;
-
     //Listener list
     private final Set<NotificationListener> mNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
+    //Services List
     private final Set<BleService> mServices = Collections.synchronizedSet(new HashSet<BleService>());
-    private volatile boolean mConfirmationOperationRunning = false;
-    private BluetoothGatt mBluetoothGatt;
-    private int mReceivedSignalStrengthIndication;
+    private volatile boolean mForceOperationRunning = false;
     private boolean mIsConnected = false;
+    private int mRSSI;
+    //Gathering controller.
+    private BluetoothGatt mBluetoothGatt;
+
 
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
         @Override
@@ -66,7 +68,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                     mIsConnected = true;
                     mBluetoothGatt = gatt;
                     Log.d(TAG, "onConnectionStateChange() -> mBluetoothGatt.discoverServices(): " + mBluetoothGatt.discoverServices());
-                    mParent.onPeripheralConnectionChanged(Peripheral.this);
+                    mPeripheralService.onPeripheralConnectionChanged(Peripheral.this);
                     break;
                 case BluetoothProfile.STATE_DISCONNECTING:
                     Log.d(TAG, "onConnectionStateChange() -> BluetoothProfile.STATE_DISCONNECTING: " + address);
@@ -74,10 +76,50 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                 case BluetoothProfile.STATE_DISCONNECTED:
                     Log.i(TAG, "onConnectionStateChange() -> disconnected from GATT server: " + address);
                     mIsConnected = false;
-                    mParent.onPeripheralConnectionChanged(Peripheral.this);
+                    mPeripheralService.onPeripheralConnectionChanged(Peripheral.this);
                     break;
                 default:
                     throw new IllegalStateException("onConnectionStateChange() -> state not implemented: " + newState);
+            }
+        }
+
+        @Override
+        public void onCharacteristicRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
+            super.onCharacteristicRead(gatt, characteristic, status);
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                for (final BleService service : mServices) {
+                    service.onCharacteristicUpdate(characteristic);
+                }
+                if (mForceOperationRunning) {
+                    mLastActionUsedQueue.add(characteristic);
+                }
+            } else {
+                Log.w(TAG, String.format("onCharacteristicRead -> Characteristic %s failed with the following status: %d", characteristic.getUuid(), status));
+            }
+        }
+
+        @Override
+        public void onCharacteristicChanged(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic) {
+            super.onCharacteristicChanged(gatt, characteristic);
+            for (final BleService service : mServices) {
+                service.onCharacteristicUpdate(characteristic);
+            }
+            mBleStackProtector.execute(mBluetoothGatt);
+        }
+
+        @Override
+        public void onCharacteristicWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
+            super.onCharacteristicChanged(gatt, characteristic);
+            Log.d(TAG, String.format("onCharacteristicWrite -> Received Characteristic %s with status %d", characteristic.getUuid(), status));
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                for (final BleService service : mServices) {
+                    service.onCharacteristicWrite(characteristic);
+                }
+                if (mForceOperationRunning) {
+                    mLastActionUsedQueue.add(characteristic);
+                }
+            } else {
+                Log.e(TAG, String.format("onCharacteristicWrite -> The device %s was unable to write in the characteristic %s.", getAddress(), characteristic.getUuid()));
             }
         }
 
@@ -94,92 +136,96 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                 for (final NotificationListener listener : mNotificationListeners) {
                     registerDeviceListener(listener);
                 }
-                mParent.onPeripheralServiceDiscovery(Peripheral.this);
+                mPeripheralService.onPeripheralServiceDiscovery(Peripheral.this);
             } else {
                 Log.w(TAG, String.format("onServicesDiscovered -> Failed with status: " + status));
             }
         }
 
         @Override
-        public void onCharacteristicRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
-            super.onCharacteristicRead(gatt, characteristic, status);
+        public void onDescriptorRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattDescriptor descriptor, final int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                for (BleService service : mServices) {
-                    service.onCharacteristicRead(characteristic);
+                if (mForceOperationRunning) {
+                    mLastActionUsedQueue.add(descriptor);
                 }
-                if (mConfirmationOperationRunning) {
-                    mLastCharacteristicsUsedQueue.add(characteristic);
+                Log.i(TAG, String.format("onDescriptorRead -> Descriptor %s was read successfully.", descriptor.getUuid()));
+                for (final BleService service : mServices) {
+                    service.onDescriptorRead(descriptor);
                 }
             } else {
-                Log.w(TAG, String.format("onCharacteristicRead -> Characteristic %s failed with the following status: %d", characteristic.getUuid(), status));
+                Log.i(TAG, String.format("onDescriptorRead -> Descriptor %s failed with status %d.", descriptor.getUuid(), status));
             }
         }
 
         @Override
-        public void onCharacteristicChanged(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic) {
-            super.onCharacteristicChanged(gatt, characteristic);
-            for (final BleService service : mServices) {
-                if (service instanceof NotificationService) {
-                    ((NotificationService) service).onChangeNotification(characteristic);
+        public void onDescriptorWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattDescriptor descriptor, final int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.i(TAG, String.format("onDescriptorWrite -> Descriptor %s was written successfully.", descriptor.getUuid()));
+                if (mForceOperationRunning) {
+                    mLastActionUsedQueue.add(descriptor);
                 }
-            }
-            mBleStackProtector.execute(mBluetoothGatt);
-        }
-
-        @Override
-        public void onCharacteristicWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
-            super.onCharacteristicChanged(gatt, characteristic);
-            Log.d(TAG, String.format("On characteristic write %s with value %d with status %d", characteristic.getUuid(), characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0), status));
-            if (mConfirmationOperationRunning) {
-                mLastCharacteristicsUsedQueue.add(characteristic);
+                for (final BleService service : mServices) {
+                    service.onDescriptorWrite(descriptor);
+                }
+            } else {
+                Log.i(TAG, String.format("onDescriptorWrite -> Descriptor %s failed with status %d.", descriptor.getUuid(), status));
             }
         }
     };
 
     public Peripheral(@NonNull final BlePeripheralService parent, @NonNull final BluetoothDevice bluetoothDevice, final int rssi) {
-        mParent = parent;
+        mPeripheralService = parent;
         mBluetoothDevice = bluetoothDevice;
         mBluetoothGatt = null;
         mAddress = bluetoothDevice.getAddress();
         mAdvertisedName = bluetoothDevice.getName().trim();
-        mReceivedSignalStrengthIndication = rssi;
+        mRSSI = rssi;
     }
 
     /**
-     * Checks if a characteristic is inside an iterable.
+     * Obtains the physical address of the device.
      *
-     * @param characteristic to be checked
-     * @param iterable       with the elements we want to compare with the characteristic.
-     * @return <code>true</code> if the iterable contains the element - <code>false</code> otherwise.
+     * @return {@link java.lang.String} with the MAC-Address of the device.
      */
-    public static boolean containsCharacteristic(final BluetoothGattCharacteristic characteristic, final Iterable<BluetoothGattCharacteristic> iterable) {
-        for (final BluetoothGattCharacteristic lastCharacteristic : iterable) {
-            if (lastCharacteristic.getUuid().toString().equals(characteristic.getUuid().toString())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     public String getAddress() {
         return mAddress;
     }
 
+    /**
+     * Checks the signal strength of the device towards the external BleDevice.
+     *
+     * @return {@link java.lang.Integer} with the signal strength.
+     */
     @Override
     public int getRSSI() {
-        return mReceivedSignalStrengthIndication;
+        return mRSSI;
     }
 
+    /**
+     * Sets the signal strength of the device towards the external BleDevice.
+     *
+     * @param RSSI with the signal strength.
+     */
     public void setRSSI(final int RSSI) {
-        mReceivedSignalStrengthIndication = RSSI;
+        mRSSI = RSSI;
     }
 
+    /**
+     * Obtains the public name of the BleDevice.
+     *
+     * @return {@link java.lang.String} with the advertised name.
+     */
     @Override
     public String getAdvertisedName() {
         return mAdvertisedName;
     }
 
+    /**
+     * Checks if a device is connected or not.
+     *
+     * @return <code>true</code> if the device is connected - <code>false</code> if the device is disconnected.
+     */
     @Override
     public boolean isConnected() {
         return mIsConnected;
@@ -194,7 +240,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given class.
      */
     @Override
-    public <T extends BleService> T getPeripheralService(final Class<T> type) {
+    public <T extends BleService> T getDeviceService(final Class<T> type) {
         for (final BleService service : mServices) {
             if (service.getClass().equals(type)) {
                 return (T) service;
@@ -211,7 +257,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given name
      */
     @Override
-    public BleService getPeripheralService(final String serviceName) {
+    public BleService getDeviceService(final String serviceName) {
         for (BleService service : mServices) {
             if (service.isExplicitService(serviceName)) {
                 return service;
@@ -226,7 +272,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
      */
     @Override
-    public Iterable<BleService> getDiscoveredPeripheralServices() {
+    public Iterable<BleService> getDiscoveredServices() {
         final List<BleService> discoveredBleServices = new LinkedList<>();
         for (final BleService service : mServices) {
             discoveredBleServices.add(service);
@@ -241,7 +287,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
      */
     @Override
-    public Iterable<String> getDiscoveredPeripheralServicesNames() {
+    public Iterable<String> getDiscoveredServicesNames() {
         final Set<String> discoveredServices = new HashSet<>();
         for (final BleService service : mServices) {
             discoveredServices.add(String.format("%s %s", service.getClass().getSimpleName(), service.getUUIDString()));
@@ -249,11 +295,37 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         return discoveredServices;
     }
 
-    public void connect(@NonNull final Context ctx) {
-        // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
-        mBluetoothDevice.connectGatt(ctx, false, mBleStackProtector);
+    /**
+     * Retrieves the device history service in case it haves one.
+     * NOTE: In case the device haves more that one history service it will only return the first one.
+     *
+     * @return {@link com.sensirion.libble.services.HistoryService} of the device - <code>null</code> if it doesn't haves one.
+     */
+    @Override
+    public HistoryService getHistoryService() {
+        for (final BleService service : mServices) {
+            if (service instanceof HistoryService) {
+                return (HistoryService) service;
+            }
+        }
+        return null;
     }
 
+    /**
+     * Establish a connection between the application and the peripheral.
+     *
+     * @param context of the application that wants to connect with the device. Cannot be <code>null</code>
+     */
+    public void connect(@NonNull final Context context) {
+        // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
+        mBluetoothDevice.connectGatt(context, false, mBleStackProtector);
+    }
+
+    /**
+     * Tries to establish the connection with a device that was already connected.
+     *
+     * @return <code>true</code> if the connection was recovered - <code>false</code> otherwise.
+     */
     public boolean reconnect() {
         if (mBluetoothGatt == null) {
             Log.e(TAG, "reconnect -> Bluetooth gatt it's not connected.");
@@ -262,6 +334,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         return mBluetoothGatt.connect();
     }
 
+    /**
+     * Closes a connection with a device.
+     */
     public void disconnect() {
         if (mBluetoothGatt == null) {
             Log.w(TAG, "disconnect -> Bluetooth gatt was already disconnected.");
@@ -280,7 +355,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     /**
      * Request a read on a given {@code BluetoothGattCharacteristic}. The read
      * result is reported asynchronously through the
-     * {@code BluetoothGattCallback#onCharacteristicRead(android.bluetooth.BluetoothGatt,
+     * {@code BluetoothGattCallback#onCharacteristicUpdate(android.bluetooth.BluetoothGatt,
      *android.bluetooth.BluetoothGattCharacteristic, int)} callback.
      *
      * @param characteristic The characteristic to read from.
@@ -312,7 +387,19 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
     public boolean forceReadCharacteristic(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxNumberConnections) {
-        return forceCharacteristicReadOrWrite(characteristic, timeoutMs, maxNumberConnections, true);
+        return forceActionReadOrWrite(characteristic, timeoutMs, maxNumberConnections, true);
+    }
+
+    /**
+     * Request a write to a given {@code BluetoothGattCharacteristic}. The write
+     * operation is done asynchronously through the
+     * {@code BluetoothGattCallback#onCharacteristicWrite(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)} callback.
+     *
+     * @param characteristic The characteristic to overwrite.
+     */
+    public void writeCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
+        mBleStackProtector.addWriteCharacteristic(characteristic);
+        mBleStackProtector.execute(mBluetoothGatt);
     }
 
     /**
@@ -338,55 +425,140 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
     public boolean forceWriteCharacteristic(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxRequestCount) {
-        return forceCharacteristicReadOrWrite(characteristic, timeoutMs, maxRequestCount, false);
+        return forceActionReadOrWrite(characteristic, timeoutMs, maxRequestCount, false);
+    }
+
+
+    /**
+     * Reads a {@link android.bluetooth.BluetoothGattDescriptor} in the bluetooth gatherer.
+     *
+     * @param descriptor the descriptor we want to read.
+     */
+    public void readDescriptor(@NonNull final BluetoothGattDescriptor descriptor) {
+        mBleStackProtector.addReadDescriptor(descriptor);
+        mBleStackProtector.execute(mBluetoothGatt);
+    }
+
+    /**
+     * Method that send a read request of a descriptor to device, informing the user if the characteristic was retrieved.
+     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     *
+     * @param descriptor that is going to be readed. Cannot be <code>null</code>
+     * @param timeoutMs  acceptable time without receiving an answer from the peripheral.
+     * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public boolean readDescriptorWithConfirmation(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs) {
+        return forceDescriptorRead(descriptor, timeoutMs, 1);
+    }
+
+    /**
+     * Convenience method for forcing the read of a descritor.
+     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     *
+     * @param descriptor       that is going to be written. Cannot be <code>null</code>
+     * @param timeoutMs        acceptable time without receiving an answer from the peripheral.
+     * @param maxNumberRequest It needs to be a positive number.
+     * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
+     */
+    public boolean forceDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs, final int maxNumberRequest) {
+        return forceActionReadOrWrite(descriptor, timeoutMs, maxNumberRequest, true);
+    }
+
+    /**
+     * Writes a {@link android.bluetooth.BluetoothGattDescriptor} in the bluetooth gatherer.
+     *
+     * @param descriptor the descriptor we want to store.
+     */
+    public void writeDescriptor(final BluetoothGattDescriptor descriptor) {
+        mBleStackProtector.addWriteDescriptor(descriptor);
+        mBleStackProtector.execute(mBluetoothGatt);
+    }
+
+    /**
+     * Method that send a read request of a descriptor to device, informing the user if the characteristic was retrieved.
+     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     *
+     * @param descriptor that is going to be readed. Cannot be <code>null</code>
+     * @param timeoutMs  acceptable time without receiving an answer from the peripheral.
+     * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public boolean writeDescriptorWithConfirmation(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs) {
+        return forceDescriptorWrite(descriptor, timeoutMs, 1);
+    }
+
+    /**
+     * Convenience method for forcing the write of a descritor.
+     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     *
+     * @param descriptor       that is going to be written. Cannot be <code>null</code>
+     * @param timeoutMs        acceptable time without receiving an answer from the peripheral.
+     * @param maxNumberRequest It needs to be a positive number.
+     * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
+     */
+    public boolean forceDescriptorWrite(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs, final int maxNumberRequest) {
+        return forceActionReadOrWrite(descriptor, timeoutMs, maxNumberRequest, false);
     }
 
     /**
      * Convenience method for forcing a characteristic read or write, in case we want to be sure to read the characteristic.
      * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
      *
-     * @param characteristic  that is going to be processed. Cannot be <code>null</code>
+     * @param action          that is going to be processed. Needs to be {@link android.bluetooth.BluetoothGattCharacteristic} or a {@link android.bluetooth.BluetoothGattDescriptor}. Cannot be <code>null</code>
      * @param timeoutMs       acceptable time without receiving an answer from the peripheral.
      * @param maxRequestCount maximumNumberOfReads. It has to be a positive number.
      * @return <code>true</code> if the characteristic was processed - <code>false</code> otherwise.
      */
-    private synchronized boolean forceCharacteristicReadOrWrite(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxRequestCount, final boolean isReading) {
-        mConfirmationOperationRunning = true;
-        final long timeNow = System.currentTimeMillis();
-        mBleStackProtector.cleanCharacteristicCache();
-        int requestCounter = 0;
-        while (isConnected()) {
-            if (System.currentTimeMillis() - timeoutMs * requestCounter > timeNow) {
+    private synchronized boolean forceActionReadOrWrite(@NonNull final Object action, final int timeoutMs, final int maxRequestCount, final boolean isReadAction) {
+        try {
+            mForceOperationRunning = true;
+            final long timeNow = System.currentTimeMillis();
+            mBleStackProtector.cleanCharacteristicCache();
+            int requestCounter = 0;
+            while (isConnected()) {
+                if (System.currentTimeMillis() - timeoutMs * requestCounter > timeNow) {
+                    executeAction(action, isReadAction);
+                    requestCounter++;
+                }
+                if (mLastActionUsedQueue.contains(action)) {
+                    return true;
+                }
                 if (requestCounter >= maxRequestCount) {
                     break;
                 }
-                if (isReading) {
-                    readCharacteristic(characteristic);
-                } else {
-                    writeCharacteristic(characteristic);
+                try {
+                    Thread.sleep(INTERVAL_BETWEEN_CHECKS_MILLISECONDS);
+                } catch (final InterruptedException ignored) {
+                    Log.w(TAG, String.format("forceActionReadOrWrite -> Action %s produced an interruptedException.", action));
                 }
-                requestCounter++;
             }
-
-            if (containsCharacteristic(characteristic, mLastCharacteristicsUsedQueue)) {
-                break;
-            }
-
-            try {
-                Thread.sleep(INTERVAL_BETWEEN_CHECKS_MILLISECONDS);
-            } catch (final InterruptedException ignored) {
-                Log.w(TAG, String.format("forceCharacteristicReadOrWrite -> Characteristic %s produced an interruptedException.", characteristic.getUuid().toString()));
-            }
+            return false;
+        } finally {
+            mLastActionUsedQueue.clear();
+            mForceOperationRunning = false;
+            mBleStackProtector.cleanCharacteristicCache();
         }
-        mLastCharacteristicsUsedQueue.clear();
-        mConfirmationOperationRunning = false;
-        mBleStackProtector.cleanCharacteristicCache();
-        return false;
     }
 
+    private void executeAction(@NonNull final Object action, final boolean isReadAction) {
+        if (isReadAction) {
+            if (action instanceof BluetoothGattCharacteristic) {
+                readCharacteristic((BluetoothGattCharacteristic) action);
+            } else if (action instanceof BluetoothGattDescriptor) {
+                readDescriptor((BluetoothGattDescriptor) action);
+            }
+        } else {
+            if (action instanceof BluetoothGattCharacteristic) {
+                writeCharacteristic((BluetoothGattCharacteristic) action);
+            } else if (action instanceof BluetoothGattDescriptor) {
+                writeDescriptor((BluetoothGattDescriptor) action);
+            }
+        }
+    }
 
     /**
-     * Ask for the a characteristic of a service
+     * Ask for a named characteristic of a service.
      * NOTE: It returns the first characteristic it founds.
      *
      * @param characteristicName name of the characteristic.
@@ -405,35 +577,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Request a write to a given {@code BluetoothGattCharacteristic}. The write
-     * operation is done asynchronously through the
-     * {@code BluetoothGattCallback#onCharacteristicWrite(android.bluetooth.BluetoothGatt, android.bluetooth.BluetoothGattCharacteristic, int)} callback.
-     *
-     * @param characteristic The characteristic to overwrite.
-     */
-    public void writeCharacteristic(final BluetoothGattCharacteristic characteristic) {
-        mBleStackProtector.addWriteCharacteristic(characteristic);
-        mBleStackProtector.execute(mBluetoothGatt);
-    }
-
-    /**
      * Enables or disables notification on a given characteristic.
      *
      * @param characteristic Characteristic to act on.
      * @param enabled        If <code>true</code>, enable notification - <code>false</code> otherwise.
      */
-    public void setCharacteristicNotification(final BluetoothGattCharacteristic characteristic, final boolean enabled) {
+    public void setCharacteristicNotification(@NonNull final BluetoothGattCharacteristic characteristic, final boolean enabled) {
         mBleStackProtector.addCharacteristicNotification(characteristic, enabled);
-        mBleStackProtector.execute(mBluetoothGatt);
-    }
-
-    /**
-     * Writes a {@link android.bluetooth.BluetoothGattDescriptor} in the bluetooth gatherer.
-     *
-     * @param descriptor the descriptor we want to store.
-     */
-    public void writeDescriptor(final BluetoothGattDescriptor descriptor) {
-        mBleStackProtector.addDescriptorCharacteristic(descriptor);
         mBleStackProtector.execute(mBluetoothGatt);
     }
 
@@ -460,32 +610,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return <code>true</code> if a valid service was found, <code>false</code> otherwise.
      */
     @Override
-    public boolean registerDeviceListener(final NotificationListener listener) {
-        return registerDeviceListener(listener, null);
-    }
-
-    /**
-     * Registers a notification listener in service that are able to inform to the incoming listener.
-     * Each service with notifications checks if the listener is able to read it's data with interfaces.
-     *
-     * @param listener    Activity from outside the library that
-     *                    wants to listen for notifications.
-     * @param serviceName <code>null</code> in case we want to ask to every service.
-     *                    name of the service in case we want to listen to a particular service.
-     * @return <code>true</code> if a valid service was found, <code>false</code> otherwise.
-     */
-    @Override
-    public boolean registerDeviceListener(final NotificationListener listener, final String serviceName) {
+    public boolean registerDeviceListener(@NonNull final NotificationListener listener) {
         mNotificationListeners.add(listener);
         boolean validServiceFound = false;
         for (final BleService service : mServices) {
             if (service instanceof NotificationService) {
-                if (serviceName == null) {
-                    ((NotificationService) service).registerNotificationListener(listener);
+                if (((NotificationService) service).registerNotificationListener(listener)) {
                     validServiceFound = true;
-                } else if (service.isExplicitService(serviceName)) {
-                    ((NotificationService) service).registerNotificationListener(listener);
-                    return true;
                 }
             }
         }
@@ -501,7 +632,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *                 want to listen for notifications anymore.
      */
     @Override
-    public void unregisterDeviceListener(final NotificationListener listener) {
+    public void unregisterDeviceListener(@NonNull final NotificationListener listener) {
         for (final BleService service : mServices) {
             if (service instanceof NotificationService) {
                 ((NotificationService) service).unregisterNotificationListener(listener);
@@ -518,20 +649,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     @Override
     public int getNumberOfDiscoveredServices() {
         return mServices.size();
-    }
-
-    /**
-     * Obtains the names of each discovered service.
-     *
-     * @return {@link java.util.List} with the services names. (Simple names)
-     */
-    @Override
-    public List<String> getDiscoveredServicesNames() {
-        final List<String> serviceNames = new LinkedList<>();
-        for (final BleService service : mServices) {
-            serviceNames.add(service.getClass().getSimpleName());
-        }
-        return serviceNames;
     }
 
     /**
@@ -553,7 +670,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     /**
      * Compares two discovered peripherals with the RSSI. Used for sorting.
      * In case the peripherals are connected it respects the order of insertion. (Return 0)
-     * In case the peripherals are disconnected it worrks using the order of insertion.
+     * In case the peripherals are disconnected it works using the order of insertion.
      *
      * @param anotherPeripheral peripheral that has to be sorted.
      * @return positive number if this peripheral has bigger RSSI, negative otherwise. returns <code>0</code> if the device is connected.

@@ -13,8 +13,8 @@ import android.util.Log;
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.devices.BlePeripheralService;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.listeners.devices.BleDeviceStateListener;
-import com.sensirion.libble.listeners.devices.BleScanListener;
+import com.sensirion.libble.listeners.devices.DeviceStateListener;
+import com.sensirion.libble.listeners.devices.ScanListener;
 import com.sensirion.libble.services.BleService;
 
 import java.util.Collections;
@@ -27,14 +27,16 @@ import java.util.UUID;
 public class BleManager {
 
     private static final String TAG = BleManager.class.getSimpleName();
-
     private static BleManager mInstance;
 
-    private boolean mShouldStartScanning;
-
-    private BlePeripheralService mBlePeripheralService;
-
+    //List with the listeners that are used when {@link com.sensirion.libble.devices.BlePeripheralService} is not connected.
     private final Set<NotificationListener> mNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
+    private final Set<DeviceStateListener> mDeviceStateListeners = Collections.synchronizedSet(new HashSet<DeviceStateListener>());
+    private final Set<ScanListener> mScanListeners = Collections.synchronizedSet(new HashSet<ScanListener>());
+
+    //Manager values
+    private boolean mShouldStartScanning;
+    private BlePeripheralService mBlePeripheralService;
 
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
@@ -42,14 +44,18 @@ public class BleManager {
             Log.i(TAG, "onServiceConnected() -> connected to BlePeripheralService");
             mBlePeripheralService = ((BlePeripheralService.LocalBinder) service).getService();
 
-            for (final NotificationListener listener: mNotificationListeners){
-                if (listener instanceof BleDeviceStateListener) {
-                    mBlePeripheralService.registerPeripheralStateListener((BleDeviceStateListener)listener);
-                }
-                if(listener instanceof BleScanListener) {
-                    mBlePeripheralService.registerScanListener((BleScanListener)listener);
-                }
+            for (final DeviceStateListener listener : mDeviceStateListeners) {
+                mBlePeripheralService.registerPeripheralStateListener(listener);
             }
+            for (final ScanListener listener : mScanListeners) {
+                mBlePeripheralService.registerScanListener(listener);
+            }
+            for (final NotificationListener listener : mNotificationListeners) {
+                mBlePeripheralService.registerPeripheralListener(listener);
+            }
+
+            mDeviceStateListeners.clear();
+            mScanListeners.clear();
             mNotificationListeners.clear();
 
             if (mShouldStartScanning) {
@@ -301,7 +307,7 @@ public class BleManager {
             Log.e(TAG, String.format("getServiceWithName -> Device with address %s not found.", deviceAddress));
             return null;
         }
-        return device.getPeripheralService(serviceName);
+        return device.getDeviceService(serviceName);
     }
 
     /**
@@ -322,16 +328,8 @@ public class BleManager {
     }
 
     /**
-     * Register a listener in all connected devices.
-     *
-     * @param listener pretending to listen for notifications in all devices.
-     */
-    public void registerDeviceListenerToAllConnected(@NonNull final NotificationListener listener) {
-        registerDeviceListener(listener, null);
-    }
-
-    /**
      * Registers a listener in a connected device.
+     * This listener will be registered to every service of a device.
      *
      * @param deviceAddress of the device we want to listen to - <code>null</code> if we want to register a listener to all connected devices.
      * @param listener      pretending to listen for notifications of a device.
@@ -345,17 +343,6 @@ public class BleManager {
                 }
                 break;
             }
-        }
-    }
-
-    /**
-     * Unregister a listener from all connected devices.
-     *
-     * @param listener that does not want to get notifications any more.
-     */
-    public void unregisterDeviceListenerFromAllConnected(@NonNull final NotificationListener listener) {
-        for (final BleDevice device : getConnectedBleDevices()) {
-            unregisterDeviceListener(listener, device.getAddress());
         }
     }
 
@@ -455,7 +442,7 @@ public class BleManager {
      * @param deviceAddress of the peripheral.
      * @return {@link java.util.List} with the services names.
      */
-    public List<String> getDiscoveredServicesNames(@NonNull final String deviceAddress) {
+    public Iterable<String> getDiscoveredServicesNames(@NonNull final String deviceAddress) {
         final BleDevice device = getConnectedDevice(deviceAddress);
         if (device == null) {
             Log.e(TAG, String.format("getDiscoveredServicesNames -> Device with address %s not found.", deviceAddress));
@@ -464,54 +451,55 @@ public class BleManager {
         return device.getDiscoveredServicesNames();
     }
 
-
     /**
-     * Adds a listener to the device state change notifying list.
+     * Adds a listener to the library notification listener list.
+     * This listener will be registered to every service of all the devices connected or that will be connected.
      *
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
-    public synchronized void registerDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
-        if (mBlePeripheralService == null){
-            Log.w(TAG, "registerScanListener -> Peripheral Service is not enabled yet.");
+    public synchronized void registerNotificationListener(@NonNull final NotificationListener listener) {
+        if (mBlePeripheralService == null) {
+            Log.w(TAG, "registerNotificationListener -> Peripheral Service is not enabled yet.");
+            if (listener instanceof DeviceStateListener) {
+                mDeviceStateListeners.add((DeviceStateListener) listener);
+            }
+            if (listener instanceof ScanListener) {
+                mScanListeners.add((ScanListener) listener);
+            }
             mNotificationListeners.add(listener);
         } else {
-            mBlePeripheralService.registerPeripheralStateListener(listener);
+            if (listener instanceof DeviceStateListener) {
+                mBlePeripheralService.registerPeripheralStateListener((DeviceStateListener) listener);
+            }
+            if (listener instanceof ScanListener) {
+                mBlePeripheralService.registerScanListener((ScanListener) listener);
+            }
+            mBlePeripheralService.registerPeripheralListener(listener);
         }
     }
 
     /**
-     * Adds a listener to the scan state change notifying list.
-     *
-     * @param listener that wants to be added - Cannot be <code>null</code>
-     */
-    public synchronized void registerScanListener(@NonNull final BleScanListener listener) {
-        if (mBlePeripheralService == null){
-            Log.w(TAG, "registerScanListener -> Peripheral Service is not enabled yet.");
-            mNotificationListeners.add(listener);
-        } else {
-            mBlePeripheralService.registerScanListener(listener);
-        }
-    }
-
-    /**
-     * Removes a listener from the device state change notifying list.
+     * Removes a listener from the library listener list.
      *
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
-    public synchronized void unregisterDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
-        if (mBlePeripheralService != null) {
-            mBlePeripheralService.unregisterPeripheralStateListener(listener);
-        }
-    }
-
-    /**
-     * Removes a listener from the scan state change notifying list.
-     *
-     * @param listener that wants to be removed - Cannot be <code>null</code>
-     */
-    public synchronized void unregisterScanListener(@NonNull final BleScanListener listener) {
-        if (mBlePeripheralService != null) {
-            mBlePeripheralService.unregisterScanListener(listener);
+    public synchronized void unregisterNotificationListener(@NonNull final NotificationListener listener) {
+        if (mBlePeripheralService == null) {
+            if (listener instanceof DeviceStateListener) {
+                mDeviceStateListeners.remove(listener);
+            }
+            if (listener instanceof ScanListener) {
+                mScanListeners.remove(listener);
+            }
+            mNotificationListeners.remove(listener);
+        } else {
+            if (listener instanceof DeviceStateListener) {
+                mBlePeripheralService.unregisterPeripheralStateListener((DeviceStateListener) listener);
+            }
+            if (listener instanceof ScanListener) {
+                mBlePeripheralService.unregisterScanListener((ScanListener) listener);
+            }
+            mBlePeripheralService.unregisterPeripheralListenerToAllConnected(listener);
         }
     }
 }

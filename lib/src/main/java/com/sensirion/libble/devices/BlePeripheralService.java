@@ -17,8 +17,9 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.radiusnetworks.bluetooth.BluetoothCrashResolver;
-import com.sensirion.libble.listeners.devices.BleDeviceStateListener;
-import com.sensirion.libble.listeners.devices.BleScanListener;
+import com.sensirion.libble.listeners.NotificationListener;
+import com.sensirion.libble.listeners.devices.DeviceStateListener;
+import com.sensirion.libble.listeners.devices.ScanListener;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     //Class tags.
     private static final String TAG = BlePeripheralService.class.getSimpleName();
     private static final String PREFIX = BlePeripheralService.class.getName();
+
     //Broadcast actions
     public static final String ACTION_PERIPHERAL_SERVICE_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_SERVICE_DISCOVERY";
     public static final String ACTION_PERIPHERAL_DISCOVERY = PREFIX + "/ACTION_PERIPHERAL_DISCOVERY";
@@ -45,20 +47,27 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     public static final String ACTION_SCANNING_STARTED = PREFIX + "/ACTION_SCANNING_STARTED";
     public static final String ACTION_SCANNING_STOPPED = PREFIX + "/ACTION_SCANNING_STOPPED";
     public static final String EXTRA_PERIPHERAL_ADDRESS = PREFIX + ".EXTRA_PERIPHERAL_ADDRESS";
+
     //Default Scan attributes
     private static final int ONE_SECOND_MS = 1000;
     private static final long DEFAULT_SCAN_DURATION_MS = 10 * ONE_SECOND_MS; //10 seconds
+
     //Binder
     private final IBinder mBinder = new LocalBinder();
+
     //List of peripherals
     private final Map<String, Peripheral> mDiscoveredPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
     private final Map<String, Peripheral> mConnectedPeripherals = Collections.synchronizedMap(new HashMap<String, Peripheral>());
+
     //Listeners list.
-    private final List<BleDeviceStateListener> mPeripheralStateListeners = Collections.synchronizedList(new LinkedList<BleDeviceStateListener>());
-    private final List<BleScanListener> mPeripheralScanListeners = Collections.synchronizedList(new LinkedList<BleScanListener>());
+    private final Set<DeviceStateListener> mPeripheralStateListeners = Collections.synchronizedSet(new HashSet<DeviceStateListener>());
+    private final Set<ScanListener> mPeripheralScanListeners = Collections.synchronizedSet(new HashSet<ScanListener>());
+    private final Set<NotificationListener> mPeripheralNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
+
     //Scan attributes.
     private long mScanDurationMs;
     private boolean mIsScanning = false;
+
     //Android connectors
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothCrashResolver mBluetoothSharingCrashResolver;
@@ -107,9 +116,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     private void notifyPeripheralConnectionChanged(@NonNull final Peripheral peripheral) {
-        final Iterator<BleDeviceStateListener> itr = mPeripheralStateListeners.iterator();
+        final Iterator<DeviceStateListener> itr = mPeripheralStateListeners.iterator();
         while (itr.hasNext()) {
-            final BleDeviceStateListener listener = itr.next();
+            final DeviceStateListener listener = itr.next();
             try {
                 if (peripheral.isConnected()) {
                     listener.onDeviceConnected(peripheral);
@@ -124,9 +133,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     private void notifyDiscoveredPeripheralChanged(@NonNull final Peripheral peripheral) {
-        final Iterator<BleDeviceStateListener> itr = mPeripheralStateListeners.iterator();
+        final Iterator<DeviceStateListener> itr = mPeripheralStateListeners.iterator();
         while (itr.hasNext()) {
-            final BleDeviceStateListener listener = itr.next();
+            final DeviceStateListener listener = itr.next();
             try {
                 listener.onDeviceDiscovered(peripheral);
             } catch (final Exception e) {
@@ -137,9 +146,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     private void notifyPeripheralServiceDiscovery(@NonNull final Peripheral peripheral) {
-        final Iterator<BleDeviceStateListener> itr = mPeripheralStateListeners.iterator();
+        final Iterator<DeviceStateListener> itr = mPeripheralStateListeners.iterator();
         while (itr.hasNext()) {
-            final BleDeviceStateListener listener = itr.next();
+            final DeviceStateListener listener = itr.next();
             try {
                 listener.onDeviceAllServicesDiscovered(peripheral);
             } catch (final Exception e) {
@@ -312,9 +321,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     private void notifyScanStateChange(final boolean enabled) {
-        final Iterator<BleScanListener> itr = mPeripheralScanListeners.iterator();
+        final Iterator<ScanListener> itr = mPeripheralScanListeners.iterator();
         while (itr.hasNext()) {
-            final BleScanListener listener = itr.next();
+            final ScanListener listener = itr.next();
             try {
                 listener.onScanStateChanged(enabled);
             } catch (final Exception e) {
@@ -452,9 +461,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
-    public synchronized void registerPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
+    public synchronized void registerPeripheralStateListener(@NonNull final DeviceStateListener listener) {
         if (mPeripheralStateListeners.contains(listener)) {
-            Log.w(TAG, String.format("registerDeviceStateListener -> Listener %s was already added to the listener list", listener));
+            Log.w(TAG, String.format("registerPeripheralStateListener -> Listener %s was already added to the listener list", listener));
         } else {
             mPeripheralStateListeners.add(listener);
         }
@@ -465,7 +474,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
-    public synchronized void registerScanListener(@NonNull final BleScanListener listener) {
+    public synchronized void registerScanListener(@NonNull final ScanListener listener) {
         if (mPeripheralScanListeners.contains(listener)) {
             Log.w(TAG, String.format("registerScanListener -> Listener %s was already added to the listener list", listener));
         } else {
@@ -478,12 +487,12 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
-    public synchronized void unregisterPeripheralStateListener(@NonNull final BleDeviceStateListener listener) {
+    public synchronized void unregisterPeripheralStateListener(@NonNull final DeviceStateListener listener) {
         if (mPeripheralStateListeners.contains(listener)) {
             mPeripheralStateListeners.remove(listener);
-            Log.i(TAG, String.format("unregisterDeviceStateListener -> Listener %s was removed from the list.", listener));
+            Log.i(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was removed from the list.", listener));
         } else {
-            Log.w(TAG, String.format("unregisterDeviceStateListener -> Listener %s was already removed from the list.", listener));
+            Log.w(TAG, String.format("unregisterPeripheralStateListener -> Listener %s was already removed from the list.", listener));
         }
     }
 
@@ -492,12 +501,12 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      *
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
-    public synchronized void unregisterScanListener(@NonNull final BleScanListener listener) {
+    public synchronized void unregisterScanListener(@NonNull final ScanListener listener) {
         if (mPeripheralScanListeners.contains(listener)) {
             mPeripheralScanListeners.remove(listener);
-            Log.i(TAG, String.format("unregisterDeviceStateListener -> Listener %s was removed from the list.", listener));
+            Log.i(TAG, String.format("unregisterScanListener -> Listener %s was removed from the list.", listener));
         } else {
-            Log.w(TAG, String.format("unregisterDeviceStateListener -> Listener %s was already removed from the list.", listener));
+            Log.w(TAG, String.format("unregisterScanListener -> Listener %s was already removed from the list.", listener));
         }
     }
 
@@ -520,6 +529,29 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         }
     }
 
+    /**
+     * Register for notifications automatically when a new device is connected.
+     *
+     * @param listener that wants to register automatically for notifications on new connected devices.
+     */
+    public void registerPeripheralListener(@NonNull final NotificationListener listener) {
+        mPeripheralNotificationListeners.add(listener);
+    }
+
+    /**
+     * Unregisters new devices automatic notifications registering.
+     *
+     * @param listener that doesn't want to register automatically for notifications on new connected devices.
+     */
+    public void unregisterPeripheralListenerToAllConnected(@NonNull final NotificationListener listener) {
+        mPeripheralNotificationListeners.remove(listener);
+    }
+
+    /**
+     * Checks if the peripheral is scanning for new devices.
+     *
+     * @return <code>true</code> if the service is scanning - <code>false</code> otherwise.
+     */
     public synchronized boolean isScanning() {
         return mIsScanning;
     }

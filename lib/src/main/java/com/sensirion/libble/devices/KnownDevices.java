@@ -12,10 +12,9 @@ public enum KnownDevices {
     RHT_GADGETS {
         @Override
         public List<String> getAdvertisedNames() {
-            final List<String> deviceNames = new ArrayList<>(3);
+            final List<String> deviceNames = new ArrayList<>(2);
             deviceNames.add("SHTC1 smart gadget");
             deviceNames.add("SHT31 Smart Gadget");
-            deviceNames.add("Smart Humigadget");
             return deviceNames;
         }
     };

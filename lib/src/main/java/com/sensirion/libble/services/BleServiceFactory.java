@@ -6,8 +6,9 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.generic.BatteryService;
+import com.sensirion.libble.services.generic.DeviceInformationService;
 import com.sensirion.libble.services.sensirion.shtc1.SHTC1ConnectionSpeedService;
-import com.sensirion.libble.services.sensirion.shtc1.SHTC1LoggingService;
+import com.sensirion.libble.services.sensirion.shtc1.SHTC1HistoryService;
 import com.sensirion.libble.services.sensirion.shtc1.SHTC1RHTService;
 
 import java.lang.reflect.Constructor;
@@ -25,14 +26,23 @@ public class BleServiceFactory {
     private final Map<String, Class<? extends BleService>> mServiceLookUp = Collections.synchronizedMap(new HashMap<String, Class<? extends BleService>>());
 
     private BleServiceFactory() {
-        registerServiceImplementation(BatteryService.SERVICE_UUID, BatteryService.class);
-        registerServiceImplementation(SHTC1RHTService.SERVICE_UUID, SHTC1RHTService.class);
-        registerServiceImplementation(SHTC1LoggingService.SERVICE_UUID, SHTC1LoggingService.class);
-        registerServiceImplementation(SHTC1ConnectionSpeedService.SERVICE_UUID, SHTC1ConnectionSpeedService.class);
+        registerGenericServices();
+        registerSHTC1Services();
     }
 
     public static BleServiceFactory getInstance() {
         return mInstance;
+    }
+
+    private void registerGenericServices() {
+        registerServiceImplementation(BatteryService.SERVICE_UUID, BatteryService.class);
+        registerServiceImplementation(DeviceInformationService.SERVICE_UUID, DeviceInformationService.class);
+    }
+
+    private void registerSHTC1Services() {
+        registerServiceImplementation(SHTC1RHTService.SERVICE_UUID, SHTC1RHTService.class);
+        registerServiceImplementation(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
+        registerServiceImplementation(SHTC1ConnectionSpeedService.SERVICE_UUID, SHTC1ConnectionSpeedService.class);
     }
 
     /**

@@ -49,6 +49,7 @@ class BleStackProtector extends BluetoothGattCallback {
 
     @Override
     public void onCharacteristicRead(final BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, final int status) {
+        super.onCharacteristicRead(gatt, characteristic, status);
         mCurrentAction = null;
         execute(gatt);
     }
@@ -56,6 +57,13 @@ class BleStackProtector extends BluetoothGattCallback {
     @Override
     public void onCharacteristicWrite(final BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic, final int status) {
         super.onCharacteristicWrite(gatt, characteristic, status);
+        mCurrentAction = null;
+        execute(gatt);
+    }
+
+    @Override
+    public void onDescriptorRead(final BluetoothGatt gatt, final BluetoothGattDescriptor descriptor, final int status) {
+        super.onDescriptorRead(gatt, descriptor, status);
         mCurrentAction = null;
         execute(gatt);
     }
@@ -70,6 +78,7 @@ class BleStackProtector extends BluetoothGattCallback {
     @Override
     public void onReliableWriteCompleted(final BluetoothGatt gatt, final int status) {
         super.onReliableWriteCompleted(gatt, status);
+        mCurrentAction = null;
         execute(gatt);
     }
 
@@ -140,13 +149,26 @@ class BleStackProtector extends BluetoothGattCallback {
     }
 
     /**
+     * Adds a descriptor that wants to be written in the queue.
+     *
+     * @param descriptor for the queue.
+     */
+    public void addReadDescriptor(final BluetoothGattDescriptor descriptor) {
+        if (descriptor == null) {
+            Log.e(TAG, "addReadDescriptor -> Received a null descriptor.");
+        } else {
+            mActionQueue.add(new ReadDescriptorAction(descriptor));
+        }
+    }
+
+    /**
      * Adds a descriptor that wants to be wrote in the queue.
      *
      * @param descriptor for the queue.
      */
-    public void addDescriptorCharacteristic(final BluetoothGattDescriptor descriptor) {
+    public void addWriteDescriptor(final BluetoothGattDescriptor descriptor) {
         if (descriptor == null) {
-            Log.e(TAG, "addDescriptorCharacteristic -> Received a null descriptor.");
+            Log.e(TAG, "addReadDescriptor -> Received a null descriptor.");
         } else {
             mActionQueue.add(new WriteDescriptorAction(descriptor));
         }
@@ -193,8 +215,20 @@ class BleStackProtector extends BluetoothGattCallback {
         }
 
         protected final String TAG = String.format("%s.%s", BleStackProtector.TAG, ServiceAction.class.getSimpleName());
+    }
 
 
+    private static class ReadDescriptorAction extends ServiceAction {
+        private final BluetoothGattDescriptor descriptor;
+
+        private ReadDescriptorAction(final BluetoothGattDescriptor descriptor) {
+            this.descriptor = descriptor;
+        }
+
+        @Override
+        protected boolean unsafeExecute(final BluetoothGatt gatt) throws DeadObjectException {
+            return gatt.readDescriptor(this.descriptor);
+        }
     }
 
     private static class WriteDescriptorAction extends ServiceAction {

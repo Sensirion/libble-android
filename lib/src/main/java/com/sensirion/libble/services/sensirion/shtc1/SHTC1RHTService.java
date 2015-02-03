@@ -1,8 +1,8 @@
 package com.sensirion.libble.services.sensirion.shtc1;
 
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -13,15 +13,10 @@ import com.sensirion.libble.utils.RHTDataPoint;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
-import java.util.UUID;
 
 public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListener> {
 
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
-    public static final String RHT_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
-    private static final String TAG = SHTC1RHTService.class.getSimpleName();
-
-    private static final String SENSOR_NAME = "SHTC1";
 
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";
 
@@ -35,7 +30,7 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
 
     public SHTC1RHTService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
-        mHumidityTemperatureCharacteristic = getCharacteristicFor(RHT_CHARACTERISTIC_UUID);
+        mHumidityTemperatureCharacteristic = getCharacteristic(RHT_CHARACTERISTIC_UUID);
         peripheral.readCharacteristic(mHumidityTemperatureCharacteristic);
         bluetoothGattService.addCharacteristic(mHumidityTemperatureCharacteristic);
     }
@@ -60,8 +55,7 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
      * @return <code>true</code> in case it managed correctly the new data - <code>false</code> otherwise.
      */
     @Override
-    public boolean onChangeNotification(final BluetoothGattCharacteristic updatedCharacteristic) {
-        super.onCharacteristicRead(updatedCharacteristic);
+    public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
         if (mHumidityTemperatureCharacteristic.getUuid().equals(updatedCharacteristic.getUuid())) {
             final byte[] rawData = updatedCharacteristic.getValue();
             mLastDatapoint = convertToHumanReadableValues(rawData);
@@ -75,7 +69,7 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
         final Iterator<RHTListener> iterator = super.mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().onNewRHTValues(mPeripheral, mLastDatapoint, SENSOR_NAME);
+                iterator.next().onNewRHTValues(mPeripheral, mLastDatapoint, getSensorName());
             } catch (final Exception e) {
                 Log.e(TAG, "notifyListeners -> The following exception was produced: ", e);
                 iterator.remove();
@@ -84,28 +78,10 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
     }
 
     /**
-     * This method will normally only be called from {@link com.sensirion.libble.services.NotificationService}
-     *
-     * @param characteristic of notifications.
-     * @param enabled        <code>true</code> if notifications have to be enabled - <code>false</code> otherwise.
-     */
-    @Override
-    public void setCharacteristicNotification(final BluetoothGattCharacteristic characteristic, final boolean enabled) {
-        mPeripheral.setCharacteristicNotification(characteristic, enabled);
-        if (UUID.fromString(RHT_CHARACTERISTIC_UUID).equals(characteristic.getUuid())) {
-            final BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID.fromString(RHT_DESCRIPTOR_UUID));
-            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            mPeripheral.writeDescriptor(descriptor);
-        } else {
-            Log.d(TAG, String.format("setCharacteristicNotification -> Characteristic with UUID %s was found.", characteristic.getUuid()));
-        }
-    }
-
-    /**
      * Enables the characteristic notifications of the service.
      */
     @Override
-    public void registerNotificationCharacteristics() {
+    public void registerDeviceCharacteristicNotifications() {
         registerNotification(mHumidityTemperatureCharacteristic);
     }
 
@@ -131,5 +107,21 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
             }
         }
         return null;
+    }
+
+    /**
+     * Obtains the sensor name of the service.
+     *
+     * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known.
+     */
+    public String getSensorName() {
+        switch (mPeripheral.getAdvertisedName()) {
+            case "SHTC1 smart gadget":
+                return "SHTC1";
+            case "SHT31 Smart Gadget":
+                return "SHT31";
+            default:
+                return null;
+        }
     }
 }

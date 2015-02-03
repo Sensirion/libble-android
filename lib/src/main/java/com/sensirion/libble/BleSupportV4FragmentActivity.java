@@ -8,8 +8,6 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.listeners.devices.BleDeviceStateListener;
-import com.sensirion.libble.listeners.devices.BleScanListener;
 import com.sensirion.libble.services.BleService;
 
 import java.util.List;
@@ -202,17 +200,6 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
         return mBleManager.isDeviceConnected(deviceAddress);
     }
 
-
-    /**
-     * Register a listener in all connected devices.
-     *
-     * @param listener pretending to listen for notifications in all devices.
-     */
-    @SuppressWarnings("unused")
-    public void registerDeviceListenerToAllConnected(@NonNull final NotificationListener listener) {
-        mBleManager.registerDeviceListenerToAllConnected(listener);
-    }
-
     /**
      * Registers a listener in a connected devices.
      *
@@ -223,16 +210,6 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     @SuppressWarnings("unused")
     public void registerDeviceListener(@NonNull final NotificationListener listener, @Nullable final String address) {
         mBleManager.registerDeviceListener(listener, address);
-    }
-
-    /**
-     * Unregister a listener from all connected devices.
-     *
-     * @param listener that does not want to get notifications any more.
-     */
-    @SuppressWarnings("unused")
-    public void unregisterDeviceListenerFromAllConnected(@NonNull final NotificationListener listener) {
-        mBleManager.unregisterDeviceListenerFromAllConnected(listener);
     }
 
     /**
@@ -292,7 +269,7 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      * @return {@link java.util.LinkedList} with the services names.
      */
     @SuppressWarnings("unused")
-    public List<String> getDiscoveredServicesNames(@NonNull final String address) {
+    public Iterable<String> getDiscoveredServicesNames(@NonNull final String address) {
         return mBleManager.getDiscoveredServicesNames(address);
     }
 
@@ -322,43 +299,24 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
-     * Adds a listener to the device state change notifying list.
+     * Adds a listener to the library notification listener list.
+     * This listener will be registered to every service of all the devices connected or that will be connected.
      *
      * @param listener that wants to be added - Cannot be <code>null</code>
      */
     @SuppressWarnings("unused")
-    public synchronized void registerDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
-        mBleManager.registerDeviceStateListener(listener);
+    public synchronized void registerNotificationListener(@NonNull final NotificationListener listener) {
+        mBleManager.registerNotificationListener(listener);
     }
 
     /**
-     * Adds a listener to the scan state change notifying list.
-     *
-     * @param listener that wants to be added - Cannot be <code>null</code>
-     */
-    @SuppressWarnings("unused")
-    public synchronized void registerScanListener(@NonNull final BleScanListener listener) {
-        mBleManager.registerScanListener(listener);
-    }
-
-    /**
-     * Removes a listener from the device state change notifying list.
+     * Removes a listener from the library listener list.
      *
      * @param listener that wants to be removed - Cannot be <code>null</code>
      */
     @SuppressWarnings("unused")
-    public synchronized void unregisterDeviceStateListener(@NonNull final BleDeviceStateListener listener) {
-        mBleManager.unregisterDeviceStateListener(listener);
-    }
-
-    /**
-     * Removes a listener from the scan state change notifying list.
-     *
-     * @param listener that wants to be removed - Cannot be <code>null</code>
-     */
-    @SuppressWarnings("unused")
-    public synchronized void unregisterScanListener(@NonNull final BleScanListener listener) {
-        mBleManager.unregisterScanListener(listener);
+    public synchronized void unregisterNotificationListener(@NonNull final NotificationListener listener) {
+        mBleManager.unregisterNotificationListener(listener);
     }
 
     @SuppressWarnings("unused")

@@ -2,6 +2,7 @@ package com.sensirion.libble.services.generic;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -11,23 +12,26 @@ public class BatteryService extends BleService<Integer> {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";
+
     //NAMED CHARACTERISTIC NAME
-    public static final String READ_BATTERY_CHARACTERISTIC_VALUE_NAME = BatteryService.class.getName() + ".getBattery";
+    public static final String READ_BATTERY_CHARACTERISTIC = BatteryService.class.getName() + ".getBattery";
+
     //FORCE READING CONSTANTS
-    private static final int MAX_WAITING_TIME_BETWEEN_READS_MS = 75;
-    private static final int MAX_READ_TRIES = 3000 / MAX_WAITING_TIME_BETWEEN_READS_MS;
-    //CLASS TAG
-    private static final String TAG = BatteryService.class.getSimpleName();
+    private static final int WAITING_TIME_BETWEEN_READS = 75;
+    private static final int MAX_READ_TRIES = 3000 / WAITING_TIME_BETWEEN_READS;
+
     //UUIDs
-    private static final String UUID_BATTERY_LEVEL_CHARACTERISTIC = "00002a19-0000-1000-8000-00805f9b34fb";
+    private static final String BATTERY_LEVEL_CHARACTERISTIC_UUID = "00002a19-0000-1000-8000-00805f9b34fb";
+
     //CHARACTERISTICS
     private final BluetoothGattCharacteristic mBatteryLevelCharacteristic;
+
     //BATTERY_SERVICE LEVEL
     private Integer mBatteryLevel = null;
 
     public BatteryService(Peripheral parent, BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
-        mBatteryLevelCharacteristic = getCharacteristicFor(UUID_BATTERY_LEVEL_CHARACTERISTIC);
+        mBatteryLevelCharacteristic = getCharacteristic(BATTERY_LEVEL_CHARACTERISTIC_UUID);
         parent.readCharacteristic(mBatteryLevelCharacteristic);
     }
 
@@ -38,19 +42,21 @@ public class BatteryService extends BleService<Integer> {
      */
     public Integer getBatteryLevel() {
         if (mBatteryLevel == null) {
-            return getCharacteristicValue(READ_BATTERY_CHARACTERISTIC_VALUE_NAME);
+            mPeripheral.forceReadCharacteristic(mBatteryLevelCharacteristic, WAITING_TIME_BETWEEN_READS, MAX_READ_TRIES);
+            return mBatteryLevel;
         }
         mPeripheral.readCharacteristic(mBatteryLevelCharacteristic);
         return mBatteryLevel;
     }
 
     @Override
-    public boolean onCharacteristicRead(final BluetoothGattCharacteristic characteristic) {
+    public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic characteristic) {
         if (mBatteryLevelCharacteristic.equals(characteristic)) {
             mBatteryLevel = mBatteryLevelCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            Log.i(TAG, String.format("onCharacteristicUpdate -> Battery it's at %d%% in the device %s.", mBatteryLevel, getAddress()));
+            return true;
         }
-        Log.i(TAG, String.format("Battery it's at %d%s in the device %s.", mBatteryLevel, "%", mPeripheral.getAddress()));
-        return super.onCharacteristicRead(characteristic);
+        return super.onCharacteristicUpdate(characteristic);
     }
 
     /**
@@ -61,17 +67,9 @@ public class BatteryService extends BleService<Integer> {
      */
     @Override
     public Integer getCharacteristicValue(final String characteristicName) {
-        Log.d(TAG, String.format("Requested battery level in peripheral %s.", mPeripheral.getAddress()));
-        if (characteristicName.equals(READ_BATTERY_CHARACTERISTIC_VALUE_NAME)) {
-            //If it doesn't have the battery level.
-            if (mBatteryLevel == null) {
-                mPeripheral.forceReadCharacteristic(mBatteryLevelCharacteristic, MAX_WAITING_TIME_BETWEEN_READS_MS, MAX_READ_TRIES);
-                mPeripheral.cleanCharacteristicCache();
-                return mBatteryLevel;
-            } else {
-                mPeripheral.readCharacteristic(mBatteryLevelCharacteristic);
-                return mBatteryLevel;
-            }
+        if (characteristicName.equals(READ_BATTERY_CHARACTERISTIC)) {
+            Log.d(TAG, String.format("getCharacteristicValue -> Requested battery level in peripheral %s.", mPeripheral.getAddress()));
+            return getBatteryLevel();
         }
         return null;
     }
