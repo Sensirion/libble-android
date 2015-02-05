@@ -50,15 +50,15 @@ public class BleServiceFactory {
      *
      * @param parent  {@link com.sensirion.libble.devices.Peripheral} that discovered the service.
      * @param service {@link android.bluetooth.BluetoothGattService} that should be wrapped.
-     * @return {@link BleService} with the service class with the same lookup UUID as the BluetoothGattService.
+     * @return {@link BleService} with the service class with the same lookup UUID as the BluetoothGattService. <code>null</code> if the class is not a valid class.
      */
     public BleService createServiceFor(@NonNull final Peripheral parent, @NonNull final BluetoothGattService service) {
         final String uuid = service.getUuid().toString();
         final Class serviceClass = mServiceLookUp.get(uuid);
 
         if (serviceClass == null) {
-            Log.w(TAG, String.format("createServiceFor() -> Create generic service with uuid: %s", uuid));
-            return new BleService(parent, service);
+            Log.w(TAG, String.format("createServiceFor() -> Service %s does not have an assigned BleService.", uuid));
+            return null;
         }
 
         Log.i(TAG, String.format("createServiceFor -> Create known service with uuid %s from class %s", uuid, serviceClass.getSimpleName()));

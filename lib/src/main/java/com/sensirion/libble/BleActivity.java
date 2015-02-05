@@ -288,19 +288,6 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Ask for the a characteristic of a service
-     * NOTE: It returns the first characteristic it founds.
-     *
-     * @param deviceAddress      of the device we want to listen for a characteristic.
-     * @param characteristicName name of the characteristic.
-     * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
-     */
-    @SuppressWarnings("unused")
-    public Object getCharacteristicValue(@NonNull final String deviceAddress, @NonNull final String characteristicName) {
-        return mBleManager.getCharacteristicValue(deviceAddress, characteristicName);
-    }
-
-    /**
      * Adds a listener to the library notification listener list.
      * This listener will be registered to every service of all the devices connected or that will be connected.
      *

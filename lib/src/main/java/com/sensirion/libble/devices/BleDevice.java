@@ -78,15 +78,6 @@ public interface BleDevice {
     int getNumberOfDiscoveredServices();
 
     /**
-     * Ask for the a characteristic of a service
-     * NOTE: It returns the first characteristic it founds.
-     *
-     * @param characteristicName name of the characteristic.
-     * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
-     */
-    Object getCharacteristicValue(String characteristicName);
-
-    /**
      * Ask all the services to enable or disable all their notifications.
      *
      * @param enabled <code>true</code> if notifications wants to be enabled - <code>false</code> otherwise.

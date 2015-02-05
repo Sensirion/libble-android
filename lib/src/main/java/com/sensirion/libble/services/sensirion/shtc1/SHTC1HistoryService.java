@@ -8,17 +8,20 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.listeners.history.HistoryListener;
+import com.sensirion.libble.listeners.services.HumidityListener;
 import com.sensirion.libble.listeners.services.RHTListener;
+import com.sensirion.libble.listeners.services.TemperatureListener;
 import com.sensirion.libble.services.HistoryService;
+import com.sensirion.libble.utils.HumidityUnit;
 import com.sensirion.libble.utils.RHTDataPoint;
+import com.sensirion.libble.utils.TemperatureUnit;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 public class SHTC1HistoryService extends HistoryService {
@@ -43,7 +46,9 @@ public class SHTC1HistoryService extends HistoryService {
     private static final int MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 1300;
     private static final int SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS = 50;
 
-    private final List<RHTListener> mRHTHistoryListeners = Collections.synchronizedList(new LinkedList<RHTListener>());
+    private final Set<HumidityListener> mHumidityListeners = Collections.synchronizedSet(new HashSet<HumidityListener>());
+    private final Set<TemperatureListener> mTemperatureListeners = Collections.synchronizedSet(new HashSet<TemperatureListener>());
+    private final Set<RHTListener> mRHTListeners = Collections.synchronizedSet(new HashSet<RHTListener>());
 
     private final BluetoothGattCharacteristic mStartStopCharacteristic;
     private final BluetoothGattCharacteristic mIntervalCharacteristic;
@@ -53,7 +58,7 @@ public class SHTC1HistoryService extends HistoryService {
     private final BluetoothGattCharacteristic mLoggedDataCharacteristic;
     private final BluetoothGattCharacteristic mUserDataCharacteristic;
 
-    private int mExtractedDatapointsCounter = 0;
+    private int mExtractedDataPointsCounter = 0;
     private long lastTimeLogged;
     private byte mNumConsecutiveFailsReadingData = 0;
 
@@ -79,6 +84,7 @@ public class SHTC1HistoryService extends HistoryService {
         mUserDataCharacteristic = super.getCharacteristic(USER_DATA_UUID);
         addCharacteristicsTo(bluetoothGattService);
         prepareCharacteristics();
+        synchronizeData();
     }
 
     private void addCharacteristicsTo(@NonNull final BluetoothGattService bluetoothGattService) {
@@ -200,7 +206,7 @@ public class SHTC1HistoryService extends HistoryService {
     public boolean isGadgetLoggingEnabled() {
         checkGadgetLoggingState();
         if (mLoggingIsEnabled == null) {
-            Log.e(TAG, String.format("isGadgetLoggingEnabled -> A problem was produced when trying to know is logging is enabled in device %s.", getAddress()));
+            Log.e(TAG, String.format("isGadgetLoggingEnabled -> A problem was produced when trying to know is logging is enabled in device %s.", getDeviceAddress()));
             return false;
         }
         return mLoggingIsEnabled;
@@ -232,20 +238,19 @@ public class SHTC1HistoryService extends HistoryService {
     }
 
     /**
-     * This method checks the logging interval.
-     *
-     * @return number if we know the interval - return <code>null</code> otherwise.
+     * This method returns the logging interval in milliseconds to the client device.
+     * @return {@link java.lang.Integer} with the logging interval in milliseconds - <code>null</code> if it's not known.
      */
     @Override
     public Integer getDownloadIntervalMs() {
-        return getDownloadIntervalSeconds();
+        return getDownloadIntervalSeconds() * 1000;
     }
 
     /**
-     * This method checks the current pointer of the device.
+     * This method gets the current pointer of the device.
      *
      * @return {@link java.lang.Integer} with the start pointer - <code>null</code> if it doesn't have one.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread.
      */
     public Integer getCurrentPoint() {
         if (mCurrentPointer == null) {
@@ -257,7 +262,7 @@ public class SHTC1HistoryService extends HistoryService {
     }
 
     /**
-     * This method checks the start pointer of the device.
+     * This method gets the start pointer of the device.
      *
      * @return {@link java.lang.Integer} with the start pointer - <code>-1</code> if it doesn't have one.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
@@ -528,7 +533,7 @@ public class SHTC1HistoryService extends HistoryService {
      */
     @Override
     public synchronized boolean startDataDownload() {
-        if (mRHTHistoryListeners.isEmpty()) {
+        if (mRHTListeners.isEmpty()) {
             Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
             return false;
         }
@@ -569,7 +574,7 @@ public class SHTC1HistoryService extends HistoryService {
     }
 
     private synchronized void downloadDataFromPeripheral() {
-        mExtractedDatapointsCounter = 0;
+        mExtractedDataPointsCounter = 0;
         final int totalValuesToDownload = calculateValuesToDownload();
         while (getEndPointer() > 0 && mNumConsecutiveFailsReadingData < MAX_CONSECUTIVE_TRIES) {
             for (int i = totalValuesToDownload; i > 0; i--) {
@@ -627,7 +632,7 @@ public class SHTC1HistoryService extends HistoryService {
             //Creates a datapoint object with the obtained data, and fills it with humidity and temperature.
             final float temperature = ((float) humidityAndTemperature[0]) / 100f;
             final float humidity = ((float) humidityAndTemperature[1]) / 100f;
-            final int epoch = mPeripheralEpoch + (mStartPointDownload + mExtractedDatapointsCounter) * mInterval;
+            final int epoch = mPeripheralEpoch + (mStartPointDownload + mExtractedDataPointsCounter) * mInterval;
             final long timestamp = epoch * 1000l;
 
             final RHTDataPoint extractedDataPoint = new RHTDataPoint(temperature, humidity, timestamp);
@@ -636,7 +641,7 @@ public class SHTC1HistoryService extends HistoryService {
 
             //Adds the new datapoint to the the list.
             mNumConsecutiveFailsReadingData = 0;
-            mExtractedDatapointsCounter++;
+            mExtractedDataPointsCounter++;
             lastTimeLogged = System.currentTimeMillis();
 
             onDatapointRead(extractedDataPoint);
@@ -658,13 +663,12 @@ public class SHTC1HistoryService extends HistoryService {
     /**
      * Obtains the number of elements to log
      *
-     * @return <code>int</code> with the total number of elements to log.
+     * @return {@link java.lang.Integer} with the total number of elements to log.
      */
     @Override
-    public int getNumberLoggedElements() {
+    public Integer getNumberLoggedElements() {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-
-        if (getCurrentPoint() == 0) {
+        if (mCurrentPointer == null || mCurrentPointer == 0) {
             return 0;
         }
         resetStartPointer();
@@ -683,47 +687,76 @@ public class SHTC1HistoryService extends HistoryService {
      */
     @Override
     public boolean registerNotificationListener(@NonNull final NotificationListener newListener) {
+        final boolean historyListenerFound = super.registerNotificationListener(newListener);
         boolean rhtListenerFound = false;
+        boolean temperatureListenerFound = false;
+        boolean humidityListenerFound = false;
+
         if (newListener instanceof RHTListener) {
-            mRHTHistoryListeners.add((RHTListener) newListener);
-            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new RHT history listener: %s ", getAddress(), newListener));
+            mRHTListeners.add((RHTListener) newListener);
+            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new RHT listener: %s ", getDeviceAddress(), newListener));
             rhtListenerFound = true;
         }
-        return rhtListenerFound | super.registerNotificationListener(newListener);
+        if (newListener instanceof TemperatureListener) {
+            mTemperatureListeners.add((TemperatureListener) newListener);
+            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new Temperature listener: %s ", getDeviceAddress(), newListener));
+            temperatureListenerFound = true;
+        }
+        if (newListener instanceof HumidityListener) {
+            mHumidityListeners.add((HumidityListener) newListener);
+            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new Humidity listener: %s ", getDeviceAddress(), newListener));
+            humidityListenerFound = true;
+        }
+        return historyListenerFound || rhtListenerFound || temperatureListenerFound || humidityListenerFound;
     }
 
     /**
      * Removes a listener from the download notification list.
      *
-     * @param listenerForRemove listener that doesn't need the listen for notifications anymore.
+     * @param listenerForRemoval listener that doesn't need the listen for notifications anymore.
      */
     @Override
-    public boolean unregisterNotificationListener(@NonNull final NotificationListener listenerForRemove) {
-        boolean rhtListenerFound = false;
-        if (listenerForRemove instanceof RHTListener) {
-            if (mRHTHistoryListeners.contains(listenerForRemove)) {
-                mRHTHistoryListeners.remove(listenerForRemove);
-                Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the RHTListener list.", mPeripheral.getAddress(), listenerForRemove));
-                rhtListenerFound = true;
-            }
+    public boolean unregisterNotificationListener(@NonNull final NotificationListener listenerForRemoval) {
+        final boolean historyListener = super.unregisterNotificationListener(listenerForRemoval);
+        boolean rhtListener = false;
+        boolean temperatureListener = false;
+        boolean humidityListener = false;
+
+        if (listenerForRemoval instanceof RHTListener) {
+                mRHTListeners.remove(listenerForRemoval);
+                Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the RHTListener list.", getDeviceAddress(), listenerForRemoval));
+                rhtListener = true;
         }
-        return rhtListenerFound | super.unregisterNotificationListener(listenerForRemove);
+        if (listenerForRemoval instanceof TemperatureListener){
+            mTemperatureListeners.remove(listenerForRemoval);
+            Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the Temperature list.", getDeviceAddress(), listenerForRemoval));
+            temperatureListener = true;
+        }
+
+        if (listenerForRemoval instanceof HumidityListener){
+            mHumidityListeners.remove(listenerForRemoval);
+            Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the Humidity list.", getDeviceAddress(), listenerForRemoval));
+            humidityListener = true;
+        }
+        return historyListener || rhtListener || temperatureListener || humidityListener;
     }
 
     /**
      * Notifies download progress to the listeners.
      */
-    private void onDatapointRead(final RHTDataPoint dataPoint) {
+    private void onDatapointRead(@NonNull final RHTDataPoint dataPoint) {
         notifyDatapointRead(dataPoint);
-        notifyDownloadProgress();
+        notifyHistoricalHumidity(dataPoint);
+        notifyHistoricalTemperature(dataPoint);
+        super.notifyDownloadProgress(mExtractedDataPointsCounter);
     }
 
-    private void notifyDatapointRead(final RHTDataPoint dataPoint) {
-        final Iterator<RHTListener> iterator = mRHTHistoryListeners.iterator();
+    private void notifyDatapointRead(@NonNull final RHTDataPoint dataPoint) {
+        final Iterator<RHTListener> iterator = mRHTListeners.iterator();
         while (iterator.hasNext()) {
             try {
                 final RHTListener listener = iterator.next();
-                listener.onNewHistoricalRHTValues(mPeripheral, dataPoint, getSensorName());
+                listener.onNewHistoricalRHTValue(mPeripheral, dataPoint, getSensorName());
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
@@ -731,12 +764,12 @@ public class SHTC1HistoryService extends HistoryService {
         }
     }
 
-    private void notifyDownloadProgress() {
-        final Iterator<HistoryListener> iterator = mListeners.iterator();
+    private void notifyHistoricalTemperature(@NonNull final RHTDataPoint dataPoint) {
+        final Iterator<TemperatureListener> iterator = mTemperatureListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                final HistoryListener listener = iterator.next();
-                listener.setDownloadProgress(mPeripheral, mExtractedDatapointsCounter);
+                final TemperatureListener listener = iterator.next();
+                listener.onNewHistoricalTemperature(mPeripheral, dataPoint.getTemperatureCelsius(), dataPoint.getTimestamp(), getSensorName(), TemperatureUnit.CELSIUS);
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
@@ -744,50 +777,14 @@ public class SHTC1HistoryService extends HistoryService {
         }
     }
 
-    /**
-     * Notifies total elements to download to the listeners.
-     *
-     * @param numberElementsToDownload number of elements to download.
-     */
-    private void notifyTotalNumberElements(final int numberElementsToDownload) {
-        final Iterator<HistoryListener> iterator = mListeners.iterator();
+    private void notifyHistoricalHumidity(@NonNull final RHTDataPoint dataPoint) {
+        final Iterator<HumidityListener> iterator = mHumidityListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().setAmountElementsToDownload(mPeripheral, numberElementsToDownload);
-            } catch (RuntimeException e) {
-                Log.e(TAG, "notifyTotalNumberElements -> The following exception was produced when notifying the listeners: ", e);
-                iterator.remove();
-            }
-        }
-    }
-
-    /**
-     * Notifies download progress to the listeners.
-     */
-    private void onDownloadFailure() {
-        final Iterator<HistoryListener> iterator = mListeners.iterator();
-        Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.size()));
-        while (iterator.hasNext()) {
-            try {
-                iterator.next().onLogDownloadFailure(mPeripheral);
-            } catch (RuntimeException e) {
-                Log.e(TAG, "onLogDownloadFailure -> The following exception was produced when notifying the listeners: ", e);
-                iterator.remove();
-            }
-        }
-    }
-
-    /**
-     * Notifies to the user that the application has finish downloading the logged data.
-     */
-    private void onDownloadComplete() {
-        final Iterator<HistoryListener> iterator = mListeners.iterator();
-        Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.size()));
-        while (iterator.hasNext()) {
-            try {
-                iterator.next().onLogDownloadCompleted(mPeripheral);
+                final HumidityListener listener = iterator.next();
+                listener.onNewHistoricalHumidity(mPeripheral, dataPoint.getRelativeHumidity(), dataPoint.getTimestamp(), getSensorName(), HumidityUnit.RELATIVE_HUMIDITY);
             } catch (final RuntimeException e) {
-                Log.e(TAG, "onDownloadComplete -> The following exception was produced when notifying the listeners: ", e);
+                Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
             }
         }
@@ -805,7 +802,7 @@ public class SHTC1HistoryService extends HistoryService {
         }
         setGadgetLoggingEnabled(true);
         if (initialLoggingState) {
-            Log.i(TAG, String.format("resetDeviceData -> In device %s data was deleted.", getAddress()));
+            Log.i(TAG, String.format("resetDeviceData -> In device %s data was deleted.", getDeviceAddress()));
             return true;
         }
         return setGadgetLoggingEnabled(false);
@@ -816,6 +813,7 @@ public class SHTC1HistoryService extends HistoryService {
      *
      * @return <code>true</code> if the user is downloading data from the device - <code>false</code> otherwise.
      */
+    @Override
     public boolean isDownloadInProgress() {
         return mDownloadInProgress;
     }

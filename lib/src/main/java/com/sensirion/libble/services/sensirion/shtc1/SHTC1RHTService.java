@@ -3,32 +3,22 @@ package com.sensirion.libble.services.sensirion.shtc1;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
-import com.sensirion.libble.listeners.services.RHTListener;
-import com.sensirion.libble.services.NotificationService;
+import com.sensirion.libble.services.RHTService;
 import com.sensirion.libble.utils.RHTDataPoint;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Iterator;
 
-public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListener> {
+public class SHTC1RHTService extends RHTService {
 
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
-
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";
-
-    private static final short TIMEOUT_MS = 1100;
-
-    private static final byte MAX_NUMBER_REQUESTS = 4;
-
     private final BluetoothGattCharacteristic mHumidityTemperatureCharacteristic;
-
     private RHTDataPoint mLastDatapoint;
 
-    public SHTC1RHTService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
+    public SHTC1RHTService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
         mHumidityTemperatureCharacteristic = getCharacteristic(RHT_CHARACTERISTIC_UUID);
         peripheral.readCharacteristic(mHumidityTemperatureCharacteristic);
@@ -59,22 +49,10 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
         if (mHumidityTemperatureCharacteristic.getUuid().equals(updatedCharacteristic.getUuid())) {
             final byte[] rawData = updatedCharacteristic.getValue();
             mLastDatapoint = convertToHumanReadableValues(rawData);
-            notifyListeners();
+            notifyRHTDatapoint(mLastDatapoint, false);
             return true;
         }
         return false;
-    }
-
-    private void notifyListeners() {
-        final Iterator<RHTListener> iterator = super.mListeners.iterator();
-        while (iterator.hasNext()) {
-            try {
-                iterator.next().onNewRHTValues(mPeripheral, mLastDatapoint, getSensorName());
-            } catch (final Exception e) {
-                Log.e(TAG, "notifyListeners -> The following exception was produced: ", e);
-                iterator.remove();
-            }
-        }
     }
 
     /**
@@ -83,30 +61,6 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
     @Override
     public void registerDeviceCharacteristicNotifications() {
         registerNotification(mHumidityTemperatureCharacteristic);
-    }
-
-    /**
-     * Return the last HUMIGADGET_RHT_NOTIFICATION_SERVICE data in case it's known.
-     *
-     * @param characteristicName name of the characteristic.
-     * @return an {@link com.sensirion.libble.utils.RHTDataPoint} with the latest received characteristic - <code>null</code> otherwise.
-     */
-    @Override
-    public RHTDataPoint getCharacteristicValue(final String characteristicName) {
-        if (characteristicName.equals(RHTListener.READ_LATEST_RHT_DATA_POINT)) {
-            if (mLastDatapoint == null) {
-                mPeripheral.forceReadCharacteristic(mHumidityTemperatureCharacteristic, TIMEOUT_MS, MAX_NUMBER_REQUESTS);
-                if (mLastDatapoint == null) {
-                    return null;
-                }
-                mPeripheral.cleanCharacteristicCache();
-                return mLastDatapoint;
-            } else {
-                mPeripheral.readCharacteristic(mHumidityTemperatureCharacteristic);
-                return mLastDatapoint;
-            }
-        }
-        return null;
     }
 
     /**
@@ -123,5 +77,14 @@ public class SHTC1RHTService extends NotificationService<RHTDataPoint, RHTListen
             default:
                 return null;
         }
+    }
+
+    /**
+     * Obtains the last obtained datapoint.
+     * @return {@link com.sensirion.libble.utils.RHTDataPoint} with the last RHT data obtained from the sensor.
+     */
+    @SuppressWarnings("unused")
+    public RHTDataPoint getLastDatapoint(){
+        return mLastDatapoint;
     }
 }

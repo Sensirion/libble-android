@@ -311,23 +311,6 @@ public class BleManager {
     }
 
     /**
-     * Ask for the a characteristic of a service
-     * NOTE: It returns the first characteristic it founds.
-     *
-     * @param deviceAddress      of the device we want to listen for a characteristic.
-     * @param characteristicName name of the characteristic.
-     * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
-     */
-    public Object getCharacteristicValue(@NonNull final String deviceAddress, @NonNull final String characteristicName) {
-        final BleDevice device = getConnectedDevice(deviceAddress);
-        if (device == null) {
-            Log.e(TAG, String.format("getCharacteristicValue -> Device with address %s did not found the characteristic with name: %s", deviceAddress, characteristicName));
-            return null;
-        }
-        return device.getCharacteristicValue(characteristicName);
-    }
-
-    /**
      * Registers a listener in a connected device.
      * This listener will be registered to every service of a device.
      *

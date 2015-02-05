@@ -1,6 +1,65 @@
 package com.sensirion.libble.utils;
 
+import android.support.annotation.NonNull;
+
 public abstract class TemperatureConverter {
+
+    /**
+     * Convert a given temperature to Celsius.
+     * @param temperature that is going to be converted to Celsius.
+     * @param unit of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
+     * @return {@link java.lang.Float} with the temperature in Celsius.
+     */
+    public static float convertTemperatureToCelsius(final float temperature, @NonNull final TemperatureUnit unit) {
+        switch (unit) {
+            case CELSIUS:
+                return temperature;
+            case FAHRENHEIT:
+                return TemperatureConverter.convertFahrenheitToCelsius(temperature);
+            case KELVIN:
+                return TemperatureConverter.convertKelvinToCelsius(temperature);
+            default:
+                throw new IllegalArgumentException(String.format("convertTemperatureToCelsius -> Value Unit %s is not implemented yet", unit));
+        }
+    }
+
+    /**
+     * Convert a given temperature to Fahrenheit.
+     * @param temperature that is going to be converted to Fahrenheit.
+     * @param unit of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
+     * @return {@link java.lang.Float} with the temperature in Fahrenheit.
+     */
+    public static float convertTemperatureToFahrenheit(final float temperature, @NonNull final TemperatureUnit unit) {
+        switch (unit) {
+            case CELSIUS:
+                return convertCelsiusToFahrenheit(temperature);
+            case FAHRENHEIT:
+                return temperature;
+            case KELVIN:
+                return TemperatureConverter.convertKelvinToFahrenheit(temperature);
+            default:
+                throw new IllegalArgumentException(String.format("convertTemperatureToFahrenheit -> Value Unit %s is not implemented yet", unit));
+        }
+    }
+
+    /**
+     * Convert a given temperature to Kelvin.
+     * @param temperature that is going to be converted to Kelvin.
+     * @param unit of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
+     * @return {@link java.lang.Float} with the temperature in Kelvin.
+     */
+    public static float convertTemperatureToKelvin(final float temperature, @NonNull final TemperatureUnit unit) {
+        switch (unit) {
+            case CELSIUS:
+                return convertCelsiusToKelvin(temperature);
+            case FAHRENHEIT:
+                return convertFahrenheitToKelvin(temperature);
+            case KELVIN:
+                return temperature;
+            default:
+                throw new IllegalArgumentException(String.format("convertTemperatureToKelvin -> Value Unit %s is not implemented yet", unit));
+        }
+    }
 
     /**
      * Convert a given Celsius temperature into Fahrenheit.

@@ -7,10 +7,6 @@ import android.support.annotation.NonNull;
  */
 public class RHTDataPoint implements Comparable<RHTDataPoint> {
 
-    public static final int CELSIUS = 0;
-    public static final int FAHRENHEIT = 1;
-    public static final int KELVIN = 2;
-
     private static final String TAG = RHTDataPoint.class.getSimpleName();
 
     private final float mTemperatureInCelsius;
@@ -25,7 +21,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      * @param timestamp            where this datapoint was obtained in milliseconds UTC.
      */
     public RHTDataPoint(final float temperatureInCelsius, final float relativeHumidity, final long timestamp) {
-        this(temperatureInCelsius, relativeHumidity, timestamp, CELSIUS);
+        this(temperatureInCelsius, relativeHumidity, timestamp, TemperatureUnit.CELSIUS);
     }
 
     /**
@@ -34,9 +30,9 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      * @param temperature      in the selected unit in the @param temperatureUnit.
      * @param relativeHumidity of the datapoint.
      * @param timestamp        where this datapoint was obtained in milliseconds UTC.
-     * @param temperatureUnit  can be RHTDataPoint.CELSIUS or RHTDataPoint.FAHRENHEIT or RHTDataPoint.KELVIN.
+     * @param temperatureUnit  can be TemperatureUnit.CELSIUS or TemperatureUnit.FAHRENHEIT or TemperatureUnit.KELVIN.
      */
-    public RHTDataPoint(final float temperature, final float relativeHumidity, final long timestamp, final int temperatureUnit) {
+    public RHTDataPoint(final float temperature, final float relativeHumidity, final long timestamp, final TemperatureUnit temperatureUnit) {
         switch (temperatureUnit) {
             case CELSIUS:
                 mTemperatureInCelsius = temperature;
@@ -48,7 +44,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
                 mTemperatureInCelsius = TemperatureConverter.convertKelvinToCelsius(temperature);
                 break;
             default:
-                throw new IllegalArgumentException(String.format("%s: Constructor: Temperature unit has to be %s.CELSIUS or %s.FAHRENHEIT or %s.KELVIN", TAG, TAG, TAG, TAG));
+                throw new IllegalArgumentException(String.format("%s: Constructor: Temperature unit has to be CELSIUS or FAHRENHEIT or KELVIN", TAG));
         }
 
         mRelativeHumidity = relativeHumidity;

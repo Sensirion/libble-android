@@ -15,7 +15,6 @@ import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.BleServiceFactory;
 import com.sensirion.libble.services.HistoryService;
-import com.sensirion.libble.services.NotificationService;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -128,10 +127,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             super.onServicesDiscovered(gatt, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 for (final BluetoothGattService service : gatt.getServices()) {
-                    mServices.add(BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service));
-                }
-                if (mNotificationListeners.size() > 0) {
-                    setAllNotificationsEnabled(true);
+                    final BleService knownService = BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service);
+                    if (knownService != null) {
+                        mServices.add(knownService);
+                    }
                 }
                 for (final NotificationListener listener : mNotificationListeners) {
                     registerDeviceListener(listener);
@@ -288,6 +287,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     @Override
     public Iterable<String> getDiscoveredServicesNames() {
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "getDiscoveredServiceNames() -> Bluetooth gatt is not initialized yet.");
+            return new LinkedList<>();
+        }
         final Set<String> discoveredServices = new HashSet<>();
         for (final BleService service : mServices) {
             discoveredServices.add(String.format("%s %s", service.getClass().getSimpleName(), service.getUUIDString()));
@@ -296,8 +299,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Retrieves the device history service in case it haves one.
-     * NOTE: In case the device haves more that one history service it will only return the first one.
+     * Retrieves the device history service in case it has one.
+     * NOTE: In case the device has more that one history service it will only return the first one.
      *
      * @return {@link com.sensirion.libble.services.HistoryService} of the device - <code>null</code> if it doesn't haves one.
      */
@@ -558,25 +561,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Ask for a named characteristic of a service.
-     * NOTE: It returns the first characteristic it founds.
-     *
-     * @param characteristicName name of the characteristic.
-     * @return {@link java.lang.Object} with the characteristic parsed by the service - <code>null</code> if no service was able to parse it.
-     */
-    @Override
-    public Object getCharacteristicValue(@NonNull final String characteristicName) {
-        for (final BleService<?> service : mServices) {
-            final Object value = service.getCharacteristicValue(characteristicName);
-            if (value == null) {
-                continue;
-            }
-            return value;
-        }
-        return null;
-    }
-
-    /**
      * Enables or disables notification on a given characteristic.
      *
      * @param characteristic Characteristic to act on.
@@ -595,15 +579,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     @Override
     public void setAllNotificationsEnabled(final boolean enabled) {
         for (final BleService service : mServices) {
-            if (service instanceof NotificationService) {
-                ((NotificationService) service).setNotificationsEnabled(enabled);
-            }
+            service.setNotificationsEnabled(enabled);
         }
     }
 
     /**
-     * Ask every service for being listened.
-     * Each service with notifications checks if the listener is able to read it's data with interfaces.
+     * Register listener on all BleServices of all the devices. The device doesn't need to be connected.
+     * Each service with notifications checks if the listener is able to read its data with interfaces.
      *
      * @param listener Activity from outside the library that
      *                 wants to listen for notifications.
@@ -614,17 +596,16 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         mNotificationListeners.add(listener);
         boolean validServiceFound = false;
         for (final BleService service : mServices) {
-            if (service instanceof NotificationService) {
-                if (((NotificationService) service).registerNotificationListener(listener)) {
-                    validServiceFound = true;
-                }
+            if (service.registerNotificationListener(listener)) {
+                validServiceFound = true;
+                service.setNotificationsEnabled(true);
             }
         }
         return validServiceFound;
     }
 
     /**
-     * Ask every service for not being listened by a listener.
+     * Unregister a listener from all the BleServices.
      * Each service with notifications removes it from
      * from it's list, in case the listener was listening it.
      *
@@ -634,9 +615,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     @Override
     public void unregisterDeviceListener(@NonNull final NotificationListener listener) {
         for (final BleService service : mServices) {
-            if (service instanceof NotificationService) {
-                ((NotificationService) service).unregisterNotificationListener(listener);
-            }
+            service.unregisterNotificationListener(listener);
         }
         mNotificationListeners.remove(listener);
     }
