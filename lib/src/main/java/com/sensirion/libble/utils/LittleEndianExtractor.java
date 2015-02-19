@@ -15,11 +15,11 @@ public abstract class LittleEndianExtractor {
     /**
      * Extracts a Little Endian byte array from a long value.
      *
-     * @param longValue that is going to be converted in a byte array.
+     * @param longValue that is going to be converted into a byte array.
      * @return array of {@link java.lang.Byte} ordered using the little endian convention.
      */
     public static byte[] extractLittleEndianByteArrayFromLong(final long longValue) {
-        byte[] byteArray = longToByteArray(longValue);
+        final byte[] byteArray = longToByteArray(longValue);
         if (ByteOrder.nativeOrder() == LITTLE_ENDIAN) {
             return reverseByteArray(byteArray);
         }
@@ -36,6 +36,29 @@ public abstract class LittleEndianExtractor {
                 (byte) (value >> 16),
                 (byte) (value >> 8),
                 (byte) value
+        };
+    }
+
+    /**
+     * Extracts a Little Endian byte array from an integer value.
+     *
+     * @param intValue that is going to be converted into a byte array.
+     * @return array of {@link java.lang.Byte} ordered using the little endian convention.
+     */
+    public static byte[] extractLittleEndianByteArrayFromInteger(final int intValue) {
+        final byte[] byteArray = intToByteArray(intValue);
+        if (ByteOrder.nativeOrder() == LITTLE_ENDIAN) {
+            return reverseByteArray(byteArray);
+        }
+        return byteArray;
+    }
+
+    private static byte[] intToByteArray(final int value) {
+        return new byte[]{
+                (byte) (value >> 24),
+                (byte) (value >> 16),
+                (byte) (value >> 8),
+                (byte) (value)
         };
     }
 

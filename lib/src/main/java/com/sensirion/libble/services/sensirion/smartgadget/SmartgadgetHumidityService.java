@@ -60,7 +60,7 @@ public class SmartgadgetHumidityService extends SmartgadgetRHTService<HumidityLi
     }
 
     /**
-     * Parses the extracted value unit to {@link com.sensirion.libble.utils.HumidityUnit}.
+     * Parses the extracted value unit to {@link com.sensirion.libble.utils.HumidityUnit}
      *
      * @param valueUnit {@link java.lang.String} with the value unit specified in the device.
      */

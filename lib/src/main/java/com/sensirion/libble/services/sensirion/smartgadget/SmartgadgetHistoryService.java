@@ -39,6 +39,7 @@ public class SmartgadgetHistoryService extends HistoryService {
     private Long mUserOldestTimestampToDownloadMs = null;
     private volatile boolean mTryingToDownload = false;
     private volatile int mLastSequenceNumberDownloaded = 0;
+    private volatile Integer mUserInterval = null;
 
     public SmartgadgetHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
@@ -51,6 +52,66 @@ public class SmartgadgetHistoryService extends HistoryService {
         syncTimestamp();
     }
 
+    /**
+     * Method called when a characteristic is read.
+     *
+     * @param updatedCharacteristic that was read.
+     * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
+        if (mNewestSampleTimestampMsCharacteristic.equals(updatedCharacteristic)) {
+            return onNewestSampleTimestampTimeMsRead(updatedCharacteristic);
+        } else if (mOldestTimestampCharacteristic.equals(updatedCharacteristic)) {
+            return onOldestTimestampRead(updatedCharacteristic);
+        } else if (mLoggerIntervalMsCharacteristic.equals(updatedCharacteristic)) {
+            mLoggerIntervalMs = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristic(updatedCharacteristic);
+            Log.d(TAG, String.format("onCharacteristicUpdate -> Logger interval in the device %s is %d milliseconds.", getDeviceAddress(), mLoggerIntervalMs));
+            return true;
+        } else if (mStartLoggerDownloadCharacteristic.equals(updatedCharacteristic)) {
+            if (mStartLoggerDownloadCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 0) {
+                mTryingToDownload = false;
+                onDownloadComplete();
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * This method is called when a characteristic was written in the device.
+     *
+     * @param characteristic that was written in the device with success.
+     *                       return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean onCharacteristicWrite(@NonNull final BluetoothGattCharacteristic characteristic) {
+        if (characteristic.equals(mSyncTimeCharacteristic)) {
+            Log.d(TAG, String.format("onCharacteristicWrite -> Time was synced successfully in the device %s.", getDeviceAddress()));
+            mPeripheral.forceReadCharacteristic(mOldestTimestampCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+            return true;
+        } else if (characteristic.equals(mOldestTimestampCharacteristic)) {
+            Log.d(TAG, String.format("onCharacteristicWrite -> Read back to time characteristic was set correctly in device %s.", getDeviceAddress()));
+            mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
+            return true;
+        } else if (characteristic.equals(mStartLoggerDownloadCharacteristic)) {
+            Log.d(TAG, String.format("onCharacteristicWrite -> Download started successfully on device %s.", getDeviceAddress()));
+            notifyNumberElementsToDownload();
+            return true;
+        } else if (characteristic.equals(mLoggerIntervalMsCharacteristic)) {
+            Log.d(TAG, String.format("onCharacteristicWrite -> Download interval has been set correctly in device %s.", getDeviceAddress()));
+            mLoggerIntervalMs = mUserInterval;
+            mOldestTimestampToDownloadMs = null;
+            mNewestSampleTimestampMs = null;
+            syncTimestamp();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Registers the notification characteristics in case it's needed.
+     */
     @Override
     public void registerDeviceCharacteristicNotifications() {
         super.registerNotification(mStartLoggerDownloadCharacteristic);
@@ -101,30 +162,6 @@ public class SmartgadgetHistoryService extends HistoryService {
         }
     }
 
-    /**
-     * Method called when a characteristic is read.
-     *
-     * @param updatedCharacteristic that was read.
-     * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
-     */
-    @Override
-    public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
-        if (mNewestSampleTimestampMsCharacteristic.equals(updatedCharacteristic)) {
-            return onNewestSampleTimestampTimeMsRead(updatedCharacteristic);
-        } else if (mOldestTimestampCharacteristic.equals(updatedCharacteristic)) {
-            return onOldestTimestampRead(updatedCharacteristic);
-        } else if (mLoggerIntervalMsCharacteristic.equals(updatedCharacteristic)) {
-            mLoggerIntervalMs = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristic(updatedCharacteristic);
-            Log.d(TAG, String.format("onCharacteristicUpdate -> Logger interval in the device %s is %d milliseconds.", getDeviceAddress(), mLoggerIntervalMs));
-            return true;
-        } else if (mStartLoggerDownloadCharacteristic.equals(updatedCharacteristic)) {
-            if (mStartLoggerDownloadCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 0) {
-                mTryingToDownload = false;
-                super.onDownloadComplete();
-            }
-        }
-        return false;
-    }
 
     private boolean onNewestSampleTimestampTimeMsRead(@NonNull final BluetoothGattCharacteristic newestTimestampCharacteristic) {
         final long newestTimestampToDownload = LittleEndianExtractor.extractLittleEndianLongFromCharacteristic(newestTimestampCharacteristic);
@@ -175,34 +212,6 @@ public class SmartgadgetHistoryService extends HistoryService {
     }
 
     /**
-     * This method is called when a characteristic was written in the device.
-     *
-     * @param characteristic that was written in the device with success.
-     *                       return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
-     */
-    @Override
-    public boolean onCharacteristicWrite(@NonNull final BluetoothGattCharacteristic characteristic) {
-        if (characteristic.equals(mSyncTimeCharacteristic)) {
-            Log.d(TAG, String.format("onCharacteristicWrite -> Time was synced successfully in the device %s.", getDeviceAddress()));
-            mPeripheral.forceReadCharacteristic(mOldestTimestampCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
-            return true;
-        } else if (characteristic.equals(mOldestTimestampCharacteristic)) {
-            Log.d(TAG, String.format("onCharacteristicWrite -> Read back to time characteristic was set correctly in device %s.", getDeviceAddress()));
-            mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
-            return true;
-        } else if (characteristic.equals(mStartLoggerDownloadCharacteristic)) {
-            Log.d(TAG, String.format("onCharacteristicWrite -> Download started successfully on device %s.", getDeviceAddress()));
-            notifyNumberElementsToDownload();
-            return true;
-        } else if (characteristic.equals(mLoggerIntervalMsCharacteristic)) {
-            Log.d(TAG, String.format("onCharacteristicWrite -> Download interval has been set correctly in device %s.", getDeviceAddress()));
-            syncTimestamp();
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Starts the data download from the device.
      *
      * @return <code>true</code> if the data download started correctly. <code>false</code> otherwise.
@@ -240,10 +249,9 @@ public class SmartgadgetHistoryService extends HistoryService {
      */
     @Override
     public boolean setDownloadInterval(final int loggerIntervalInMilliseconds) {
-        mLoggerIntervalMsCharacteristic.setValue(loggerIntervalInMilliseconds, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-        mLoggerIntervalMs = null;
-        mOldestTimestampToDownloadMs = null;
-        mNewestSampleTimestampMs = null;
+        Log.d(TAG, String.format("setDownloadInterval -> Setting the download interval to %d.", loggerIntervalInMilliseconds));
+        mLoggerIntervalMsCharacteristic.setValue(LittleEndianExtractor.extractLittleEndianByteArrayFromInteger(loggerIntervalInMilliseconds));
+        mUserInterval = loggerIntervalInMilliseconds;
         return mPeripheral.forceWriteCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
     }
 

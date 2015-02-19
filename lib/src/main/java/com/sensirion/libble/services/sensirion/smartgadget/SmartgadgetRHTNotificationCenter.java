@@ -23,7 +23,7 @@ import java.util.Map;
 import static com.sensirion.libble.utils.TemperatureConverter.convertTemperatureToCelsius;
 
 /**
- * Class used by the Humidity and temperatureInCelsius service in order to make a class that wraps the Temperature and Humidity data for the given devices.
+ * Class used by the Humidity and temperature services in order to wrap the Temperature and Humidity data for the connected devices.
  */
 class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityListener {
 
