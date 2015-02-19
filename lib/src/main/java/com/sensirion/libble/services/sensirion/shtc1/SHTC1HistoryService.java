@@ -73,7 +73,7 @@ public class SHTC1HistoryService extends HistoryService {
 
     private volatile boolean mDownloadInProgress = false;
 
-    public SHTC1HistoryService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
+    public SHTC1HistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
         mStartStopCharacteristic = super.getCharacteristic(START_STOP_UUID);
         mIntervalCharacteristic = super.getCharacteristic(LOGGING_INTERVAL_UUID);
@@ -84,7 +84,7 @@ public class SHTC1HistoryService extends HistoryService {
         mUserDataCharacteristic = super.getCharacteristic(USER_DATA_UUID);
         addCharacteristicsTo(bluetoothGattService);
         prepareCharacteristics();
-        synchronizeData();
+        isServiceSynchronized();
     }
 
     private void addCharacteristicsTo(@NonNull final BluetoothGattService bluetoothGattService) {
@@ -151,31 +151,32 @@ public class SHTC1HistoryService extends HistoryService {
      * Obtains all the attributes from the device, this method should be called when initializing the gadget.
      *
      * @return <code>true</code> if data was synchronized correctly - <code>false</code> otherwise.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread.
      */
-    public synchronized boolean synchronizeData() {
+    @Override
+    public synchronized boolean isServiceSynchronized() {
         if (checkGadgetLoggingState() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the enabling state of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to read the state of the device.");
             return false;
         }
         if (getDownloadIntervalSeconds() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the interval of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to read the interval of the device.");
             return false;
         }
         if (getCurrentPoint() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the current pointer of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to read the current pointer of the device.");
             return false;
         }
         if (getStartPointer() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to obtain the start pointer of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to obtain the start pointer of the device.");
             return false;
         }
         if (getEndPointer() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to obtain the end pointer of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to obtain the end pointer of the device.");
             return false;
         }
         if (getUserData() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to user data of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to user data of the device.");
             return false;
         }
         return true;
@@ -239,6 +240,7 @@ public class SHTC1HistoryService extends HistoryService {
 
     /**
      * This method returns the logging interval in milliseconds to the client device.
+     *
      * @return {@link java.lang.Integer} with the logging interval in milliseconds - <code>null</code> if it's not known.
      */
     @Override
@@ -723,17 +725,17 @@ public class SHTC1HistoryService extends HistoryService {
         boolean humidityListener = false;
 
         if (listenerForRemoval instanceof RHTListener) {
-                mRHTListeners.remove(listenerForRemoval);
-                Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the RHTListener list.", getDeviceAddress(), listenerForRemoval));
-                rhtListener = true;
+            mRHTListeners.remove(listenerForRemoval);
+            Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the RHTListener list.", getDeviceAddress(), listenerForRemoval));
+            rhtListener = true;
         }
-        if (listenerForRemoval instanceof TemperatureListener){
+        if (listenerForRemoval instanceof TemperatureListener) {
             mTemperatureListeners.remove(listenerForRemoval);
             Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the Temperature list.", getDeviceAddress(), listenerForRemoval));
             temperatureListener = true;
         }
 
-        if (listenerForRemoval instanceof HumidityListener){
+        if (listenerForRemoval instanceof HumidityListener) {
             mHumidityListeners.remove(listenerForRemoval);
             Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the Humidity list.", getDeviceAddress(), listenerForRemoval));
             humidityListener = true;

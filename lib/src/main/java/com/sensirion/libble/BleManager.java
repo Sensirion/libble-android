@@ -413,10 +413,10 @@ public class BleManager {
     public int getNumberOfDiscoveredServices(@NonNull final String deviceAddress) {
         final BleDevice device = getConnectedDevice(deviceAddress);
         if (device == null) {
-            Log.e(TAG, String.format("getNumberOfDiscoveredServices -> Device with address %s not found.", deviceAddress));
+            Log.e(TAG, String.format("getNumberServices -> Device with address %s not found.", deviceAddress));
             return -1;
         }
-        return device.getNumberOfDiscoveredServices();
+        return device.getNumberServices();
     }
 
     /**

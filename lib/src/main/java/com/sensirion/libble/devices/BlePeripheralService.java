@@ -111,6 +111,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     public synchronized void onPeripheralServiceDiscovery(@NonNull final Peripheral peripheral) {
+        Log.i(TAG, String.format("onPeripheralServiceDiscovery -> Peripheral %s discovered %d services.", peripheral.getAddress(), peripheral.getNumberServices()));
         sendLocalBroadcast(ACTION_PERIPHERAL_SERVICE_DISCOVERY, EXTRA_PERIPHERAL_ADDRESS, peripheral.getAddress());
         notifyPeripheralServiceDiscovery(peripheral);
     }

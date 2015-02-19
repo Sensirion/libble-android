@@ -13,10 +13,10 @@ import java.util.Iterator;
  * This service can be used for control data download. The user can obtain this service directly from the
  * {@link com.sensirion.libble.devices.BleDevice} and can use it without needing to know how it is
  * implemented or which type of data it use.
- *
+ * <p/>
  * This service should be implemented by all the services which retrieves information from historical data.
  */
-public abstract class HistoryService extends BleService <HistoryListener> {
+public abstract class HistoryService extends BleService<HistoryListener> {
 
     public HistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
@@ -24,6 +24,7 @@ public abstract class HistoryService extends BleService <HistoryListener> {
 
     /**
      * Notifies the download progress of a download.
+     *
      * @param downloadProgress with the number of downloaded elements.
      */
     protected void notifyDownloadProgress(final int downloadProgress) {
@@ -170,4 +171,11 @@ public abstract class HistoryService extends BleService <HistoryListener> {
      */
     @SuppressWarnings("unused")
     public abstract boolean isDownloadInProgress();
+
+    /**
+     * Checks if the service is synchronized with the {@link com.sensirion.libble.devices.BleDevice}.
+     *
+     * @return <code>true</code> if the service is synchronized. <code>false</code> otherwise.
+     */
+    public abstract boolean isServiceSynchronized();
 }

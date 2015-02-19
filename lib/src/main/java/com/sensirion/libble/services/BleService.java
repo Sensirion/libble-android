@@ -20,27 +20,23 @@ import java.util.concurrent.Executors;
  * Represents a {@link android.bluetooth.BluetoothGattService} as defined in org.bluetooth.service.*
  * or a proprietary implementation.
  */
-public abstract class BleService <ListenerType extends NotificationListener> {
-
-    protected final String TAG = this.getClass().getSimpleName();
+public abstract class BleService<ListenerType extends NotificationListener> {
 
     //Characteristic descriptor UUID.
     protected static final UUID USER_CHARACTERISTIC_DESCRIPTOR_UUID = UUID.fromString("00002901-0000-1000-8000-00805f9b34fb");
     protected static final UUID NOTIFICATION_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
-
     //Force action attributes.
     private static final short WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST = 160;
     private static final byte MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST = 10;
-
+    protected final String TAG = this.getClass().getSimpleName();
     //Class attributes.
     protected final Peripheral mPeripheral;
+    //Listeners
+    protected final Set<ListenerType> mListeners = Collections.synchronizedSet(new HashSet<ListenerType>());
     private final BluetoothGattService mBluetoothGattService;
     private final Set<BluetoothGattCharacteristic> mNotifyCharacteristics = Collections.synchronizedSet(new HashSet<BluetoothGattCharacteristic>());
     private boolean mNotificationsAreEnabled = false;
     private boolean mIsRequestingNotifications = false;
-
-    //Listeners
-    protected final Set<ListenerType> mListeners = Collections.synchronizedSet(new HashSet<ListenerType>());
 
     public BleService(@NonNull final Peripheral servicePeripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         mPeripheral = servicePeripheral;
@@ -140,7 +136,7 @@ public abstract class BleService <ListenerType extends NotificationListener> {
                 mNotifyCharacteristics.remove(characteristic);
                 Log.i(TAG, String.format("registerNotification -> Cleared active notification of UUID %s in peripheral with address: %s", characteristic.getUuid(), mPeripheral.getAddress()));
                 setCharacteristicNotification(characteristic, false);
-                if (mNotifyCharacteristics.isEmpty()){
+                if (mNotifyCharacteristics.isEmpty()) {
                     mNotificationsAreEnabled = false;
                 }
             }

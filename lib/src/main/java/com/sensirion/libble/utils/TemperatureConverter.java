@@ -6,8 +6,9 @@ public abstract class TemperatureConverter {
 
     /**
      * Convert a given temperature to Celsius.
+     *
      * @param temperature that is going to be converted to Celsius.
-     * @param unit of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
+     * @param unit        of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
      * @return {@link java.lang.Float} with the temperature in Celsius.
      */
     public static float convertTemperatureToCelsius(final float temperature, @NonNull final TemperatureUnit unit) {
@@ -25,8 +26,9 @@ public abstract class TemperatureConverter {
 
     /**
      * Convert a given temperature to Fahrenheit.
+     *
      * @param temperature that is going to be converted to Fahrenheit.
-     * @param unit of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
+     * @param unit        of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
      * @return {@link java.lang.Float} with the temperature in Fahrenheit.
      */
     public static float convertTemperatureToFahrenheit(final float temperature, @NonNull final TemperatureUnit unit) {
@@ -44,8 +46,9 @@ public abstract class TemperatureConverter {
 
     /**
      * Convert a given temperature to Kelvin.
+     *
      * @param temperature that is going to be converted to Kelvin.
-     * @param unit of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
+     * @param unit        of the temperature. {@link com.sensirion.libble.utils.TemperatureUnit}
      * @return {@link java.lang.Float} with the temperature in Kelvin.
      */
     public static float convertTemperatureToKelvin(final float temperature, @NonNull final TemperatureUnit unit) {

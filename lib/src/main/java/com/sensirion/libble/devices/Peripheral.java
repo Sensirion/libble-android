@@ -34,20 +34,24 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private static final String TAG = Peripheral.class.getSimpleName();
 
     // Force reading attributes.
-    private static final byte INTERVAL_BETWEEN_CHECKS_MILLISECONDS = 25;
+    private static final byte INTERVAL_BETWEEN_CHECKS_MILLISECONDS = 51;
     private final Queue<Object> mLastActionUsedQueue = new LinkedBlockingQueue<>();
+
     //Peripheral attributes
     private final BlePeripheralService mPeripheralService;
     private final BluetoothDevice mBluetoothDevice;
     private final String mAdvertisedName;
     private final String mAddress;
+
     //Listener list
     private final Set<NotificationListener> mNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
+
     //Services List
     private final Set<BleService> mServices = Collections.synchronizedSet(new HashSet<BleService>());
     private volatile boolean mForceOperationRunning = false;
     private boolean mIsConnected = false;
     private int mRSSI;
+
     //Gathering controller.
     private BluetoothGatt mBluetoothGatt;
 
@@ -126,10 +130,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         public void onServicesDiscovered(@NonNull final BluetoothGatt gatt, final int status) {
             super.onServicesDiscovered(gatt, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                for (final BluetoothGattService service : gatt.getServices()) {
+                final List<BluetoothGattService> discoveredServices = gatt.getServices();
+                Log.w(TAG, String.format(String.format("onServicesDiscovered -> Discovered %s services in the device %s.", discoveredServices.size(), getAddress())));
+                for (final BluetoothGattService service : discoveredServices) {
                     final BleService knownService = BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service);
                     if (knownService != null) {
                         mServices.add(knownService);
+                        Log.d(TAG, String.format("onServiceDiscovered -> Added service %s to the service list.", knownService));
                     }
                 }
                 for (final NotificationListener listener : mNotificationListeners) {
@@ -231,15 +238,15 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * NOTE: Returns the first service it founds with of the given type.
      * Obtain a peripheral service in case the peripheral haves it.
+     * NOTE: Returns the first service found of the given type.
      *
      * @param type service class that the user wants to obtain.
      * @param <T>  Class of the service.
      * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given class.
      */
     @Override
-    public <T extends BleService> T getDeviceService(final Class<T> type) {
+    public <T extends BleService> T getDeviceService(@NonNull final Class<T> type) {
         for (final BleService service : mServices) {
             if (service.getClass().equals(type)) {
                 return (T) service;
@@ -250,14 +257,14 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Asks for a service with a particular name.
-     * NOTE: Returns the first service it founds with the given name.
+     * NOTE: Returns the first service found of the given type.
      *
      * @param serviceName name of the service.
      * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given name
      */
     @Override
-    public BleService getDeviceService(final String serviceName) {
-        for (BleService service : mServices) {
+    public BleService getDeviceService(@NonNull final String serviceName) {
+        for (final BleService service : mServices) {
             if (service.isExplicitService(serviceName)) {
                 return service;
             }
@@ -527,13 +534,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                 if (mLastActionUsedQueue.contains(action)) {
                     return true;
                 }
-                if (requestCounter >= maxRequestCount) {
-                    break;
-                }
                 try {
                     Thread.sleep(INTERVAL_BETWEEN_CHECKS_MILLISECONDS);
                 } catch (final InterruptedException ignored) {
                     Log.w(TAG, String.format("forceActionReadOrWrite -> Action %s produced an interruptedException.", action));
+                }
+                if (requestCounter >= maxRequestCount) {
+                    break;
                 }
             }
             return false;
@@ -626,7 +633,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return number of discovered services.
      */
     @Override
-    public int getNumberOfDiscoveredServices() {
+    public int getNumberServices() {
         return mServices.size();
     }
 

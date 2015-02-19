@@ -81,10 +81,11 @@ public class SHTC1RHTService extends RHTService {
 
     /**
      * Obtains the last obtained datapoint.
+     *
      * @return {@link com.sensirion.libble.utils.RHTDataPoint} with the last RHT data obtained from the sensor.
      */
     @SuppressWarnings("unused")
-    public RHTDataPoint getLastDatapoint(){
+    public RHTDataPoint getLastDatapoint() {
         return mLastDatapoint;
     }
 }

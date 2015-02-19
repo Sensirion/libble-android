@@ -10,6 +10,10 @@ import com.sensirion.libble.services.generic.DeviceInformationService;
 import com.sensirion.libble.services.sensirion.shtc1.SHTC1ConnectionSpeedService;
 import com.sensirion.libble.services.sensirion.shtc1.SHTC1HistoryService;
 import com.sensirion.libble.services.sensirion.shtc1.SHTC1RHTService;
+import com.sensirion.libble.services.sensirion.smartgadget.SmartgadgetHistoryService;
+import com.sensirion.libble.services.sensirion.smartgadget.SmartgadgetHumidityService;
+import com.sensirion.libble.services.sensirion.smartgadget.SmartgadgetTemperatureService;
+import com.sensirion.libble.services.ti.SensorTagRHTService;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -28,6 +32,8 @@ public class BleServiceFactory {
     private BleServiceFactory() {
         registerGenericServices();
         registerSHTC1Services();
+        registerSmartgadgetServices();
+        registerTexasInstrumentsServices();
     }
 
     public static BleServiceFactory getInstance() {
@@ -43,6 +49,16 @@ public class BleServiceFactory {
         registerServiceImplementation(SHTC1RHTService.SERVICE_UUID, SHTC1RHTService.class);
         registerServiceImplementation(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
         registerServiceImplementation(SHTC1ConnectionSpeedService.SERVICE_UUID, SHTC1ConnectionSpeedService.class);
+    }
+
+    private void registerSmartgadgetServices() {
+        registerServiceImplementation(SmartgadgetTemperatureService.SERVICE_UUID, SmartgadgetTemperatureService.class);
+        registerServiceImplementation(SmartgadgetHumidityService.SERVICE_UUID, SmartgadgetHumidityService.class);
+        registerServiceImplementation(SmartgadgetHistoryService.SERVICE_UUID, SmartgadgetHistoryService.class);
+    }
+
+    private void registerTexasInstrumentsServices() {
+        registerServiceImplementation(SensorTagRHTService.SERVICE_UUID, SensorTagRHTService.class);
     }
 
     /**
@@ -67,12 +83,12 @@ public class BleServiceFactory {
             return constructor.newInstance(parent, service);
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             Log.e(TAG, "createServiceFor -> During the creation of a service the following exception was thrown -> ", e);
-            throw new RuntimeException(String.format("%s: createServiceFor -> During the creation of a service the following exception was thrown ->", TAG), e);
+            return null;
         }
     }
 
     /**
-     * Let's you add your own specific service implementations that are created on app-level.
+     * Lets you add your own specific service implementations that are created on app-level.
      * Make sure that these classes extend {@link BleService}.
      *
      * @param uuid       of the service.

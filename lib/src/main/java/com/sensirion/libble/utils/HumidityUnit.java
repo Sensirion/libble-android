@@ -1,5 +1,6 @@
 package com.sensirion.libble.utils;
 
 public enum HumidityUnit {
-    RELATIVE_HUMIDITY;
+    ABSOLUTE_HUMIDITY,
+    RELATIVE_HUMIDITY
 }

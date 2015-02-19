@@ -12,9 +12,11 @@ public enum KnownDevices {
     RHT_GADGETS {
         @Override
         public List<String> getAdvertisedNames() {
-            final List<String> deviceNames = new ArrayList<>(2);
-            deviceNames.add("SHTC1 smart gadget");
+            final List<String> deviceNames = new ArrayList<>(4);
+            deviceNames.add("SHTC1 smart gadget"); // Official device name is not capitalized like the following one.
             deviceNames.add("SHT31 Smart Gadget");
+            deviceNames.add("Smart Humigadget");
+            deviceNames.add("SensorTag");
             return deviceNames;
         }
     };

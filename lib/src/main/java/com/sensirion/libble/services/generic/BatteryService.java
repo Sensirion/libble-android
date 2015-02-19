@@ -11,7 +11,7 @@ import com.sensirion.libble.services.BleService;
 
 import java.util.Iterator;
 
-public class BatteryService extends BleService <BatteryListener> {
+public class BatteryService extends BleService<BatteryListener> {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";

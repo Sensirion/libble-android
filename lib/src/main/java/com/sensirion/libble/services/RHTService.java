@@ -18,7 +18,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-public abstract class RHTService extends BleService <RHTListener> {
+public abstract class RHTService extends BleService<RHTListener> {
 
     private static final Set<RHTListener> mRHTListeners = Collections.synchronizedSet(new HashSet<RHTListener>());
     private static final Set<TemperatureListener> mTemperatureListeners = Collections.synchronizedSet(new HashSet<TemperatureListener>());
@@ -29,13 +29,14 @@ public abstract class RHTService extends BleService <RHTListener> {
     }
 
     /**
-     * Notifies to the client of a (present or past, depending on the @param timestamp) temperature change.
+     * Notifies the client of a (present or past, depending on the @param timestamp) temperature change.
+     *
      * @param temperature that the device retrieved.
-     * @param timestamp when the temperature was obtained. <code>null</code> if it's live data.
+     * @param timestamp   when the temperature was obtained. <code>null</code> if it's live data.
      */
-    protected void notifyTemperature(final float temperature, final Long timestamp, final TemperatureUnit unit){
+    protected void notifyTemperature(final float temperature, final Long timestamp, final TemperatureUnit unit) {
         final Iterator<TemperatureListener> iterator = mTemperatureListeners.iterator();
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             try {
                 final TemperatureListener listener = iterator.next();
                 if (timestamp == null) {
@@ -43,7 +44,7 @@ public abstract class RHTService extends BleService <RHTListener> {
                 } else {
                     listener.onNewHistoricalTemperature(mPeripheral, temperature, timestamp, getSensorName(), unit);
                 }
-            } catch (final Exception e){
+            } catch (final Exception e) {
                 Log.e(TAG, "notifyTemperature -> The following error was produced -> ", e);
                 iterator.remove();
             }
@@ -52,20 +53,21 @@ public abstract class RHTService extends BleService <RHTListener> {
 
     /**
      * Notifies the client of a (present or past, depending on the @param timestamp) humidity change.
-     * @param humidity that the device retrieved.
+     *
+     * @param humidity  that the device retrieved.
      * @param timestamp when the temperature was obtained. <code>null</code> if it's live data.
      */
-    protected void notifyHumidity(final float humidity, final Long timestamp, final HumidityUnit unit){
+    protected void notifyHumidity(final float humidity, final Long timestamp, final HumidityUnit unit) {
         final Iterator<HumidityListener> iterator = mHumidityListeners.iterator();
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             try {
                 final HumidityListener listener = iterator.next();
-                if (timestamp == null){
+                if (timestamp == null) {
                     listener.onNewHumidity(mPeripheral, humidity, getSensorName(), unit);
                 } else {
                     listener.onNewHistoricalHumidity(mPeripheral, humidity, timestamp, getSensorName(), unit);
                 }
-            } catch (final Exception e){
+            } catch (final Exception e) {
                 Log.e(TAG, "notifyHumidity -> The following error was produced -> ", e);
                 iterator.remove();
             }
@@ -73,24 +75,25 @@ public abstract class RHTService extends BleService <RHTListener> {
     }
 
     /**
-     * Notifies to the user the reading of RHT data that can be from notifications or from historical data. (Depending on @param timestamp)
-     * @param datapoint that the device retrieved.
+     * Notifies the user of a (present or past, depending on @param timestamp) RHT data point.
+     *
+     * @param datapoint     that the device retrieved.
      * @param isFromHistory <code>true</code> if the data came from the historical values of the device - <code>false</code> otherwise.
      */
-    protected void notifyRHTDatapoint(@NonNull final RHTDataPoint datapoint, final boolean isFromHistory){
+    protected void notifyRHTDatapoint(@NonNull final RHTDataPoint datapoint, final boolean isFromHistory) {
         final Long timestamp = (isFromHistory) ? datapoint.getTimestamp() : null;
         notifyTemperature(datapoint.getTemperatureCelsius(), timestamp, TemperatureUnit.CELSIUS);
         notifyHumidity(datapoint.getRelativeHumidity(), timestamp, HumidityUnit.RELATIVE_HUMIDITY);
         final Iterator<RHTListener> iterator = mRHTListeners.iterator();
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             try {
                 final RHTListener listener = iterator.next();
-                if (isFromHistory){
+                if (isFromHistory) {
                     listener.onNewHistoricalRHTValue(mPeripheral, datapoint, getSensorName());
                 } else {
                     listener.onNewRHTValue(mPeripheral, datapoint, getSensorName());
                 }
-            } catch (final Exception e){
+            } catch (final Exception e) {
                 Log.e(TAG, "notifyRHTDatapoint -> The following error was produced -> ", e);
                 iterator.remove();
             }
@@ -110,13 +113,13 @@ public abstract class RHTService extends BleService <RHTListener> {
             Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new RHT listener: %s ", getDeviceAddress(), newListener));
             listenerFound = true;
         }
-        if (newListener instanceof TemperatureListener){
-            mTemperatureListeners.add((TemperatureListener)newListener);
+        if (newListener instanceof TemperatureListener) {
+            mTemperatureListeners.add((TemperatureListener) newListener);
             Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new Temperature listener: %s ", getDeviceAddress(), newListener));
             listenerFound = true;
         }
-        if (newListener instanceof HumidityListener){
-            mHumidityListeners.add((HumidityListener)newListener);
+        if (newListener instanceof HumidityListener) {
+            mHumidityListeners.add((HumidityListener) newListener);
             Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new Humidity listener: %s ", getDeviceAddress(), newListener));
             listenerFound = true;
         }
@@ -151,6 +154,7 @@ public abstract class RHTService extends BleService <RHTListener> {
 
     /**
      * Obtains the sensor name of the device.
+     *
      * @return {@link java.lang.String} with the sensor name.
      */
     public abstract String getSensorName();
