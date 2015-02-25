@@ -67,3 +67,6 @@ build/
 gradle/
 gradlew
 gradlew.bat
+
+# Proguard files
+proguard_mapping.txt
