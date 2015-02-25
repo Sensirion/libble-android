@@ -3,12 +3,17 @@ apply plugin: 'com.android.library'
 android {
     compileSdkVersion 21
     buildToolsVersion "21.1.2"
-
     defaultConfig {
         minSdkVersion 18
         targetSdkVersion 21
-        versionCode 7
-        versionName "0.9.12"
+        versionCode 9
+        versionName "0.10.1"
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFile '../proguard.cfg'
+        }
     }
 }
 
