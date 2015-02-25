@@ -7,6 +7,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import com.sensirion.libble.BleManager;
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
 
@@ -26,11 +27,12 @@ public abstract class BleService<ListenerType extends NotificationListener> {
     protected static final UUID USER_CHARACTERISTIC_DESCRIPTOR_UUID = UUID.fromString("00002901-0000-1000-8000-00805f9b34fb");
     protected static final UUID NOTIFICATION_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     //Force action attributes.
-    private static final short WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST = 160;
+    private static final short WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST = 210; //Ask the device every 4 connection intervals.
     private static final byte MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST = 10;
     protected final String TAG = this.getClass().getSimpleName();
     //Class attributes.
     protected final Peripheral mPeripheral;
+
     //Listeners
     protected final Set<ListenerType> mListeners = Collections.synchronizedSet(new HashSet<ListenerType>());
     private final BluetoothGattService mBluetoothGattService;
@@ -171,7 +173,12 @@ public abstract class BleService<ListenerType extends NotificationListener> {
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                mPeripheral.forceDescriptorWrite(descriptor, WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST, MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST);
+                if (mPeripheral.forceDescriptorWrite(descriptor, WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST, MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST)) {
+                    Log.i(TAG, "setCharacteristicNotification -> Notification have been written successfully in the device.");
+                } else {
+                    Log.e(TAG, String.format("setCharacteristicNotification -> It was impossible to enable notifications in device %s.", getDeviceAddress()));
+                    BleManager.getInstance().disconnectDevice(getDeviceAddress());
+                }
             }
         });
     }
