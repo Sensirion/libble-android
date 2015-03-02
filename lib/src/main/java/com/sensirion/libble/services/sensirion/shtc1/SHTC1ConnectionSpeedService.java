@@ -2,33 +2,16 @@ package com.sensirion.libble.services.sensirion.shtc1;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.Peripheral;
-import com.sensirion.libble.services.PeripheralService;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.services.BleService;
 
-import java.util.Arrays;
-import java.util.List;
-
-public class HumigadgetConnectionSpeedService extends PeripheralService<Boolean> {
+public class SHTC1ConnectionSpeedService extends BleService {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000fa10-0000-1000-8000-00805f9b34fb";
-
-    //CLASS TAGS
-    private static final String TAG = HumigadgetConnectionSpeedService.class.getSimpleName();
-    private static final String PREFIX = HumigadgetConnectionSpeedService.class.getName();
-
-    //CHARACTERISTICS value NAMES
-    public static final String READ_NOTIFICATION_SPEED_NAME = PREFIX + ".getNotificationSpeed";
-    public static final String WRITE_NOTIFICATION_LOW_SPEED_NAME = PREFIX + ".setNotificationSpeedSlow";
-    public static final String WRITE_NOTIFICATION_HIGH_SPEED_NAME = PREFIX + ".setNotificationSpeedFast";
-    public static final String WRITE_NOTIFICATION_DEFAULT_SPEED_NAME = PREFIX + ".setNotificationSpeedToDefault";
-    public static final List<String> CHARACTERISTICS_VALUE_LIST =
-            Arrays.asList(READ_NOTIFICATION_SPEED_NAME,
-                    WRITE_NOTIFICATION_LOW_SPEED_NAME,
-                    WRITE_NOTIFICATION_HIGH_SPEED_NAME,
-                    WRITE_NOTIFICATION_DEFAULT_SPEED_NAME);
 
     //FORCE READING CONSTANTS
     private static final int MAX_WAIT_TIME_BETWEEN_READ_OR_WRITE_TRIES = 75;
@@ -44,31 +27,9 @@ public class HumigadgetConnectionSpeedService extends PeripheralService<Boolean>
     //NOTIFICATION SPEED LEVEL
     private Byte mNotificationSpeedLevel = null;
 
-    public HumigadgetConnectionSpeedService(final Peripheral peripheral, final BluetoothGattService bluetoothGattService) {
+    public SHTC1ConnectionSpeedService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
-        mNotificationSpeedCharacteristic = getCharacteristicFor(NOTIFICATION_CHARACTERISTIC_UUID);
-    }
-
-    /**
-     * Returns the characteristic value.
-     *
-     * @param characteristicName of the characteristic wanted.
-     * @return <code>true</code> if the speed is high - <code>false</code> if the speed is slow - <code>null</code> if it's not known.
-     */
-    @Override
-    public Boolean getCharacteristicValue(final String characteristicName) {
-        Log.i(TAG, String.format("Requested battery level in peripheral %s.", mPeripheral.getAddress()));
-        if (characteristicName.equals(READ_NOTIFICATION_SPEED_NAME)) {
-            return isNotificationSpeedValueSetHigh();
-        }
-        if (characteristicName.equals(WRITE_NOTIFICATION_LOW_SPEED_NAME)) {
-            return setConnectionSpeed(false);
-        }
-        if (characteristicName.equals(WRITE_NOTIFICATION_HIGH_SPEED_NAME)
-                || characteristicName.equals(WRITE_NOTIFICATION_DEFAULT_SPEED_NAME)) {
-            return setConnectionSpeed(true);
-        }
-        return null;
+        mNotificationSpeedCharacteristic = getCharacteristic(NOTIFICATION_CHARACTERISTIC_UUID);
     }
 
     /**
@@ -92,11 +53,12 @@ public class HumigadgetConnectionSpeedService extends PeripheralService<Boolean>
     }
 
     /**
-     * Sets the notification speed using {@link HumigadgetConnectionSpeedService.CONNECTION_SPEED}.
+     * Sets the notification speed using {@link SHTC1ConnectionSpeedService.CONNECTION_SPEED}.
      *
      * @param connectionSpeed that wants to be set in the device.
      * @return <code>true</code> if the connection speed was set in the device - <code>false</code> otherwise.
      */
+    @SuppressWarnings("unused")
     public boolean setNotificationSpeed(final CONNECTION_SPEED connectionSpeed) {
         switch (connectionSpeed) {
             case HIGH:

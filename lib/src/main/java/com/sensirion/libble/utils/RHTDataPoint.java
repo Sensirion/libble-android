@@ -1,13 +1,11 @@
-package com.sensirion.libble.services.sensirion.common;
+package com.sensirion.libble.utils;
+
+import android.support.annotation.NonNull;
 
 /**
  * Convenience class for storing the obtained humidity and temperature.
  */
 public class RHTDataPoint implements Comparable<RHTDataPoint> {
-
-    public static final int CELSIUS = 0;
-    public static final int FAHRENHEIT = 1;
-    public static final int KELVIN = 2;
 
     private static final String TAG = RHTDataPoint.class.getSimpleName();
 
@@ -23,7 +21,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      * @param timestamp            where this datapoint was obtained in milliseconds UTC.
      */
     public RHTDataPoint(final float temperatureInCelsius, final float relativeHumidity, final long timestamp) {
-        this(temperatureInCelsius, relativeHumidity, timestamp, CELSIUS);
+        this(temperatureInCelsius, relativeHumidity, timestamp, TemperatureUnit.CELSIUS);
     }
 
     /**
@@ -32,42 +30,27 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      * @param temperature      in the selected unit in the @param temperatureUnit.
      * @param relativeHumidity of the datapoint.
      * @param timestamp        where this datapoint was obtained in milliseconds UTC.
-     * @param temperatureUnit  can be RHTDataPoint.CELSIUS or RHTDataPoint.FAHRENHEIT or RHTDataPoint.KELVIN.
+     * @param temperatureUnit  can be TemperatureUnit.CELSIUS or TemperatureUnit.FAHRENHEIT or TemperatureUnit.KELVIN.
      */
-    public RHTDataPoint(final float temperature, final float relativeHumidity, final long timestamp, final int temperatureUnit) {
+    public RHTDataPoint(final float temperature, final float relativeHumidity, final long timestamp, final TemperatureUnit temperatureUnit) {
         switch (temperatureUnit) {
             case CELSIUS:
                 mTemperatureInCelsius = temperature;
                 break;
             case FAHRENHEIT:
-                mTemperatureInCelsius = convertFahrenheitToCelsius(temperature);
+                mTemperatureInCelsius = TemperatureConverter.convertFahrenheitToCelsius(temperature);
                 break;
             case KELVIN:
-                mTemperatureInCelsius = convertKelvinToCelsius(temperature);
+                mTemperatureInCelsius = TemperatureConverter.convertKelvinToCelsius(temperature);
                 break;
             default:
-                throw new IllegalArgumentException(String.format("%s: Constructor: Temperature unit has to be %s.CELSIUS or %s.FAHRENHEIT or %s.KELVIN", TAG, TAG, TAG, TAG));
+                throw new IllegalArgumentException(String.format("%s: Constructor: Temperature unit has to be CELSIUS or FAHRENHEIT or KELVIN", TAG));
         }
 
         mRelativeHumidity = relativeHumidity;
         mTimestamp = timestamp;
     }
 
-    private static float convertCelsiusToFahrenheit(final float temperatureInCelsius) {
-        return (temperatureInCelsius * 9f / 5f + 32f);
-    }
-
-    private static float convertCelsiusToKelvin(final float temperatureInCelsius) {
-        return temperatureInCelsius + 273.15f;
-    }
-
-    private static float convertFahrenheitToCelsius(final float tempInFahrenheit) {
-        return (tempInFahrenheit - 32f) * 5f / 9f;
-    }
-
-    private static float convertKelvinToCelsius(final float temperatureInKelvin) {
-        return temperatureInKelvin - 273.15f;
-    }
 
     /**
      * Obtains the relative humidity of the datapoint.
@@ -94,7 +77,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getTemperatureFahrenheit() {
-        return convertCelsiusToFahrenheit(mTemperatureInCelsius);
+        return TemperatureConverter.convertCelsiusToFahrenheit(mTemperatureInCelsius);
     }
 
     /**
@@ -104,7 +87,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getTemperatureKelvin() {
-        return convertCelsiusToKelvin(mTemperatureInCelsius);
+        return TemperatureConverter.convertCelsiusToKelvin(mTemperatureInCelsius);
     }
 
     /**
@@ -125,7 +108,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getDewPointFahrenheit() {
-        return convertCelsiusToFahrenheit(getDewPointCelsius());
+        return TemperatureConverter.convertCelsiusToFahrenheit(getDewPointCelsius());
     }
 
     /**
@@ -135,7 +118,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getDewPointKelvin() {
-        return convertCelsiusToKelvin(getDewPointCelsius());
+        return TemperatureConverter.convertCelsiusToKelvin(getDewPointCelsius());
     }
 
     /**
@@ -148,7 +131,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getHeatIndexCelsius() {
-        return convertFahrenheitToCelsius(getHeatIndexFahrenheit());
+        return TemperatureConverter.convertFahrenheitToCelsius(getHeatIndexFahrenheit());
     }
 
     /**
@@ -160,7 +143,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      * @return {@link java.lang.Float} with the Heat Index in Fahrenheit.
      */
     public float getHeatIndexFahrenheit() {
-        final float temperatureInFahrenheit = convertCelsiusToFahrenheit(mTemperatureInCelsius);
+        final float temperatureInFahrenheit = TemperatureConverter.convertCelsiusToFahrenheit(mTemperatureInCelsius);
         return HeatIndexCalculator.calcHeatIndexInFahrenheit(temperatureInFahrenheit, mRelativeHumidity);
     }
 
@@ -174,7 +157,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
      */
     @SuppressWarnings("unused")
     public float getHeatIndexKelvin() {
-        return convertCelsiusToKelvin(getHeatIndexCelsius());
+        return TemperatureConverter.convertKelvinToCelsius(getHeatIndexCelsius());
     }
 
     /**
@@ -198,8 +181,7 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
     }
 
     @Override
-    @SuppressWarnings("NullableProblems")
-    public int compareTo(final RHTDataPoint anotherDatapoint) {
+    public int compareTo(@NonNull final RHTDataPoint anotherDatapoint) {
         if (anotherDatapoint.getTimestamp() - mTimestamp > 0) {
             return -1;
         }

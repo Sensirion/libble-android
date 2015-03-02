@@ -3,30 +3,33 @@ package com.sensirion.libble.services.sensirion.shtc1;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.sensirion.libble.peripherals.Peripheral;
-import com.sensirion.libble.services.NotificationListener;
-import com.sensirion.libble.services.PeripheralService;
-import com.sensirion.libble.services.sensirion.common.LogDownloadListener;
-import com.sensirion.libble.services.sensirion.common.RHTDataPoint;
+import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.listeners.NotificationListener;
+import com.sensirion.libble.listeners.services.HumidityListener;
+import com.sensirion.libble.listeners.services.RHTListener;
+import com.sensirion.libble.listeners.services.TemperatureListener;
+import com.sensirion.libble.services.HistoryService;
+import com.sensirion.libble.utils.HumidityUnit;
+import com.sensirion.libble.utils.RHTDataPoint;
+import com.sensirion.libble.utils.TemperatureUnit;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
-public class HumigadgetLoggingService extends PeripheralService {
+public class SHTC1HistoryService extends HistoryService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
 
     private static final int TIMEOUT_DOWNLOAD_DATA_MS = 7500;
     private static final int MAX_CONSECUTIVE_TRIES = 10;
-
-    private static final String TAG = HumigadgetLoggingService.class.getSimpleName();
 
     private static final String START_STOP_UUID = "0000fa21-0000-1000-8000-00805f9b34fb";
     private static final String LOGGING_INTERVAL_UUID = "0000fa22-0000-1000-8000-00805f9b34fb";
@@ -41,9 +44,11 @@ public class HumigadgetLoggingService extends PeripheralService {
     private static final int GADGET_RINGBUFFER_SIZE = 16384;
 
     private static final int MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 1300;
-    private static final int SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS = 5;
+    private static final int SLEEP_BETWEEN_DOWNLOAD_REQUEST_MS = 50;
 
-    private final List<LogDownloadListener> mListeners = Collections.synchronizedList(new LinkedList<LogDownloadListener>());
+    private final Set<HumidityListener> mHumidityListeners = Collections.synchronizedSet(new HashSet<HumidityListener>());
+    private final Set<TemperatureListener> mTemperatureListeners = Collections.synchronizedSet(new HashSet<TemperatureListener>());
+    private final Set<RHTListener> mRHTListeners = Collections.synchronizedSet(new HashSet<RHTListener>());
 
     private final BluetoothGattCharacteristic mStartStopCharacteristic;
     private final BluetoothGattCharacteristic mIntervalCharacteristic;
@@ -53,7 +58,7 @@ public class HumigadgetLoggingService extends PeripheralService {
     private final BluetoothGattCharacteristic mLoggedDataCharacteristic;
     private final BluetoothGattCharacteristic mUserDataCharacteristic;
 
-    private int mExtractedDatapointsCounter = 0;
+    private int mExtractedDataPointsCounter = 0;
     private long lastTimeLogged;
     private byte mNumConsecutiveFailsReadingData = 0;
 
@@ -68,28 +73,21 @@ public class HumigadgetLoggingService extends PeripheralService {
 
     private volatile boolean mDownloadInProgress = false;
 
-    public HumigadgetLoggingService(final Peripheral parent, final BluetoothGattService bluetoothGattService) {
+    public SHTC1HistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
-        mStartStopCharacteristic = super.getCharacteristicFor(START_STOP_UUID);
-        mIntervalCharacteristic = super.getCharacteristicFor(LOGGING_INTERVAL_UUID);
-        mCurrentPointerCharacteristic = super.getCharacteristicFor(CURRENT_POINTER_UUID);
-        mStartPointerCharacteristic = super.getCharacteristicFor(START_POINTER_UUID);
-        mEndPointerCharacteristic = super.getCharacteristicFor(END_POINTER_UUID);
-        mLoggedDataCharacteristic = super.getCharacteristicFor(LOGGED_DATA_UUID);
-        mUserDataCharacteristic = super.getCharacteristicFor(USER_DATA_UUID);
+        mStartStopCharacteristic = super.getCharacteristic(START_STOP_UUID);
+        mIntervalCharacteristic = super.getCharacteristic(LOGGING_INTERVAL_UUID);
+        mCurrentPointerCharacteristic = super.getCharacteristic(CURRENT_POINTER_UUID);
+        mStartPointerCharacteristic = super.getCharacteristic(START_POINTER_UUID);
+        mEndPointerCharacteristic = super.getCharacteristic(END_POINTER_UUID);
+        mLoggedDataCharacteristic = super.getCharacteristic(LOGGED_DATA_UUID);
+        mUserDataCharacteristic = super.getCharacteristic(USER_DATA_UUID);
         addCharacteristicsTo(bluetoothGattService);
+        prepareCharacteristics();
+        isServiceSynchronized();
     }
 
-    /**
-     * Ask for the Epoch time. (Unix time in seconds)
-     *
-     * @return <code>int</code> with the epochTime time.
-     */
-    private static int getEpochTime() {
-        return (int) (System.currentTimeMillis() / 1000l);
-    }
-
-    private void addCharacteristicsTo(final BluetoothGattService bluetoothGattService) {
+    private void addCharacteristicsTo(@NonNull final BluetoothGattService bluetoothGattService) {
         bluetoothGattService.addCharacteristic(mStartStopCharacteristic);
         bluetoothGattService.addCharacteristic(mIntervalCharacteristic);
         bluetoothGattService.addCharacteristic(mCurrentPointerCharacteristic);
@@ -99,45 +97,49 @@ public class HumigadgetLoggingService extends PeripheralService {
         bluetoothGattService.addCharacteristic(mUserDataCharacteristic);
     }
 
-    @Override
-    public boolean onCharacteristicRead(final BluetoothGattCharacteristic characteristic) {
-        super.onCharacteristicRead(characteristic);
+    private void prepareCharacteristics() {
+        mPeripheral.readCharacteristic(mStartStopCharacteristic);
+        mPeripheral.readCharacteristic(mIntervalCharacteristic);
+        mPeripheral.readCharacteristic(mCurrentPointerCharacteristic);
+        mPeripheral.readCharacteristic(mStartPointerCharacteristic);
+        mPeripheral.readCharacteristic(mEndPointerCharacteristic);
+        mPeripheral.readCharacteristic(mUserDataCharacteristic);
+    }
 
-        if (characteristic == null) {
-            Log.e(TAG, "onCharacteristicRead -> Received a null characteristic");
-            return false;
-        }
+    @Override
+    public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic characteristic) {
+        super.onCharacteristicUpdate(characteristic);
 
         final String characteristicUUID = characteristic.getUuid().toString();
 
         switch (characteristicUUID) {
             case START_STOP_UUID:
                 mLoggingIsEnabled = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 1;
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s logging is %s", mPeripheral.getAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s logging is %s", mPeripheral.getAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
                 break;
             case LOGGING_INTERVAL_UUID:
                 mInterval = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s interval it's at %d seconds.", mPeripheral.getAddress(), mInterval));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s interval it's at %d seconds.", mPeripheral.getAddress(), mInterval));
                 break;
             case CURRENT_POINTER_UUID:
                 mCurrentPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s current pointer is: %d", mPeripheral.getAddress(), mCurrentPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s current pointer is: %d", mPeripheral.getAddress(), mCurrentPointer));
                 break;
             case START_POINTER_UUID:
                 mStartPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s start pointer is: %d", mPeripheral.getAddress(), mStartPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s start pointer is: %d", mPeripheral.getAddress(), mStartPointer));
                 break;
             case END_POINTER_UUID:
                 mEndPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s end pointer is: %d", mPeripheral.getAddress(), mEndPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s end pointer is: %d", mPeripheral.getAddress(), mEndPointer));
                 break;
             case LOGGED_DATA_UUID:
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s received a log.", mPeripheral.getAddress()));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received a log.", mPeripheral.getAddress()));
                 parseLoggedData(characteristic);
                 break;
             case USER_DATA_UUID:
                 mPeripheralEpoch = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicRead -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mPeripheralEpoch));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mPeripheralEpoch));
                 break;
             default:
                 return false;
@@ -149,31 +151,32 @@ public class HumigadgetLoggingService extends PeripheralService {
      * Obtains all the attributes from the device, this method should be called when initializing the gadget.
      *
      * @return <code>true</code> if data was synchronized correctly - <code>false</code> otherwise.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread.
      */
-    public synchronized boolean synchronizeData() {
-        if (isGadgetLoggingEnabled() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the enabling state of the device.");
+    @Override
+    public synchronized boolean isServiceSynchronized() {
+        if (checkGadgetLoggingState() == null) {
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to read the state of the device.");
             return false;
         }
-        if (getInterval() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the interval of the device.");
+        if (getDownloadIntervalSeconds() == null) {
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to read the interval of the device.");
             return false;
         }
         if (getCurrentPoint() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to read the current pointer of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to read the current pointer of the device.");
             return false;
         }
         if (getStartPointer() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to obtain the start pointer of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to obtain the start pointer of the device.");
             return false;
         }
         if (getEndPointer() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to obtain the end pointer of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to obtain the end pointer of the device.");
             return false;
         }
         if (getUserData() == null) {
-            Log.e(TAG, "synchronizeData -> A problem was produced when trying to user data of the device.");
+            Log.e(TAG, "isServiceSynchronized -> A problem was produced when trying to user data of the device.");
             return false;
         }
         return true;
@@ -182,10 +185,10 @@ public class HumigadgetLoggingService extends PeripheralService {
     /**
      * This method checks if logging is enabled or disabled.
      *
-     * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled.
+     * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled - <code>null</code> if the state is unknown.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public Boolean isGadgetLoggingEnabled() {
+    private Boolean checkGadgetLoggingState() {
         if (mLoggingIsEnabled == null) {
             super.mPeripheral.forceReadCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         } else {
@@ -195,12 +198,38 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     /**
+     * This method checks if logging is enabled or disabled.
+     *
+     * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled.
+     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     */
+    @Override
+    public boolean isGadgetLoggingEnabled() {
+        checkGadgetLoggingState();
+        if (mLoggingIsEnabled == null) {
+            Log.e(TAG, String.format("isGadgetLoggingEnabled -> A problem was produced when trying to know is logging is enabled in device %s.", getDeviceAddress()));
+            return false;
+        }
+        return mLoggingIsEnabled;
+    }
+
+    /**
+     * Checks is the user can modify the logging state.
+     *
+     * @return <code>true</code> if the user can enable or disable logging - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean isLoggingStateEditable() {
+        return true;
+    }
+
+    /**
      * This method checks the logging interval.
      *
      * @return number if we know the interval - return <code>null</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public Integer getInterval() {
+    public Integer getDownloadIntervalSeconds() {
         if (mInterval == null) {
             super.mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         } else {
@@ -210,10 +239,20 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     /**
-     * This method checks the current pointer of the device.
+     * This method returns the logging interval in milliseconds to the client device.
+     *
+     * @return {@link java.lang.Integer} with the logging interval in milliseconds - <code>null</code> if it's not known.
+     */
+    @Override
+    public Integer getDownloadIntervalMs() {
+        return getDownloadIntervalSeconds() * 1000;
+    }
+
+    /**
+     * This method gets the current pointer of the device.
      *
      * @return {@link java.lang.Integer} with the start pointer - <code>null</code> if it doesn't have one.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread.
      */
     public Integer getCurrentPoint() {
         if (mCurrentPointer == null) {
@@ -225,7 +264,7 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     /**
-     * This method checks the start pointer of the device.
+     * This method gets the start pointer of the device.
      *
      * @return {@link java.lang.Integer} with the start pointer - <code>-1</code> if it doesn't have one.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
@@ -275,7 +314,8 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @param enable <code>true</code> for enabling logging - <code>false</code> for disabling it.
      * @return <code>true</code> if the action was completed correctly, <code>false</code> otherwise.
      */
-    public boolean setLoggingEnabled(boolean enable) {
+    @Override
+    public boolean setLoggingState(final boolean enable) {
         if (mDownloadInProgress && enable) {
             Log.e(TAG, "We can't enable logging while a download it's in progress.");
         }
@@ -290,10 +330,11 @@ public class HumigadgetLoggingService extends PeripheralService {
     /**
      * Sets the interval of the logging, can be done when logging it's ongoing.
      *
-     * @param interval in seconds for logging.
+     * @param intervalInMilliseconds that the device will adopt for logging.
      * @return <code>true</code> if the interval was set - <code>false</code> otherwise.
      */
-    public boolean setInterval(final int interval) {
+    @Override
+    public boolean setDownloadInterval(final int intervalInMilliseconds) {
         if (mLoggingIsEnabled) {
             Log.e(TAG, "setInterval -> We can't set the interval because logging it's enabled.");
             return false;
@@ -302,15 +343,17 @@ public class HumigadgetLoggingService extends PeripheralService {
             Log.e(TAG, "setInterval -> We can't set the interval because there's a download in progress");
             return false;
         }
-        if (interval == mInterval) {
-            Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", interval, mPeripheral.getAddress()));
+        final int intervalInSeconds = intervalInMilliseconds / 1000;
+
+        if (intervalInSeconds == mInterval) {
+            Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", intervalInSeconds, mPeripheral.getAddress()));
             return true;
         }
         // Prepares logging interval characteristic.
-        mIntervalCharacteristic.setValue(interval, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+        mIntervalCharacteristic.setValue(intervalInSeconds, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
         mPeripheral.forceWriteCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        return getInterval() == interval;
+        return getDownloadIntervalSeconds() == intervalInSeconds;
     }
 
     /**
@@ -330,7 +373,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @return <code>true</code> if the start pointer was set - <code>false</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public boolean setStartPointer(final Integer userStartPoint) {
+    public boolean setStartPointer(@Nullable final Integer userStartPoint) {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         if (userStartPoint == null) {
             Log.d(TAG, "setStartPointer() -> userStartPoint == null, user wants all the data!");
@@ -397,7 +440,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @return <code>true</code> if the end pointer was set - <code>false</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public boolean setEndPointer(final Integer endPointer) {
+    public boolean setEndPointer(@Nullable final Integer endPointer) {
         super.mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
 
         if (mCurrentPointer.equals(endPointer)) {
@@ -460,14 +503,14 @@ public class HumigadgetLoggingService extends PeripheralService {
                 return false;
             }
 
-            if (setLoggingEnabled(true)) {
+            if (setLoggingState(true)) {
                 Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was enabled", mPeripheral.getAddress()));
             } else {
                 Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
                 return false;
             }
         } else {
-            if (setLoggingEnabled(false)) {
+            if (setLoggingState(false)) {
                 Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was disabled", mPeripheral.getAddress()));
             } else {
                 Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
@@ -490,10 +533,11 @@ public class HumigadgetLoggingService extends PeripheralService {
     /**
      * Downloads all the data from the device.
      */
-    public synchronized void startDataDownload() {
-        if (mListeners.isEmpty()) {
+    @Override
+    public synchronized boolean startDataDownload() {
+        if (mRHTListeners.isEmpty()) {
             Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
-            return;
+            return false;
         }
 
         Executors.newSingleThreadExecutor().execute(new Runnable() {
@@ -511,6 +555,15 @@ public class HumigadgetLoggingService extends PeripheralService {
                 onDownloadComplete();
             }
         });
+        return true;
+    }
+
+    /**
+     * Downloads all the data from the device.
+     */
+    @Override
+    public synchronized boolean startDataDownload(final long oldestTimestampToDownload) {
+        return startDataDownload();
     }
 
     private void prepareDeviceToDownload(final boolean wasDeviceLoggingEnabled) {
@@ -523,7 +576,7 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     private synchronized void downloadDataFromPeripheral() {
-        mExtractedDatapointsCounter = 0;
+        mExtractedDataPointsCounter = 0;
         final int totalValuesToDownload = calculateValuesToDownload();
         while (getEndPointer() > 0 && mNumConsecutiveFailsReadingData < MAX_CONSECUTIVE_TRIES) {
             for (int i = totalValuesToDownload; i > 0; i--) {
@@ -547,7 +600,7 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     private int calculateValuesToDownload() {
-        final int totalNumberOfValues = getNumberElementsToLog();
+        final int totalNumberOfValues = getNumberLoggedElements();
         notifyTotalNumberElements(totalNumberOfValues);
         lastTimeLogged = System.currentTimeMillis();
         Log.i(TAG, String.format("calculateValuesToDownload -> The user has to download %d values.", totalNumberOfValues));
@@ -560,7 +613,7 @@ public class HumigadgetLoggingService extends PeripheralService {
      * @param characteristic characteristic we want to parse.
      * @return <code>true</code> if it was able to parse it - <code>false</code> otherwise.
      */
-    private boolean parseLoggedData(final BluetoothGattCharacteristic characteristic) {
+    private boolean parseLoggedData(@NonNull final BluetoothGattCharacteristic characteristic) {
         final byte[] rhtRawData = characteristic.getValue();
 
         if (isRawDatapointCorrupted(rhtRawData)) {
@@ -581,7 +634,7 @@ public class HumigadgetLoggingService extends PeripheralService {
             //Creates a datapoint object with the obtained data, and fills it with humidity and temperature.
             final float temperature = ((float) humidityAndTemperature[0]) / 100f;
             final float humidity = ((float) humidityAndTemperature[1]) / 100f;
-            final int epoch = mPeripheralEpoch + (mStartPointDownload + mExtractedDatapointsCounter) * mInterval;
+            final int epoch = mPeripheralEpoch + (mStartPointDownload + mExtractedDataPointsCounter) * mInterval;
             final long timestamp = epoch * 1000l;
 
             final RHTDataPoint extractedDataPoint = new RHTDataPoint(temperature, humidity, timestamp);
@@ -590,7 +643,7 @@ public class HumigadgetLoggingService extends PeripheralService {
 
             //Adds the new datapoint to the the list.
             mNumConsecutiveFailsReadingData = 0;
-            mExtractedDatapointsCounter++;
+            mExtractedDataPointsCounter++;
             lastTimeLogged = System.currentTimeMillis();
 
             onDatapointRead(extractedDataPoint);
@@ -598,7 +651,7 @@ public class HumigadgetLoggingService extends PeripheralService {
         return true;
     }
 
-    private boolean isRawDatapointCorrupted(final byte[] rhtRawData) {
+    private boolean isRawDatapointCorrupted(@NonNull final byte[] rhtRawData) {
         if (rhtRawData.length == 0 || rhtRawData.length % DATA_POINT_SIZE > 0) {
             // The data received it's not valid, it has to have values and
             // the whole download has to be multiple of the data point size.
@@ -610,33 +663,14 @@ public class HumigadgetLoggingService extends PeripheralService {
     }
 
     /**
-     * Checks if the device has logged elements.
-     *
-     * @return <code>true</code> if the device has logged elements - <code>false</code> otherwise.
-     */
-    public boolean hasLoggedElements() {
-        return mCurrentPointer > 0;
-    }
-
-    /**
-     * Checks if the device has elements to log.
-     *
-     * @return <code>true</code> if the device has elements to log - <code>false</code> otherwise.
-     */
-    @SuppressWarnings("unused")
-    public boolean hasElementsToLog() {
-        return getCurrentPoint() - mStartPointer > 0;
-    }
-
-    /**
      * Obtains the number of elements to log
      *
-     * @return <code>int</code> with the total number of elements to log.
+     * @return {@link java.lang.Integer} with the total number of elements to log.
      */
-    public int getNumberElementsToLog() {
+    @Override
+    public Integer getNumberLoggedElements() {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-
-        if (getCurrentPoint() == 0) {
+        if (mCurrentPointer == null || mCurrentPointer == 0) {
             return 0;
         }
         resetStartPointer();
@@ -653,50 +687,78 @@ public class HumigadgetLoggingService extends PeripheralService {
      *
      * @param newListener listener that wants to listen for notifications.
      */
-    public void registerDownloadListener(final NotificationListener newListener) {
-        if (newListener == null) {
-            Log.w(TAG, String.format("registerDownloadListener -> Received a null listener in peripheral: %s", mPeripheral.getAddress()));
-            return;
+    @Override
+    public boolean registerNotificationListener(@NonNull final NotificationListener newListener) {
+        final boolean historyListenerFound = super.registerNotificationListener(newListener);
+        boolean rhtListenerFound = false;
+        boolean temperatureListenerFound = false;
+        boolean humidityListenerFound = false;
+
+        if (newListener instanceof RHTListener) {
+            mRHTListeners.add((RHTListener) newListener);
+            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new RHT listener: %s ", getDeviceAddress(), newListener));
+            rhtListenerFound = true;
         }
-        if (newListener instanceof LogDownloadListener) {
-            mListeners.add((LogDownloadListener) newListener);
-            Log.i(TAG, String.format("registerDownloadListener -> Peripheral %s received a new download listener: %s ", mPeripheral.getAddress(), newListener));
-        } else {
-            Log.i(TAG, String.format("registerDownloadListener -> The download listener received by the peripheral %s is not a %s", mPeripheral.getAddress(), LogDownloadListener.class.getSimpleName()));
+        if (newListener instanceof TemperatureListener) {
+            mTemperatureListeners.add((TemperatureListener) newListener);
+            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new Temperature listener: %s ", getDeviceAddress(), newListener));
+            temperatureListenerFound = true;
         }
+        if (newListener instanceof HumidityListener) {
+            mHumidityListeners.add((HumidityListener) newListener);
+            Log.i(TAG, String.format("registerNotificationListener -> Peripheral %s received a new Humidity listener: %s ", getDeviceAddress(), newListener));
+            humidityListenerFound = true;
+        }
+        return historyListenerFound || rhtListenerFound || temperatureListenerFound || humidityListenerFound;
     }
 
     /**
      * Removes a listener from the download notification list.
      *
-     * @param listenerForRemove listener that doesn't need the listen for notifications anymore.
+     * @param listenerForRemoval listener that doesn't need the listen for notifications anymore.
      */
-    @SuppressWarnings("unused")
-    public void removeDownloadListener(final NotificationListener listenerForRemove) {
-        if (listenerForRemove == null) {
-            Log.w(TAG, "removeDownloadListener -> Received null listener.");
-            return;
+    @Override
+    public boolean unregisterNotificationListener(@NonNull final NotificationListener listenerForRemoval) {
+        final boolean historyListener = super.unregisterNotificationListener(listenerForRemoval);
+        boolean rhtListener = false;
+        boolean temperatureListener = false;
+        boolean humidityListener = false;
+
+        if (listenerForRemoval instanceof RHTListener) {
+            mRHTListeners.remove(listenerForRemoval);
+            Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the RHTListener list.", getDeviceAddress(), listenerForRemoval));
+            rhtListener = true;
         }
-        if (listenerForRemove instanceof LogDownloadListener) {
-            if (mListeners.contains(listenerForRemove)) {
-                mListeners.remove(listenerForRemove);
-                Log.i(TAG, String.format("removeDownloadListener -> Peripheral %s deleted %s listener from the list.", mPeripheral.getAddress(), listenerForRemove));
-            } else {
-                Log.w(TAG, String.format("removeDownloadListener -> Peripheral %s did not have the listener %s.", mPeripheral.getAddress(), listenerForRemove));
-            }
+        if (listenerForRemoval instanceof TemperatureListener) {
+            mTemperatureListeners.remove(listenerForRemoval);
+            Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the Temperature list.", getDeviceAddress(), listenerForRemoval));
+            temperatureListener = true;
         }
+
+        if (listenerForRemoval instanceof HumidityListener) {
+            mHumidityListeners.remove(listenerForRemoval);
+            Log.i(TAG, String.format("unregisterNotificationListener -> Peripheral %s deleted %s listener from the Humidity list.", getDeviceAddress(), listenerForRemoval));
+            humidityListener = true;
+        }
+        return historyListener || rhtListener || temperatureListener || humidityListener;
     }
 
     /**
      * Notifies download progress to the listeners.
      */
-    private void onDatapointRead(final RHTDataPoint dataPoint) {
-        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
+    private void onDatapointRead(@NonNull final RHTDataPoint dataPoint) {
+        notifyDatapointRead(dataPoint);
+        notifyHistoricalHumidity(dataPoint);
+        notifyHistoricalTemperature(dataPoint);
+        super.notifyDownloadProgress(mExtractedDataPointsCounter);
+    }
+
+    private void notifyDatapointRead(@NonNull final RHTDataPoint dataPoint) {
+        final Iterator<RHTListener> iterator = mRHTListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                final LogDownloadListener listener = iterator.next();
-                listener.setDownloadProgress(mPeripheral, mExtractedDatapointsCounter);
-                listener.onNewDatapointDownloaded(mPeripheral, dataPoint);
+                final RHTListener listener = iterator.next();
+                listener.onNewHistoricalRHTValue(mPeripheral, dataPoint, getSensorName());
             } catch (RuntimeException e) {
                 Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
@@ -704,50 +766,27 @@ public class HumigadgetLoggingService extends PeripheralService {
         }
     }
 
-    /**
-     * Notifies total elements to download to the listeners.
-     *
-     * @param numberElementsToDownload number of elements to download.
-     */
-    private void notifyTotalNumberElements(final int numberElementsToDownload) {
-        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
+    private void notifyHistoricalTemperature(@NonNull final RHTDataPoint dataPoint) {
+        final Iterator<TemperatureListener> iterator = mTemperatureListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().setRequestedDatapointAmount(mPeripheral, numberElementsToDownload);
+                final TemperatureListener listener = iterator.next();
+                listener.onNewHistoricalTemperature(mPeripheral, dataPoint.getTemperatureCelsius(), dataPoint.getTimestamp(), getSensorName(), TemperatureUnit.CELSIUS);
             } catch (RuntimeException e) {
-                Log.e(TAG, "notifyTotalNumberElements -> The following exception was produced when notifying the listeners: ", e);
+                Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
             }
         }
     }
 
-    /**
-     * Notifies download progress to the listeners.
-     */
-    private void onDownloadFailure() {
-        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
-        Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.size()));
+    private void notifyHistoricalHumidity(@NonNull final RHTDataPoint dataPoint) {
+        final Iterator<HumidityListener> iterator = mHumidityListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().onLogDownloadFailure(mPeripheral);
-            } catch (RuntimeException e) {
-                Log.e(TAG, "onLogDownloadFailure -> The following exception was produced when notifying the listeners: ", e);
-                iterator.remove();
-            }
-        }
-    }
-
-    /**
-     * Notifies to the user that the application has finish downloading the logged data.
-     */
-    private void onDownloadComplete() {
-        final Iterator<LogDownloadListener> iterator = mListeners.iterator();
-        Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.size()));
-        while (iterator.hasNext()) {
-            try {
-                iterator.next().onLogDownloadCompleted(mPeripheral);
+                final HumidityListener listener = iterator.next();
+                listener.onNewHistoricalHumidity(mPeripheral, dataPoint.getRelativeHumidity(), dataPoint.getTimestamp(), getSensorName(), HumidityUnit.RELATIVE_HUMIDITY);
             } catch (final RuntimeException e) {
-                Log.e(TAG, "onDownloadComplete -> The following exception was produced when notifying the listeners: ", e);
+                Log.e(TAG, "onDatapointRead() -> Listener was removed from the list because the following exception was thrown -> ", e);
                 iterator.remove();
             }
         }
@@ -757,14 +796,15 @@ public class HumigadgetLoggingService extends PeripheralService {
      * Deletes the data from the device.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public boolean deleteDataFromTheDevice() {
+    @Override
+    public boolean resetDeviceData() {
         final boolean initialLoggingState = mLoggingIsEnabled;
         if (mLoggingIsEnabled) {
             setGadgetLoggingEnabled(false);
         }
         setGadgetLoggingEnabled(true);
         if (initialLoggingState) {
-            Log.i(TAG, String.format("deleteDataFromTheDevice -> In device %s data was deleted.", getDeviceAddress()));
+            Log.i(TAG, String.format("resetDeviceData -> In device %s data was deleted.", getDeviceAddress()));
             return true;
         }
         return setGadgetLoggingEnabled(false);
@@ -775,7 +815,38 @@ public class HumigadgetLoggingService extends PeripheralService {
      *
      * @return <code>true</code> if the user is downloading data from the device - <code>false</code> otherwise.
      */
+    @Override
     public boolean isDownloadInProgress() {
         return mDownloadInProgress;
+    }
+
+    @Override
+    public void registerDeviceCharacteristicNotifications() {
+        // This service does not receive direct notifications from the device.
+    }
+
+    /**
+     * Ask for the Epoch time. (Unix time in seconds)
+     *
+     * @return <code>int</code> with the epochTime time.
+     */
+    private int getEpochTime() {
+        return (int) (System.currentTimeMillis() / 1000l);
+    }
+
+    /**
+     * Obtains the sensor name of the logging service.
+     *
+     * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known.
+     */
+    private String getSensorName() {
+        switch (mPeripheral.getAdvertisedName()) {
+            case "SHTC1 smart gadget":
+                return "SHTC1";
+            case "SHT31 Smart Gadget":
+                return "SHT31";
+            default:
+                return null;
+        }
     }
 }

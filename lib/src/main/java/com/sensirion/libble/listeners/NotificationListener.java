@@ -1,8 +1,8 @@
-package com.sensirion.libble.services;
+package com.sensirion.libble.listeners;
 
 /**
  * This is a contract for all other interfaces (that represent a
- * BleManagerService) which support BLE characteristicNotifications.
+ * BlePeripheralService) which support BLE characteristicNotifications.
  */
 public interface NotificationListener {
 }

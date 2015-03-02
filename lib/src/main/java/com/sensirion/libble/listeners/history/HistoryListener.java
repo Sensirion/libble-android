@@ -1,9 +1,10 @@
-package com.sensirion.libble.services.sensirion.common;
+package com.sensirion.libble.listeners.history;
 
-import com.sensirion.libble.peripherals.BleDevice;
-import com.sensirion.libble.services.NotificationListener;
+import com.sensirion.libble.devices.BleDevice;
+import com.sensirion.libble.listeners.NotificationListener;
 
-public interface LogDownloadListener extends NotificationListener {
+public interface HistoryListener extends NotificationListener {
+
     /**
      * Sets the actual number of downloaded elements.
      *
@@ -12,18 +13,11 @@ public interface LogDownloadListener extends NotificationListener {
     void setDownloadProgress(BleDevice device, int downloadProgress);
 
     /**
-     * Sends to the user the last datapoint read.
-     *
-     * @param dataPoint downloaded.
-     */
-    void onNewDatapointDownloaded(BleDevice device, RHTDataPoint dataPoint);
-
-    /**
      * Sets the total number of elements in a download.
      *
      * @param amount number of elements to download.
      */
-    void setRequestedDatapointAmount(BleDevice device, int amount);
+    void setAmountElementsToDownload(BleDevice device, int amount);
 
     /**
      * Advices the listeners that an error was produced when downloading the log.
