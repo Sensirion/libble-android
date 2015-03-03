@@ -115,26 +115,26 @@ public class SHTC1HistoryService extends HistoryService {
         switch (characteristicUUID) {
             case START_STOP_UUID:
                 mLoggingIsEnabled = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 1;
-                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s logging is %s", mPeripheral.getAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s logging is %s", getDeviceAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
                 break;
             case LOGGING_INTERVAL_UUID:
                 mInterval = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s interval it's at %d seconds.", mPeripheral.getAddress(), mInterval));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s interval it's at %d seconds.", getDeviceAddress(), mInterval));
                 break;
             case CURRENT_POINTER_UUID:
                 mCurrentPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s current pointer is: %d", mPeripheral.getAddress(), mCurrentPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s current pointer is: %d", getDeviceAddress(), mCurrentPointer));
                 break;
             case START_POINTER_UUID:
                 mStartPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s start pointer is: %d", mPeripheral.getAddress(), mStartPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s start pointer is: %d", getDeviceAddress(), mStartPointer));
                 break;
             case END_POINTER_UUID:
                 mEndPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s end pointer is: %d", mPeripheral.getAddress(), mEndPointer));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s end pointer is: %d", getDeviceAddress(), mEndPointer));
                 break;
             case LOGGED_DATA_UUID:
-                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received a log.", mPeripheral.getAddress()));
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received a log.", getDeviceAddress()));
                 parseLoggedData(characteristic);
                 break;
             case USER_DATA_UUID:
@@ -537,6 +537,13 @@ public class SHTC1HistoryService extends HistoryService {
     public synchronized boolean startDataDownload() {
         if (mRHTListeners.isEmpty()) {
             Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
+            return false;
+        }
+
+        if (isServiceSynchronized()) {
+            Log.i(TAG, "startDataDownload -> Download will start.");
+        } else {
+            Log.e(TAG, "startDataDownload -> Service is not synchronized yet.");
             return false;
         }
 
