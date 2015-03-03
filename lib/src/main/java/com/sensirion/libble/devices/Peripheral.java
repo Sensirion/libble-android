@@ -38,9 +38,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private final Queue<Object> mLastActionUsedQueue = new LinkedBlockingQueue<>();
 
     //Peripheral attributes
-    private final BlePeripheralService mPeripheralService;
-    private final BluetoothDevice mBluetoothDevice;
+    @Nullable
     private final String mAdvertisedName;
+    @NonNull
+    private final BlePeripheralService mPeripheralService;
+    @NonNull
+    private final BluetoothDevice mBluetoothDevice;
+    @NonNull
     private final String mAddress;
 
     //Listener list
@@ -54,7 +58,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     //Gathering controller.
     private BluetoothGatt mBluetoothGatt;
-
 
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
         @Override
@@ -184,7 +187,12 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         mBluetoothDevice = bluetoothDevice;
         mBluetoothGatt = null;
         mAddress = bluetoothDevice.getAddress();
-        mAdvertisedName = bluetoothDevice.getName().trim();
+        if (bluetoothDevice.getName() == null) {
+            Log.w(TAG, "Constructor -> The incoming device does not have a valid advertise name.");
+            mAdvertisedName = null;
+        } else {
+            mAdvertisedName = bluetoothDevice.getName().trim();
+        }
         mRSSI = rssi;
     }
 
@@ -231,6 +239,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return {@link java.lang.String} with the MAC-Address of the device.
      */
     @Override
+    @NonNull
     public String getAddress() {
         return mAddress;
     }
@@ -315,6 +324,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
      */
     @Override
+    @NonNull
     public Iterable<BleService> getDiscoveredServices() {
         final List<BleService> discoveredBleServices = new LinkedList<>();
         for (final BleService service : mServices) {
@@ -330,6 +340,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
      */
     @Override
+    @NonNull
     public Iterable<String> getDiscoveredServicesNames() {
         if (mBluetoothGatt == null) {
             Log.e(TAG, "getDiscoveredServiceNames() -> Bluetooth gatt is not initialized yet.");

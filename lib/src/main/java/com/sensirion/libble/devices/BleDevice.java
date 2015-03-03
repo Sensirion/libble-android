@@ -2,6 +2,7 @@ package com.sensirion.libble.devices;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.BleService;
@@ -36,13 +37,14 @@ public interface BleDevice {
     /**
      * Closes a connection to a device.
      */
-    public void disconnect();
+    void disconnect();
 
     /**
      * Obtains the physical address of the device.
      *
      * @return {@link java.lang.String} with the MAC-Address of the device.
      */
+    @NonNull
     String getAddress();
 
     /**
@@ -50,6 +52,7 @@ public interface BleDevice {
      *
      * @return {@link java.lang.String} with the advertised name.
      */
+    @Nullable
     String getAdvertisedName();
 
     /**
@@ -59,7 +62,6 @@ public interface BleDevice {
      */
     int getRSSI();
 
-
     /**
      * NOTE: Returns the first {@link com.sensirion.libble.services.BleService} found for the given type.
      * Obtain a {@link com.sensirion.libble.services.BleService} in case the peripheral has one.
@@ -68,6 +70,7 @@ public interface BleDevice {
      * @param <T>  Class of the service.
      * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given class.
      */
+    @Nullable
     <T extends BleService> T getDeviceService(@NonNull Class<T> type);
 
     /**
@@ -77,6 +80,7 @@ public interface BleDevice {
      * @param serviceName name of the service.
      * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given name
      */
+    @Nullable
     BleService getDeviceService(@NonNull String serviceName);
 
     /**
@@ -85,6 +89,7 @@ public interface BleDevice {
      * @return Iterable with a list of the discovered services.
      */
     @SuppressWarnings("unused")
+    @NonNull
     Iterable<BleService> getDiscoveredServices();
 
     /**
@@ -92,6 +97,7 @@ public interface BleDevice {
      *
      * @return Iterable with a list of {@link java.lang.String} of the names of the discovered services.
      */
+    @NonNull
     Iterable<String> getDiscoveredServicesNames();
 
     /**
@@ -115,7 +121,7 @@ public interface BleDevice {
      * @param listener Activity from outside the library that wants to listen for notifications.
      * @return <code>true</code> if a valid service was found, <code>false</code> otherwise.
      */
-    public boolean registerDeviceListener(@NonNull NotificationListener listener);
+    boolean registerDeviceListener(@NonNull NotificationListener listener);
 
     /**
      * Unregister {@link com.sensirion.libble.listeners.NotificationListener} from all services.
@@ -123,7 +129,7 @@ public interface BleDevice {
      *
      * @param listener to unsubscribe.
      */
-    public void unregisterDeviceListener(@NonNull NotificationListener listener);
+    void unregisterDeviceListener(@NonNull NotificationListener listener);
 
     /**
      * Retrieves the device history service in case it has one.
@@ -131,5 +137,5 @@ public interface BleDevice {
      *
      * @return {@link com.sensirion.libble.services.HistoryService} of the device - <code>null</code> if it doesn't haves one.
      */
-    public HistoryService getHistoryService();
+    HistoryService getHistoryService();
 }
