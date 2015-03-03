@@ -52,6 +52,10 @@ public class SmartgadgetHistoryService extends HistoryService {
         syncTimestamps();
     }
 
+    private static long calcSecondsSince(final long timestamp) {
+        return (System.currentTimeMillis() - timestamp) / 1000;
+    }
+
     /**
      * Method called when a characteristic is read.
      *
@@ -124,18 +128,18 @@ public class SmartgadgetHistoryService extends HistoryService {
     @Override
     public boolean isServiceSynchronized() {
         boolean isServiceSynchronized = true;
-        if (mLoggerIntervalMs == null){
+        if (mLoggerIntervalMs == null) {
             mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
             isServiceSynchronized = false;
         }
-        if (mOldestSampleTimestampMsCharacteristic == null){
+        if (mOldestSampleTimestampMsCharacteristic == null) {
             mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
             isServiceSynchronized = false;
         } else if (mOldestTimestampToDownloadMs == 0) {
             readTimestamps();
             return false;
         }
-        if (mNewestSampleTimestampMs == null){
+        if (mNewestSampleTimestampMs == null) {
             mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
             isServiceSynchronized = false;
         } else if (mNewestSampleTimestampMs == 0) {
@@ -164,7 +168,7 @@ public class SmartgadgetHistoryService extends HistoryService {
             return false;
         }
         mNewestSampleTimestampMs = newestTimestampToDownload;
-        Log.d(TAG, String.format("onNewestTimestampRead -> Newest timestamp from the device %s is from %d seconds ago", getDeviceAddress(), secondsFromTimestamp(mNewestSampleTimestampMs)));
+        Log.d(TAG, String.format("onNewestTimestampRead -> Newest timestamp from the device %s is from %d seconds ago", getDeviceAddress(), calcSecondsSince(mNewestSampleTimestampMs)));
         if (isReadyToDownload()) {
             prepareDownload();
             if (mTryingToDownload) {
@@ -182,9 +186,9 @@ public class SmartgadgetHistoryService extends HistoryService {
             return false;
         }
         mOldestTimestampToDownloadMs = oldestTimestampToDownload;
-        Log.d(TAG, String.format("onOldestTimestampRead -> Oldest timestamp from the device %s is from %d seconds ago.", getDeviceAddress(), secondsFromTimestamp(mOldestTimestampToDownloadMs)));
+        Log.d(TAG, String.format("onOldestTimestampRead -> Oldest timestamp from the device %s is from %d seconds ago.", getDeviceAddress(), calcSecondsSince(mOldestTimestampToDownloadMs)));
         if (isReadyToDownload()) {
-           prepareDownload();
+            prepareDownload();
             if (mTryingToDownload) {
                 enableHistoryDataNotifications();
             }
@@ -192,8 +196,8 @@ public class SmartgadgetHistoryService extends HistoryService {
         return true;
     }
 
-    private boolean isReadyToDownload(){
-        if (mNewestSampleTimestampMs == null || mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null){
+    private boolean isReadyToDownload() {
+        if (mNewestSampleTimestampMs == null || mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null) {
             lazyCharacteristicRequest();
             return false;
         }
@@ -203,10 +207,6 @@ public class SmartgadgetHistoryService extends HistoryService {
     private void prepareDownload() {
         startDataDownload();
         notifyNumberElementsToDownload();
-    }
-
-    private static long secondsFromTimestamp(final long timestamp){
-        return (System.currentTimeMillis() - timestamp) / 1000;
     }
 
     private void enableHistoryDataNotifications() {
@@ -337,20 +337,20 @@ public class SmartgadgetHistoryService extends HistoryService {
         return null;
     }
 
-    private void lazyCharacteristicRequest(){
+    private void lazyCharacteristicRequest() {
         mPeripheral.cleanCharacteristicCache();
-        if (mNewestSampleTimestampMs == null){
+        if (mNewestSampleTimestampMs == null) {
             mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
         }
-        if (mOldestTimestampToDownloadMs == null){
+        if (mOldestTimestampToDownloadMs == null) {
             mPeripheral.readCharacteristic(mOldestSampleTimestampMsCharacteristic);
         }
-        if (mLoggerIntervalMs == null){
+        if (mLoggerIntervalMs == null) {
             mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
         }
     }
 
-    private void readTimestamps(){
+    private void readTimestamps() {
         new Thread(new Runnable() {
             @Override
             public void run() {
