@@ -189,6 +189,43 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
+     * Establish a connection between the application and the peripheral.
+     *
+     * @param context of the application that wants to connect with the device. Cannot be <code>null</code>
+     */
+    @Override
+    public void connect(@NonNull final Context context) {
+        // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
+        mBluetoothDevice.connectGatt(context, false, mBleStackProtector);
+    }
+
+    /**
+     * Tries to establish a connection with a device that has been connected previously.
+     *
+     * @return <code>true</code> if the connection was recovered - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean reconnect() {
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "reconnect -> Bluetooth gatt it's not connected.");
+            return false;
+        }
+        return mBluetoothGatt.connect();
+    }
+
+    /**
+     * Closes a connection to a device.
+     */
+    @Override
+    public void disconnect() {
+        if (mBluetoothGatt == null) {
+            Log.w(TAG, "disconnect -> Bluetooth gatt was already disconnected.");
+            return;
+        }
+        mBluetoothGatt.disconnect();
+    }
+
+    /**
      * Obtains the physical address of the device.
      *
      * @return {@link java.lang.String} with the MAC-Address of the device.
@@ -319,40 +356,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             }
         }
         return null;
-    }
-
-    /**
-     * Establish a connection between the application and the peripheral.
-     *
-     * @param context of the application that wants to connect with the device. Cannot be <code>null</code>
-     */
-    public void connect(@NonNull final Context context) {
-        // We want to directly connect to the device, so we are setting the autoConnect parameter to false.
-        mBluetoothDevice.connectGatt(context, false, mBleStackProtector);
-    }
-
-    /**
-     * Tries to establish the connection with a device that was already connected.
-     *
-     * @return <code>true</code> if the connection was recovered - <code>false</code> otherwise.
-     */
-    public boolean reconnect() {
-        if (mBluetoothGatt == null) {
-            Log.e(TAG, "reconnect -> Bluetooth gatt it's not connected.");
-            return false;
-        }
-        return mBluetoothGatt.connect();
-    }
-
-    /**
-     * Closes a connection with a device.
-     */
-    public void disconnect() {
-        if (mBluetoothGatt == null) {
-            Log.w(TAG, "disconnect -> Bluetooth gatt was already disconnected.");
-            return;
-        }
-        mBluetoothGatt.disconnect();
     }
 
     /**

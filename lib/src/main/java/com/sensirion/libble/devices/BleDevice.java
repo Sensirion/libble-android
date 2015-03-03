@@ -1,5 +1,6 @@
 package com.sensirion.libble.devices;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 
 import com.sensirion.libble.listeners.NotificationListener;
@@ -10,6 +11,32 @@ import com.sensirion.libble.services.HistoryService;
  * Interface for any device that supports Bluetooth Low Energy (BLE)
  */
 public interface BleDevice {
+
+    /**
+     * Checks if a device is connected or not.
+     *
+     * @return <code>true</code> if the device is connected - <code>false</code> if the device is disconnected.
+     */
+    boolean isConnected();
+
+    /**
+     * Establish a connection between the application and the peripheral.
+     *
+     * @param context of the application that wants to connect with the device. Cannot be <code>null</code>
+     */
+    void connect(@NonNull Context context);
+
+    /**
+     * Tries to establish a connection with a device that has been connected previously.
+     *
+     * @return <code>true</code> if the connection was recovered - <code>false</code> otherwise.
+     */
+    boolean reconnect();
+
+    /**
+     * Closes a connection to a device.
+     */
+    public void disconnect();
 
     /**
      * Obtains the physical address of the device.
@@ -32,12 +59,6 @@ public interface BleDevice {
      */
     int getRSSI();
 
-    /**
-     * Checks if a device is connected or not.
-     *
-     * @return <code>true</code> if the device is connected - <code>false</code> if the device is disconnected.
-     */
-    boolean isConnected();
 
     /**
      * NOTE: Returns the first {@link com.sensirion.libble.services.BleService} found for the given type.
