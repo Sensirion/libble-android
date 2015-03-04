@@ -3,6 +3,7 @@ package com.sensirion.libble.services.sensirion.smartgadget;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -32,11 +33,17 @@ public class SmartgadgetHistoryService extends HistoryService {
     private final BluetoothGattCharacteristic mStartLoggerDownloadCharacteristic;
     private final BluetoothGattCharacteristic mLoggerIntervalMsCharacteristic;
 
-    //CLASS VALUES
+    //DEVICE VALUES
+    @Nullable
     private Long mNewestSampleTimestampMs = null;
+    @Nullable
     private Long mOldestTimestampToDownloadMs = null;
+    @Nullable
     private Integer mLoggerIntervalMs = null;
+    @Nullable
     private Long mUserOldestTimestampToDownloadMs = null;
+
+    //SERVICE STATE VALUES
     private volatile boolean mTryingToDownload = false;
     private volatile int mLastSequenceNumberDownloaded = 0;
     private volatile Integer mUserInterval = null;
@@ -132,15 +139,15 @@ public class SmartgadgetHistoryService extends HistoryService {
             mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
             isServiceSynchronized = false;
         }
-        if (mOldestSampleTimestampMsCharacteristic == null) {
-            mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
+        if (mOldestTimestampToDownloadMs == null) {
+            mPeripheral.readCharacteristic(mOldestSampleTimestampMsCharacteristic);
             isServiceSynchronized = false;
         } else if (mOldestTimestampToDownloadMs == 0) {
             readTimestamps();
             return false;
         }
         if (mNewestSampleTimestampMs == null) {
-            mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
+            mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
             isServiceSynchronized = false;
         } else if (mNewestSampleTimestampMs == 0) {
             readTimestamps();
@@ -210,17 +217,32 @@ public class SmartgadgetHistoryService extends HistoryService {
     }
 
     private void enableHistoryDataNotifications() {
-        if (mUserOldestTimestampToDownloadMs != null && mUserOldestTimestampToDownloadMs > mOldestTimestampToDownloadMs && mUserOldestTimestampToDownloadMs < mNewestSampleTimestampMs) {
+        if (isServiceSynchronized()) {
+            updateOldestTimestamp();
+            mStartLoggerDownloadCharacteristic.setValue(1, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            sleep(MAX_WAITING_TIME_BETWEEN_REQUEST_MS);
+            mPeripheral.cleanCharacteristicCache();
+            mPeripheral.forceWriteCharacteristic(mStartLoggerDownloadCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+        }
+    }
+
+    private void updateOldestTimestamp() {
+        if (mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
+            Log.e(TAG, "updateOldestTimestamp -> Service needs to be synchronized in order to set the oldest timestamp to download.");
+        } else if (mUserOldestTimestampToDownloadMs == null) {
+            Log.i(TAG, "updateOldestTimestamp -> User wants to download all the data from the device. No need to update the oldest timestamp.");
+        } else if (mUserOldestTimestampToDownloadMs > mOldestTimestampToDownloadMs && mUserOldestTimestampToDownloadMs < mNewestSampleTimestampMs) {
             mPeripheral.forceWriteCharacteristic(mOldestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
         }
-        mStartLoggerDownloadCharacteristic.setValue(1, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-        sleep(MAX_WAITING_TIME_BETWEEN_REQUEST_MS);
-        mPeripheral.cleanCharacteristicCache();
-        mPeripheral.forceWriteCharacteristic(mStartLoggerDownloadCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
     }
 
     private void notifyNumberElementsToDownload() {
-        super.notifyTotalNumberElements(getNumberLoggedElements());
+        final Integer numberLoggedElements = getNumberLoggedElements();
+        if (numberLoggedElements == null) {
+            Log.e(TAG, String.format("notifyNumberElementsToDownload -> Device %s tried to notify a null total number of elements.", getDeviceAddress()));
+        } else {
+            super.notifyTotalNumberElements(numberLoggedElements);
+        }
     }
 
     /**
@@ -274,6 +296,7 @@ public class SmartgadgetHistoryService extends HistoryService {
      * NOTE: This method will block the thread for a maximum of 1.2 seconds in case the interval is not known.
      */
     @Override
+    @Nullable
     public Integer getDownloadIntervalMs() {
         if (mLoggerIntervalMs == null) {
             mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
@@ -288,7 +311,12 @@ public class SmartgadgetHistoryService extends HistoryService {
      */
     @Override
     public boolean resetDeviceData() {
-        return setDownloadInterval(getDownloadIntervalMs());
+        final Integer downloadIntervalMs = getDownloadIntervalMs();
+        if (downloadIntervalMs == null) {
+            Log.e(TAG, "resetDeviceData -> Device needs to be synchronized in order to reset it.");
+            return false;
+        }
+        return setDownloadInterval(downloadIntervalMs);
     }
 
     /**
@@ -329,6 +357,7 @@ public class SmartgadgetHistoryService extends HistoryService {
      * @return <code>true</code> if the device has data - <code>false</code> otherwise.
      */
     @Override
+    @Nullable
     public Integer getNumberLoggedElements() {
         if (mNewestSampleTimestampMs != null && mOldestTimestampToDownloadMs != null && mLoggerIntervalMs != null) {
             return (int) (mNewestSampleTimestampMs - mOldestTimestampToDownloadMs) / mLoggerIntervalMs;
@@ -395,6 +424,7 @@ public class SmartgadgetHistoryService extends HistoryService {
      *
      * @return {@link java.lang.Long} with the newest sample timestamp - <code>null</code> if it's unknown.
      */
+    @Nullable
     public Long getNewestTimestampMs() {
         return mNewestSampleTimestampMs;
     }
