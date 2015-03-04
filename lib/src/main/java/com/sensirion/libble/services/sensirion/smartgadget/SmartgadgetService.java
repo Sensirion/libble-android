@@ -56,7 +56,7 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
         if (descriptor.getUuid().equals(USER_CHARACTERISTIC_DESCRIPTOR_UUID)) {
             if (descriptor.getCharacteristic().getUuid().equals(mValueCharacteristic.getUuid())) {
                 if (descriptor.getCharacteristic().getInstanceId() == mValueCharacteristic.getInstanceId()) {
-                    Log.e(TAG, String.format("onDescriptorRead -> Reading descriptor %s from characteristic %s in device %s.", descriptor.getUuid(), descriptor.getCharacteristic().getUuid(), getDeviceAddress()));
+                    Log.d(TAG, String.format("onDescriptorRead -> Reading descriptor %s from characteristic %s in device %s.", descriptor.getUuid(), descriptor.getCharacteristic().getUuid(), getDeviceAddress()));
                     try {
                         final String userDescriptor = new String(descriptor.getValue(), "UTF-8");
                         final String[] userValue = userDescriptor.split(" ");
@@ -84,10 +84,10 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
         final String characteristicUUID = updatedCharacteristic.getUuid().toString();
         if (characteristicUUID.equalsIgnoreCase(VALUE_NOTIFICATIONS_UUID)) {
             if (updatedCharacteristic.getValue().length <= 8) {
-                Log.i(TAG, "onCharacteristicUpdate -> Parsing live value.");
+                Log.d(TAG, "onCharacteristicUpdate -> Parsing live value.");
                 return parseLiveValue(updatedCharacteristic);
             } else {
-                Log.e(TAG, "onCharacteristicUpdate -> Parsing historical value.");
+                Log.d(TAG, "onCharacteristicUpdate -> Parsing historical value.");
                 return parseHistoryValue(updatedCharacteristic);
             }
         }
