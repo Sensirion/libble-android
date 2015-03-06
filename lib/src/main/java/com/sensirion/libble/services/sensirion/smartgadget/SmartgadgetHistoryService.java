@@ -177,7 +177,7 @@ public class SmartgadgetHistoryService extends HistoryService {
         mNewestSampleTimestampMs = newestTimestampToDownload;
         Log.d(TAG, String.format("onNewestTimestampRead -> Newest timestamp from the device %s is from %d seconds ago", getDeviceAddress(), calcSecondsSince(mNewestSampleTimestampMs)));
         if (isReadyToDownload()) {
-            prepareDownload();
+            notifyNumberElementsToDownload();
             if (mTryingToDownload) {
                 enableHistoryDataNotifications();
             }
@@ -195,7 +195,7 @@ public class SmartgadgetHistoryService extends HistoryService {
         mOldestTimestampToDownloadMs = oldestTimestampToDownload;
         Log.d(TAG, String.format("onOldestTimestampRead -> Oldest timestamp from the device %s is from %d seconds ago.", getDeviceAddress(), calcSecondsSince(mOldestTimestampToDownloadMs)));
         if (isReadyToDownload()) {
-            prepareDownload();
+            notifyNumberElementsToDownload();
             if (mTryingToDownload) {
                 enableHistoryDataNotifications();
             }
@@ -209,11 +209,6 @@ public class SmartgadgetHistoryService extends HistoryService {
             return false;
         }
         return true;
-    }
-
-    private void prepareDownload() {
-        startDataDownload();
-        notifyNumberElementsToDownload();
     }
 
     private void enableHistoryDataNotifications() {
