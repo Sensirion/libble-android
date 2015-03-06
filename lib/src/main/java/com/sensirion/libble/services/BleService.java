@@ -7,7 +7,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.sensirion.libble.BleManager;
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
 
@@ -23,20 +22,21 @@ import java.util.concurrent.Executors;
  */
 public abstract class BleService<ListenerType extends NotificationListener> {
 
-    //Characteristic descriptor UUID.
+    //Characteristic descriptor UUIDs
     protected static final UUID USER_CHARACTERISTIC_DESCRIPTOR_UUID = UUID.fromString("00002901-0000-1000-8000-00805f9b34fb");
     protected static final UUID NOTIFICATION_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
-    //Force action attributes.
+    //Force action attributes
     private static final short WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST = 210; //Ask the device every 4 connection intervals.
     private static final byte MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST = 10;
     protected final String TAG = this.getClass().getSimpleName();
-    //Class attributes.
+    //Class attributes
     protected final Peripheral mPeripheral;
-
     //Listeners
     protected final Set<ListenerType> mListeners = Collections.synchronizedSet(new HashSet<ListenerType>());
     private final BluetoothGattService mBluetoothGattService;
+    //Notifications
     private final Set<BluetoothGattCharacteristic> mNotifyCharacteristics = Collections.synchronizedSet(new HashSet<BluetoothGattCharacteristic>());
+    private final Set<BluetoothGattCharacteristic> mRegisteredNotifyCharacteristics = Collections.synchronizedSet(new HashSet<BluetoothGattCharacteristic>());
     private boolean mNotificationsAreEnabled = false;
     private boolean mIsRequestingNotifications = false;
 
@@ -92,7 +92,11 @@ public abstract class BleService<ListenerType extends NotificationListener> {
      * @return <code>true</code> if the descriptor was processed - <code>false</code> otherwise.
      */
     public boolean onDescriptorWrite(@NonNull final BluetoothGattDescriptor descriptor) {
-        return false; // This method needs to be overridden in order to do something with the descriptor.
+        if (mNotifyCharacteristics.contains(descriptor.getCharacteristic())) {
+            mRegisteredNotifyCharacteristics.add(descriptor.getCharacteristic());
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -112,7 +116,7 @@ public abstract class BleService<ListenerType extends NotificationListener> {
      */
     public boolean isExplicitService(final String serviceDescription) {
         if (BleService.class.getName().endsWith(serviceDescription)) {
-            Log.w(TAG, "A generic service can't be retrieved.");
+            Log.w(TAG, "isExplicitService -> A generic service can't be retrieved.");
             return false; //A generic service can't be retrieved.
         }
         return this.getClass().getName().endsWith(serviceDescription);
@@ -131,18 +135,6 @@ public abstract class BleService<ListenerType extends NotificationListener> {
     protected void registerNotification(@NonNull final BluetoothGattCharacteristic characteristic) {
         final int properties = characteristic.getProperties();
 
-        if ((properties & BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
-            // If there is an active notification on a characteristic, clear
-            // it first so it doesn't update the data field on the user interface.
-            if (mNotifyCharacteristics.contains(characteristic)) {
-                mNotifyCharacteristics.remove(characteristic);
-                Log.i(TAG, String.format("registerNotification -> Cleared active notification of UUID %s in peripheral with address: %s", characteristic.getUuid(), mPeripheral.getAddress()));
-                setCharacteristicNotification(characteristic, false);
-                if (mNotifyCharacteristics.isEmpty()) {
-                    mNotificationsAreEnabled = false;
-                }
-            }
-        }
         if ((properties & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
             mNotifyCharacteristics.add(characteristic);
             Log.i(TAG, String.format("registerNotification -> On device %s the notification %s was registered.", getDeviceAddress(), characteristic.getUuid()));
@@ -150,9 +142,20 @@ public abstract class BleService<ListenerType extends NotificationListener> {
             mNotificationsAreEnabled = true;
         } else {
             Log.w(TAG, String.format("registerNotification -> The application does not have permission to register for notifications in the characteristic %s.", characteristic.getUuid()));
+            if ((properties & BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
+                // If there is an active notification on a characteristic, clear
+                // it first so it doesn't update the data field on the user interface.
+                if (mNotifyCharacteristics.contains(characteristic)) {
+                    mNotifyCharacteristics.remove(characteristic);
+                    Log.i(TAG, String.format("registerNotification -> Cleared active notification of UUID %s in peripheral with address: %s", characteristic.getUuid(), getDeviceAddress()));
+                    setCharacteristicNotification(characteristic, false);
+                    if (mNotifyCharacteristics.isEmpty()) {
+                        mNotificationsAreEnabled = false;
+                    }
+                }
+            }
         }
     }
-
 
     /**
      * Enables or disables a notification.
@@ -170,19 +173,17 @@ public abstract class BleService<ListenerType extends NotificationListener> {
         } else {
             descriptor.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
         }
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (mPeripheral.forceDescriptorWrite(descriptor, WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST, MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST)) {
-                    Log.i(TAG, "setCharacteristicNotification -> Notification have been written successfully in the device.");
-                } else {
-                    Log.e(TAG, String.format("setCharacteristicNotification -> It was impossible to enable notifications in device %s.", getDeviceAddress()));
-                    BleManager.getInstance().disconnectDevice(getDeviceAddress());
+        if (mRegisteredNotifyCharacteristics.contains(characteristic)) {
+            mPeripheral.readCharacteristic(characteristic);
+        } else {
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    mPeripheral.forceDescriptorWrite(descriptor, WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST, MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST);
                 }
-            }
-        });
+            });
+        }
     }
-
 
     /**
      * Enables or disables the characteristic notification of a service.
