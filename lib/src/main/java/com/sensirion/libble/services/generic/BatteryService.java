@@ -10,6 +10,7 @@ import com.sensirion.libble.listeners.services.BatteryListener;
 import com.sensirion.libble.services.BleService;
 
 import java.util.Iterator;
+import java.util.concurrent.Executors;
 
 public class BatteryService extends BleService<BatteryListener> {
 
@@ -43,7 +44,12 @@ public class BatteryService extends BleService<BatteryListener> {
     @SuppressWarnings("unused")
     public Integer getBatteryLevel() {
         if (mBatteryLevel == null) {
-            mPeripheral.forceReadCharacteristic(mBatteryLevelCharacteristic, WAITING_TIME_BETWEEN_READS, MAX_READ_TRIES);
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    mPeripheral.forceReadCharacteristic(mBatteryLevelCharacteristic, WAITING_TIME_BETWEEN_READS, MAX_READ_TRIES);
+                }
+            });
             return mBatteryLevel;
         }
         mPeripheral.readCharacteristic(mBatteryLevelCharacteristic);
