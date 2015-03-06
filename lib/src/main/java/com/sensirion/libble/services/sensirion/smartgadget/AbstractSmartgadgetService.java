@@ -16,17 +16,16 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
-public abstract class SmartgadgetService<ListenerType extends NotificationListener> extends BleService<ListenerType> {
+abstract class AbstractSmartgadgetService<ListenerType extends NotificationListener> extends BleService<ListenerType> {
 
     private static final byte VALUE_SIZE = 4;
     private final String VALUE_NOTIFICATIONS_UUID; //4 Byte Float Little Endian - 20 byte [1 little endian integer (Sequence number), 4 Byte Float Little Endian]
-    protected BluetoothGattCharacteristic mValueCharacteristic;
+    private final BluetoothGattCharacteristic mValueCharacteristic;
 
     protected String mSensorName = null;
     protected Float mLastValue = null;
 
-
-    protected SmartgadgetService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String liveValueCharacteristicUUID) {
+    protected AbstractSmartgadgetService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String liveValueCharacteristicUUID) {
         super(peripheral, gatt);
 
         VALUE_NOTIFICATIONS_UUID = liveValueCharacteristicUUID;
@@ -112,7 +111,12 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
         }
         final int sequenceNumber = extractSequenceNumber(historyValueBuffer);
         final int historyInterval = mPeripheral.getHistoryService().getDownloadIntervalMs();
-        final long newestTimestamp = ((SmartgadgetHistoryService) mPeripheral.getHistoryService()).getNewestTimestampMs();
+        final SmartgadgetHistoryService historyService = (SmartgadgetHistoryService) mPeripheral.getHistoryService();
+
+        final Long newestTimestamp = historyService.getNewestTimestampMs();
+        if (newestTimestamp == null) {
+            throw new IllegalArgumentException(String.format("%s: parseHistoryValue -> Cannot obtain the newest timestamp from the history service in device %s.", TAG, getDeviceAddress()));
+        }
 
         for (int offset = 4; offset < historyValueBuffer.length; offset += 4) {
             final long timestamp = newestTimestamp - (historyInterval * ((((offset / VALUE_SIZE) - 1) + sequenceNumber)));
@@ -124,7 +128,7 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
         final int numberParsedElements = (historyValueBuffer.length / 4) - 1;
         ((SmartgadgetHistoryService) mPeripheral.getHistoryService()).setLastSequenceNumberDownloaded(sequenceNumber + numberParsedElements);
 
-        return false;
+        return true;
     }
 
     private int extractSequenceNumber(@NonNull final byte[] byteBuffer) {

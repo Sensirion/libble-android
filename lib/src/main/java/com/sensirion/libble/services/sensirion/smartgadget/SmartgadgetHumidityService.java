@@ -10,7 +10,7 @@ import com.sensirion.libble.utils.HumidityUnit;
 
 import java.util.Iterator;
 
-public class SmartgadgetHumidityService extends SmartgadgetRHTService<HumidityListener> {
+public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<HumidityListener> {
 
     //SERVICE UUID.
     public static final String SERVICE_UUID = "00001234-b38d-4985-720e-0f993a68ee41";
