@@ -24,6 +24,12 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.Executors;
 
+import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
+import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT32;
+import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT8;
+import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
+import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE;
+
 public class SHTC1HistoryService extends HistoryService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
@@ -60,16 +66,21 @@ public class SHTC1HistoryService extends HistoryService {
 
     private int mExtractedDataPointsCounter = 0;
     private long lastTimeLogged;
-    private byte mNumConsecutiveFailsReadingData = 0;
 
+    @Nullable
     private Integer mStartPointDownload = null;
-
+    @Nullable
     private Boolean mLoggingIsEnabled = null;
+    @Nullable
     private Integer mInterval = null;
+    @Nullable
     private Integer mCurrentPointer = null;
+    @Nullable
     private Integer mStartPointer = null;
+    @Nullable
     private Integer mEndPointer = null;
-    private Integer mPeripheralEpoch = null;
+    @Nullable
+    private Integer mUserData = null;
 
     private volatile boolean mDownloadInProgress = false;
 
@@ -114,23 +125,23 @@ public class SHTC1HistoryService extends HistoryService {
 
         switch (characteristicUUID) {
             case START_STOP_UUID:
-                mLoggingIsEnabled = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 1;
+                mLoggingIsEnabled = characteristic.getIntValue(FORMAT_UINT8, 0) == 1;
                 Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s logging is %s", getDeviceAddress(), ((mLoggingIsEnabled) ? "enabled" : "disabled")));
                 break;
             case LOGGING_INTERVAL_UUID:
-                mInterval = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+                mInterval = characteristic.getIntValue(FORMAT_UINT16, 0);
                 Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s interval it's at %d seconds.", getDeviceAddress(), mInterval));
                 break;
             case CURRENT_POINTER_UUID:
-                mCurrentPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+                mCurrentPointer = characteristic.getIntValue(FORMAT_UINT32, 0);
                 Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s current pointer is: %d", getDeviceAddress(), mCurrentPointer));
                 break;
             case START_POINTER_UUID:
-                mStartPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+                mStartPointer = characteristic.getIntValue(FORMAT_UINT32, 0);
                 Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s start pointer is: %d", getDeviceAddress(), mStartPointer));
                 break;
             case END_POINTER_UUID:
-                mEndPointer = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+                mEndPointer = characteristic.getIntValue(FORMAT_UINT32, 0);
                 Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s end pointer is: %d", getDeviceAddress(), mEndPointer));
                 break;
             case LOGGED_DATA_UUID:
@@ -138,8 +149,8 @@ public class SHTC1HistoryService extends HistoryService {
                 parseLoggedData(characteristic);
                 break;
             case USER_DATA_UUID:
-                mPeripheralEpoch = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
-                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mPeripheralEpoch));
+                mUserData = characteristic.getIntValue(FORMAT_UINT32, 0);
+                Log.d(TAG, String.format("onCharacteristicUpdate -> Device %s received %d as it's user data.", mPeripheral.getAddress(), mUserData));
                 break;
             default:
                 return false;
@@ -188,6 +199,7 @@ public class SHTC1HistoryService extends HistoryService {
      * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled - <code>null</code> if the state is unknown.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
+    @Nullable
     private Boolean checkGadgetLoggingState() {
         if (mLoggingIsEnabled == null) {
             super.mPeripheral.forceReadCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
@@ -229,6 +241,7 @@ public class SHTC1HistoryService extends HistoryService {
      * @return number if we know the interval - return <code>null</code> otherwise.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
+    @Nullable
     public Integer getDownloadIntervalSeconds() {
         if (mInterval == null) {
             super.mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
@@ -244,8 +257,13 @@ public class SHTC1HistoryService extends HistoryService {
      * @return {@link java.lang.Integer} with the logging interval in milliseconds - <code>null</code> if it's not known.
      */
     @Override
+    @Nullable
     public Integer getDownloadIntervalMs() {
-        return getDownloadIntervalSeconds() * 1000;
+        final Integer intervalInSeconds = getDownloadIntervalSeconds();
+        if (intervalInSeconds == null) {
+            return null;
+        }
+        return intervalInSeconds * 1000;
     }
 
     /**
@@ -254,6 +272,7 @@ public class SHTC1HistoryService extends HistoryService {
      * @return {@link java.lang.Integer} with the start pointer - <code>null</code> if it doesn't have one.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread.
      */
+    @Nullable
     public Integer getCurrentPoint() {
         if (mCurrentPointer == null) {
             super.mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
@@ -269,6 +288,7 @@ public class SHTC1HistoryService extends HistoryService {
      * @return {@link java.lang.Integer} with the start pointer - <code>-1</code> if it doesn't have one.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
+    @Nullable
     public Integer getStartPointer() {
         if (mStartPointer == null) {
             super.mPeripheral.forceReadCharacteristic(mStartPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
@@ -284,6 +304,7 @@ public class SHTC1HistoryService extends HistoryService {
      * @return {@link java.lang.Integer} with the end pointer - <code>-1</code> if it doesn't have one.
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
+    @Nullable
     public Integer getEndPointer() {
         if (mEndPointer == null) {
             super.mPeripheral.forceReadCharacteristic(mEndPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
@@ -295,17 +316,18 @@ public class SHTC1HistoryService extends HistoryService {
 
     /**
      * This method checks the introduced user data.
-     * It blocks the UI thread until it receives a response or a timeout is produced.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @return {@link java.lang.Integer} with the introduced user data.
      */
+    @Nullable
     public Integer getUserData() {
-        if (mPeripheralEpoch == null) {
+        if (mUserData == null) {
             super.mPeripheral.forceReadCharacteristic(mUserDataCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         } else {
             super.mPeripheral.readCharacteristic(mUserDataCharacteristic);
         }
-        return mPeripheralEpoch;
+        return mUserData;
     }
 
     /**
@@ -318,13 +340,14 @@ public class SHTC1HistoryService extends HistoryService {
     public boolean setLoggingState(final boolean enable) {
         if (mDownloadInProgress && enable) {
             Log.e(TAG, "We can't enable logging while a download it's in progress.");
+            return false;
         }
 
         // Prepares user data characteristic.
-        mStartStopCharacteristic.setValue((byte) ((enable) ? 1 : 0), BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+        mStartStopCharacteristic.setValue((byte) ((enable) ? 1 : 0), FORMAT_UINT8, 0);
         mPeripheral.forceWriteCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         mPeripheral.forceReadCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        return enable == mLoggingIsEnabled;
+        return mLoggingIsEnabled != null && enable == mLoggingIsEnabled;
     }
 
     /**
@@ -335,7 +358,7 @@ public class SHTC1HistoryService extends HistoryService {
      */
     @Override
     public boolean setDownloadInterval(final int intervalInMilliseconds) {
-        if (mLoggingIsEnabled) {
+        if (mLoggingIsEnabled != null && mLoggingIsEnabled) {
             Log.e(TAG, "setInterval -> We can't set the interval because logging it's enabled.");
             return false;
         }
@@ -345,15 +368,16 @@ public class SHTC1HistoryService extends HistoryService {
         }
         final int intervalInSeconds = intervalInMilliseconds / 1000;
 
-        if (intervalInSeconds == mInterval) {
+        if (mInterval != null && mInterval == intervalInSeconds) {
             Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", intervalInSeconds, mPeripheral.getAddress()));
             return true;
         }
         // Prepares logging interval characteristic.
-        mIntervalCharacteristic.setValue(intervalInSeconds, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+        mIntervalCharacteristic.setValue(intervalInSeconds, FORMAT_UINT16, 0);
         mPeripheral.forceWriteCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        return getDownloadIntervalSeconds() == intervalInSeconds;
+
+        return mInterval != null && mInterval == intervalInSeconds;
     }
 
     /**
@@ -382,6 +406,11 @@ public class SHTC1HistoryService extends HistoryService {
             if (userStartPoint < 0) {
                 throw new IllegalArgumentException(String.format("%s: setStartPointer() -> userStartPoint has to be null or >= 0", TAG));
             }
+            if (mCurrentPointer == null) {
+                Log.e(TAG, "setStartPointer -> Service is not synchronized yet.");
+                return false;
+            }
+
             if (userStartPoint.equals(mStartPointer) && mCurrentPointer < GADGET_RINGBUFFER_SIZE) {
                 Log.i(TAG, String.format("setStartPointer() -> Start pointer is already %d on the peripheral: %s", mStartPointer, mPeripheral.getAddress()));
                 return true;
@@ -398,18 +427,28 @@ public class SHTC1HistoryService extends HistoryService {
         }
         // Prepares logging interval characteristic.
         Log.i(TAG, String.format("setStartPointer() -> Start point will be set to: %d", mStartPointDownload));
-        mStartPointerCharacteristic.setValue(mStartPointDownload, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+        mStartPointerCharacteristic.setValue(mStartPointDownload, FORMAT_UINT32, 0);
         return mPeripheral.forceWriteCharacteristic(mStartPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
     }
 
     private int calculateMinimumStartPoint() {
+        if (mCurrentPointer == null) {
+            Log.e(TAG, "Service is not synchronized yet.");
+            return 0;
+        }
         if (mCurrentPointer > GADGET_RINGBUFFER_SIZE) {
             return mCurrentPointer - GADGET_RINGBUFFER_SIZE;
         }
         return 1;
     }
 
+    @Nullable
     private Integer calculateStartPoint(@NonNull final Integer userStartPoint) {
+        if (mEndPointer == null) {
+            Log.e(TAG, "calculateStartPoint -> Service is not synchronized yet. ");
+            return null;
+        }
+
         if (userStartPoint >= mEndPointer) {
             Log.w(TAG, "calculateStartPoint() -> userStartPoint is bigger or equal than EndPointer!");
             return null;
@@ -443,14 +482,14 @@ public class SHTC1HistoryService extends HistoryService {
     public boolean setEndPointer(@Nullable final Integer endPointer) {
         super.mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
 
-        if (mCurrentPointer.equals(endPointer)) {
+        if (mCurrentPointer != null && mCurrentPointer.equals(endPointer)) {
             Log.i(TAG, String.format("setEndPointer -> The device %s already had the end pointer set.", mPeripheral.getAddress()));
             return true;
         }
 
         if (endPointer == null) {
             Log.i(TAG, "setEndPointer -> Setting the end pointer to the maximum possible value.");
-            mEndPointerCharacteristic.setValue(mCurrentPointer, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+            mEndPointerCharacteristic.setValue(mCurrentPointer, FORMAT_UINT32, 0);
         } else {
             mEndPointerCharacteristic.setValue(endPointer, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         }
@@ -468,10 +507,10 @@ public class SHTC1HistoryService extends HistoryService {
      * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
     public boolean setUserData(final int userData) {
-        mUserDataCharacteristic.setValue(userData, BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+        mUserDataCharacteristic.setValue(userData, FORMAT_UINT32, 0);
         mPeripheral.forceWriteCharacteristic(mUserDataCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         mPeripheral.forceReadCharacteristic(mUserDataCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        return getUserData() == userData;
+        return mUserData != null && mUserData == userData;
     }
 
     /**
@@ -488,8 +527,8 @@ public class SHTC1HistoryService extends HistoryService {
             return true;
         }
 
-        if ((mIntervalCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE) == 0
-                && (mIntervalCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) == 0) {
+        if ((mIntervalCharacteristic.getProperties() & PROPERTY_WRITE) == 0
+                && (mIntervalCharacteristic.getProperties() & PROPERTY_WRITE_NO_RESPONSE) == 0) {
 
             Log.e(TAG, String.format("setGadgetLoggingEnabled -> The device %s doesn't have enough permissions for writing.", mPeripheral.getAddress()));
             return false;
@@ -584,8 +623,13 @@ public class SHTC1HistoryService extends HistoryService {
 
     private synchronized void downloadDataFromPeripheral() {
         mExtractedDataPointsCounter = 0;
-        final int totalValuesToDownload = calculateValuesToDownload();
-        while (getEndPointer() > 0 && mNumConsecutiveFailsReadingData < MAX_CONSECUTIVE_TRIES) {
+        final Integer totalValuesToDownload = calculateValuesToDownload();
+        final Integer endPointer = getEndPointer();
+        if (totalValuesToDownload == null || endPointer == null) {
+            Log.e(TAG, "downloadDataFromPeripheral -> Service needs to be synchronized ");
+            return;
+        }
+        while (getEndPointer() > 0 && mDownloadInProgress) {
             for (int i = totalValuesToDownload; i > 0; i--) {
                 mPeripheral.readCharacteristic(mLoggedDataCharacteristic);
                 /**
@@ -606,8 +650,13 @@ public class SHTC1HistoryService extends HistoryService {
         }
     }
 
-    private int calculateValuesToDownload() {
-        final int totalNumberOfValues = getNumberLoggedElements();
+    @Nullable
+    private Integer calculateValuesToDownload() {
+        final Integer totalNumberOfValues = getNumberLoggedElements();
+        if (totalNumberOfValues == null) {
+            Log.e(TAG, "calculateValuesToDownload -> Service is not synchronized yet.");
+            return null;
+        }
         notifyTotalNumberElements(totalNumberOfValues);
         lastTimeLogged = System.currentTimeMillis();
         Log.i(TAG, String.format("calculateValuesToDownload -> The user has to download %d values.", totalNumberOfValues));
@@ -623,7 +672,17 @@ public class SHTC1HistoryService extends HistoryService {
     private boolean parseLoggedData(@NonNull final BluetoothGattCharacteristic characteristic) {
         final byte[] rhtRawData = characteristic.getValue();
 
-        if (isRawDatapointCorrupted(rhtRawData)) {
+        if (mUserData == null || mStartPointDownload == null || mInterval == null) {
+            Log.e(TAG, "parseLoggedData -> Service is not synchronized yet.");
+            return false;
+        }
+
+        if (rhtRawData.length == 0) {
+            Log.i(TAG, "parseLoggedData -> Data download has finished successfully.");
+            mDownloadInProgress = false;
+            return true;
+        } else if (rhtRawData.length % DATA_POINT_SIZE > 0) {
+            Log.e(TAG, String.format("isRawDatapointCorrupted -> The received data don't have a valid length: %d", rhtRawData.length));
             return false;
         }
 
@@ -641,7 +700,7 @@ public class SHTC1HistoryService extends HistoryService {
             //Creates a datapoint object with the obtained data, and fills it with humidity and temperature.
             final float temperature = ((float) humidityAndTemperature[0]) / 100f;
             final float humidity = ((float) humidityAndTemperature[1]) / 100f;
-            final int epoch = mPeripheralEpoch + (mStartPointDownload + mExtractedDataPointsCounter) * mInterval;
+            final int epoch = mUserData + (mStartPointDownload + mExtractedDataPointsCounter) * mInterval;
             final long timestamp = epoch * 1000l;
 
             final RHTDataPoint extractedDataPoint = new RHTDataPoint(temperature, humidity, timestamp);
@@ -649,7 +708,6 @@ public class SHTC1HistoryService extends HistoryService {
             Log.i(TAG, String.format("parseLoggedData -> Logged in device %s values %s", mPeripheral.getAddress(), extractedDataPoint.toString()));
 
             //Adds the new datapoint to the the list.
-            mNumConsecutiveFailsReadingData = 0;
             mExtractedDataPointsCounter++;
             lastTimeLogged = System.currentTimeMillis();
 
@@ -658,30 +716,25 @@ public class SHTC1HistoryService extends HistoryService {
         return true;
     }
 
-    private boolean isRawDatapointCorrupted(@NonNull final byte[] rhtRawData) {
-        if (rhtRawData.length == 0 || rhtRawData.length % DATA_POINT_SIZE > 0) {
-            // The data received it's not valid, it has to have values and
-            // the whole download has to be multiple of the data point size.
-            Log.e(TAG, String.format("isRawDatapointCorrupted -> The received data don't have a valid length: %d", rhtRawData.length));
-            mNumConsecutiveFailsReadingData++;
-            return true;
-        }
-        return false;
-    }
-
     /**
-     * Obtains the number of elements to log
+     * Obtains the number of elements to log.
      *
-     * @return {@link java.lang.Integer} with the total number of elements to log.
+     * @return {@link java.lang.Integer} with the total number of elements to log. <code>null</code> if the number of sample is unknown.
      */
     @Override
+    @Nullable
     public Integer getNumberLoggedElements() {
         mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
         if (mCurrentPointer == null || mCurrentPointer == 0) {
-            return 0;
+            Log.e(TAG, "getNumberLoggedElements -> The device is not synchronized yet. (hint -> Call 'isSynchronized()' first)");
+            return null;
         }
         resetStartPointer();
-        int totalValues = getCurrentPoint() - getStartPointer();
+        if (mStartPointer == null) {
+            Log.e(TAG, "getNumberLoggedElements -> Cannot obtain the start pointer of the device.");
+            return null;
+        }
+        int totalValues = mCurrentPointer - mStartPointer;
         if (totalValues > GADGET_RINGBUFFER_SIZE) {
             totalValues = GADGET_RINGBUFFER_SIZE;
         }
@@ -805,7 +858,11 @@ public class SHTC1HistoryService extends HistoryService {
      */
     @Override
     public boolean resetDeviceData() {
-        final boolean initialLoggingState = mLoggingIsEnabled;
+        final Boolean initialLoggingState = mLoggingIsEnabled;
+        if (initialLoggingState == null) {
+            Log.e(TAG, "resetDeviceData -> Service is not synchronized yet.");
+            return false;
+        }
         if (mLoggingIsEnabled) {
             setGadgetLoggingEnabled(false);
         }
@@ -846,6 +903,7 @@ public class SHTC1HistoryService extends HistoryService {
      *
      * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known.
      */
+    @Nullable
     private String getSensorName() {
         switch (mPeripheral.getAdvertisedName()) {
             case "SHTC1 smart gadget":
