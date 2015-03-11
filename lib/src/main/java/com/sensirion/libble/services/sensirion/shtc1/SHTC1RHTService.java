@@ -68,6 +68,7 @@ public class SHTC1RHTService extends RHTService {
      *
      * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known.
      */
+    @Override
     public String getSensorName() {
         switch (mPeripheral.getAdvertisedName()) {
             case "SHTC1 smart gadget":

@@ -117,13 +117,13 @@ public abstract class HistoryService extends BleService<HistoryListener> {
     public abstract boolean setDownloadInterval(int loggerIntervalInMilliseconds);
 
     /**
-     * Gets the interval of the device in milliseconds.
+     * Gets the interval between history data points on the device in milliseconds.
      *
-     * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known
+     * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known.
      */
     @SuppressWarnings("unused")
     @Nullable
-    public abstract Integer getDownloadIntervalMs();
+    public abstract Integer getLoggingIntervalMs();
 
     /**
      * Deletes all the data from the device.
@@ -159,7 +159,7 @@ public abstract class HistoryService extends BleService<HistoryListener> {
     public abstract boolean setLoggingState(boolean enabled);
 
     /**
-     * Checks the number of elements a device have to download.
+     * Checks the number of logged elements that the user can download.
      *
      * @return {@link java.lang.Integer} with the number of logged elements. <code>null</code> if it's unknown.
      */

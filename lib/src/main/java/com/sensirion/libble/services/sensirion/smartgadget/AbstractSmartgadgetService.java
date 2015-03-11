@@ -110,7 +110,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
             return false;
         }
         final int sequenceNumber = extractSequenceNumber(historyValueBuffer);
-        final int historyInterval = mPeripheral.getHistoryService().getDownloadIntervalMs();
+        final int historyInterval = mPeripheral.getHistoryService().getLoggingIntervalMs();
         final SmartgadgetHistoryService historyService = (SmartgadgetHistoryService) mPeripheral.getHistoryService();
 
         final Long newestTimestamp = historyService.getNewestTimestampMs();
