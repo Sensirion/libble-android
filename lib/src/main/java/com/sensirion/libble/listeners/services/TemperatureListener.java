@@ -1,5 +1,7 @@
 package com.sensirion.libble.listeners.services;
 
+import android.support.annotation.NonNull;
+
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.utils.TemperatureUnit;
@@ -17,7 +19,7 @@ public interface TemperatureListener extends NotificationListener {
      * @param temperature {@link java.lang.Float} with the temperature value.
      * @param sensorName  {@link java.lang.String} with the name of the sensor that reported the temperature data.
      */
-    void onNewTemperature(BleDevice device, float temperature, String sensorName, TemperatureUnit unit);
+    void onNewTemperature(@NonNull BleDevice device, float temperature, @NonNull String sensorName, @NonNull TemperatureUnit unit);
 
     /**
      * Sends to the user the latest historical temperature.
@@ -27,5 +29,5 @@ public interface TemperatureListener extends NotificationListener {
      * @param timestamp   in milliseconds that determines when the temperature was obtained.
      * @param sensorName  of the sensor that reported the humidity.
      */
-    void onNewHistoricalTemperature(BleDevice device, float temperature, long timestamp, String sensorName, TemperatureUnit unit);
+    void onNewHistoricalTemperature(@NonNull BleDevice device, float temperature, long timestamp, @NonNull String sensorName, @NonNull TemperatureUnit unit);
 }

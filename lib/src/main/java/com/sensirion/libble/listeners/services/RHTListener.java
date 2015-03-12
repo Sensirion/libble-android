@@ -1,5 +1,7 @@
 package com.sensirion.libble.listeners.services;
 
+import android.support.annotation.NonNull;
+
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.utils.RHTDataPoint;
@@ -16,7 +18,7 @@ public interface RHTListener extends NotificationListener {
      * @param dataPoint  {@link com.sensirion.libble.utils.RHTDataPoint} with the RHT_DATA.
      * @param sensorName {@link java.lang.String} with the name of the sensor that reported the RHT_DATA
      */
-    void onNewRHTValue(BleDevice device, RHTDataPoint dataPoint, String sensorName);
+    void onNewRHTValue(@NonNull BleDevice device, @NonNull RHTDataPoint dataPoint, @NonNull String sensorName);
 
     /**
      * Sends to the user a data point that was extracted from the historical data of the device.
@@ -25,5 +27,5 @@ public interface RHTListener extends NotificationListener {
      * @param dataPoint  downloaded.
      * @param sensorName of the historical data.
      */
-    void onNewHistoricalRHTValue(BleDevice device, RHTDataPoint dataPoint, String sensorName);
+    void onNewHistoricalRHTValue(@NonNull BleDevice device, @NonNull RHTDataPoint dataPoint, @NonNull String sensorName);
 }

@@ -1,5 +1,7 @@
 package com.sensirion.libble.listeners.devices;
 
+import android.support.annotation.NonNull;
+
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.listeners.NotificationListener;
 
@@ -14,24 +16,24 @@ public interface DeviceStateListener extends NotificationListener {
      *
      * @param device that was connected.
      */
-    void onDeviceConnected(BleDevice device);
+    void onDeviceConnected(@NonNull BleDevice device);
 
     /**
      * This method is called when a device becomes disconnected.
      *
      * @param device that was disconnected.
      */
-    void onDeviceDisconnected(BleDevice device);
+    void onDeviceDisconnected(@NonNull BleDevice device);
 
     /**
      * This method is called when the library discovers a new device.
      *
      * @param device that was discovered.
      */
-    void onDeviceDiscovered(BleDevice device);
+    void onDeviceDiscovered(@NonNull BleDevice device);
 
     /**
      * This method is called when all the device services are discovered.
      */
-    void onDeviceAllServicesDiscovered(BleDevice device);
+    void onDeviceAllServicesDiscovered(@NonNull BleDevice device);
 }
