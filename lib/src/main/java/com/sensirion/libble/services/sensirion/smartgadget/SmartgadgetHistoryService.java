@@ -3,13 +3,17 @@ package com.sensirion.libble.services.sensirion.smartgadget;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
-import com.sensirion.libble.services.HistoryService;
+import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
-public class SmartgadgetHistoryService extends HistoryService {
+import java.util.concurrent.Executors;
+
+public class SmartgadgetHistoryService extends AbstractHistoryService {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000f234-b38d-4985-720e-0f993a68ee41";
@@ -21,35 +25,50 @@ public class SmartgadgetHistoryService extends HistoryService {
     private static final String START_LOGGER_DOWNLOAD_UUID = "0000f238-b38d-4985-720e-0f993a68ee41";
     private static final String LOGGER_INTERVAL_MS_UUID = "0000f239-b38d-4985-720e-0f993a68ee41";
 
+    //INTERVALS
+    private static final short ONE_SECOND_MS = 1000;
+    private static final int ONE_MINUTE_MS = 60 * ONE_SECOND_MS;
+    private static final int DOWNLOAD_TIMEOUT = ONE_MINUTE_MS;
+
     //FORCE READ/WRITE ATTRIBUTES
-    private static final short MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 400;
-    private static final byte NUMBER_FORCE_READING_REQUEST = 3;
+    private static final short MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 101;
+    private static final byte NUMBER_FORCE_READING_REQUEST = 10;
 
     //CHARACTERISTICS
     private final BluetoothGattCharacteristic mSyncTimeCharacteristic;
-    private final BluetoothGattCharacteristic mOldestTimestampCharacteristic;
+    private final BluetoothGattCharacteristic mOldestSampleTimestampMsCharacteristic;
     private final BluetoothGattCharacteristic mNewestSampleTimestampMsCharacteristic;
     private final BluetoothGattCharacteristic mStartLoggerDownloadCharacteristic;
     private final BluetoothGattCharacteristic mLoggerIntervalMsCharacteristic;
 
-    //CLASS VALUES
+    //DEVICE VALUES
+    @Nullable
     private Long mNewestSampleTimestampMs = null;
+    @Nullable
     private Long mOldestTimestampToDownloadMs = null;
+    @Nullable
     private Integer mLoggerIntervalMs = null;
+    @Nullable
     private Long mUserOldestTimestampToDownloadMs = null;
-    private volatile boolean mTryingToDownload = false;
+
+    //SERVICE STATE VALUES
+    private volatile Long mTryingToDownload = null;
     private volatile int mLastSequenceNumberDownloaded = 0;
     private volatile Integer mUserInterval = null;
 
     public SmartgadgetHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
         mSyncTimeCharacteristic = super.getCharacteristic(SYNC_TIME_UUID);
-        mOldestTimestampCharacteristic = super.getCharacteristic(READ_BACK_TO_TIME_MS_UUID);
+        mOldestSampleTimestampMsCharacteristic = super.getCharacteristic(READ_BACK_TO_TIME_MS_UUID);
         mNewestSampleTimestampMsCharacteristic = super.getCharacteristic(NEWEST_SAMPLE_TIME_MS_UUID);
         mStartLoggerDownloadCharacteristic = super.getCharacteristic(START_LOGGER_DOWNLOAD_UUID);
         mLoggerIntervalMsCharacteristic = super.getCharacteristic(LOGGER_INTERVAL_MS_UUID);
         parent.readCharacteristic(mLoggerIntervalMsCharacteristic);
-        syncTimestamp();
+        syncTimestamps();
+    }
+
+    private static long calcSecondsSince(final long timestamp) {
+        return (System.currentTimeMillis() - timestamp) / 1000;
     }
 
     /**
@@ -61,8 +80,8 @@ public class SmartgadgetHistoryService extends HistoryService {
     @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
         if (mNewestSampleTimestampMsCharacteristic.equals(updatedCharacteristic)) {
-            return onNewestSampleTimestampTimeMsRead(updatedCharacteristic);
-        } else if (mOldestTimestampCharacteristic.equals(updatedCharacteristic)) {
+            return onNewestTimestampRead(updatedCharacteristic);
+        } else if (mOldestSampleTimestampMsCharacteristic.equals(updatedCharacteristic)) {
             return onOldestTimestampRead(updatedCharacteristic);
         } else if (mLoggerIntervalMsCharacteristic.equals(updatedCharacteristic)) {
             mLoggerIntervalMs = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristic(updatedCharacteristic);
@@ -70,27 +89,26 @@ public class SmartgadgetHistoryService extends HistoryService {
             return true;
         } else if (mStartLoggerDownloadCharacteristic.equals(updatedCharacteristic)) {
             if (mStartLoggerDownloadCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 0) {
-                mTryingToDownload = false;
+                mTryingToDownload = null;
                 onDownloadComplete();
             }
         }
         return false;
     }
 
-
     /**
      * This method is called when a characteristic was written in the device.
      *
      * @param characteristic that was written in the device with success.
-     *                       return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
+     * @return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
      */
     @Override
     public boolean onCharacteristicWrite(@NonNull final BluetoothGattCharacteristic characteristic) {
         if (characteristic.equals(mSyncTimeCharacteristic)) {
             Log.d(TAG, String.format("onCharacteristicWrite -> Time was synced successfully in the device %s.", getDeviceAddress()));
-            mPeripheral.forceReadCharacteristic(mOldestTimestampCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+            mPeripheral.forceReadCharacteristic(mOldestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
             return true;
-        } else if (characteristic.equals(mOldestTimestampCharacteristic)) {
+        } else if (characteristic.equals(mOldestSampleTimestampMsCharacteristic)) {
             Log.d(TAG, String.format("onCharacteristicWrite -> Read back to time characteristic was set correctly in device %s.", getDeviceAddress()));
             mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
             return true;
@@ -103,7 +121,7 @@ public class SmartgadgetHistoryService extends HistoryService {
             mLoggerIntervalMs = mUserInterval;
             mOldestTimestampToDownloadMs = null;
             mNewestSampleTimestampMs = null;
-            syncTimestamp();
+            syncTimestamps();
             return true;
         }
         return false;
@@ -124,30 +142,38 @@ public class SmartgadgetHistoryService extends HistoryService {
      */
     @Override
     public boolean isServiceSynchronized() {
-        if (mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
-            syncTimestamp();
+        if (mLoggerIntervalMs == null) {
+            forceCharacteristicRequest();
+            return false;
         }
         if (mOldestTimestampToDownloadMs == null) {
-            mPeripheral.forceReadCharacteristic(mOldestTimestampCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
-            if (mOldestTimestampToDownloadMs == null) {
-                return false;
-            }
+            forceCharacteristicRequest();
+            return false;
+        } else if (mOldestTimestampToDownloadMs == 0) {
+            readTimestamps();
+            return false;
         }
-        Log.d(TAG, String.format("isServiceSynchronized -> Oldest timestamp is %d.", mOldestTimestampToDownloadMs));
         if (mNewestSampleTimestampMs == null) {
-            mPeripheral.forceReadCharacteristic(mNewestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
-            if (mNewestSampleTimestampMs == null) {
-                return false;
+            forceCharacteristicRequest();
+            return false;
+        } else if (mNewestSampleTimestampMs == 0) {
+            readTimestamps();
+            return false;
+        }
+        return checkSmartgadgetServices();
+    }
+
+    private boolean checkSmartgadgetServices() {
+        for (final AbstractBleService service : mPeripheral.getDiscoveredServices()){
+            if (service instanceof AbstractSmartgadgetService){
+                if (((AbstractSmartgadgetService) service).isSynchronized()){
+                    Log.d(TAG, String.format("checkSmartgadgetServices -> Service %s is synchronized.", service));
+                } else {
+                    Log.i(TAG, String.format("checkSmartgadgetServices -> Service %s is not synchronized yet.", service));
+                    return false;
+                }
             }
         }
-        Log.d(TAG, String.format("isServiceSynchronized -> Newest timestamp is %d.", mNewestSampleTimestampMs));
-        if (mLoggerIntervalMs == null) {
-            mPeripheral.forceReadCharacteristic(mNewestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
-            if (mNewestSampleTimestampMs == null) {
-                return false;
-            }
-        }
-        Log.d(TAG, String.format("isServiceSynchronized -> Logger interval is %d.", mLoggerIntervalMs));
         return true;
     }
 
@@ -162,20 +188,20 @@ public class SmartgadgetHistoryService extends HistoryService {
         }
     }
 
-
-    private boolean onNewestSampleTimestampTimeMsRead(@NonNull final BluetoothGattCharacteristic newestTimestampCharacteristic) {
+    private boolean onNewestTimestampRead(@NonNull final BluetoothGattCharacteristic newestTimestampCharacteristic) {
         final long newestTimestampToDownload = LittleEndianExtractor.extractLittleEndianLongFromCharacteristic(newestTimestampCharacteristic);
         if (newestTimestampToDownload == 0) {
-            syncTimestamp();
-            Log.w(TAG, "onNewestSampleTimestampTimeMsRead -> Time is not synced yet.");
+            syncTimestamps();
+            Log.w(TAG, "onNewestTimestampRead -> Time is not synced yet.");
             return false;
         }
         mNewestSampleTimestampMs = newestTimestampToDownload;
-        Log.d(TAG, String.format("onNewestSampleTimestampTimeMsRead -> Newest timestamp from the device %s is %d. (%d seconds ago)", getDeviceAddress(), mNewestSampleTimestampMs, ((System.currentTimeMillis() - mNewestSampleTimestampMs) / 1000)));
-        if (mOldestTimestampToDownloadMs == null) {
-            mPeripheral.readCharacteristic(mOldestTimestampCharacteristic);
-        } else if (mTryingToDownload) {
-            enableHistoryDataNotifications();
+        Log.d(TAG, String.format("onNewestTimestampRead -> Newest timestamp from the device %s is from %d seconds ago", getDeviceAddress(), calcSecondsSince(mNewestSampleTimestampMs)));
+        if (isReadyToDownload()) {
+            notifyNumberElementsToDownload();
+            if (canStartDownload() && !isDownloadInProgress()) {
+                enableHistoryDataNotifications();
+            }
         }
         return true;
     }
@@ -183,32 +209,64 @@ public class SmartgadgetHistoryService extends HistoryService {
     private boolean onOldestTimestampRead(@NonNull final BluetoothGattCharacteristic oldestTimestampCharacteristic) {
         final long oldestTimestampToDownload = LittleEndianExtractor.extractLittleEndianLongFromCharacteristic(oldestTimestampCharacteristic);
         if (oldestTimestampToDownload == 0) {
-            syncTimestamp();
-            Log.w(TAG, "onNewestSampleTimestampTimeMsRead -> Time is not synced yet.");
+            syncTimestamps();
+            Log.w(TAG, "onNewestTimestampRead -> Time is not synced yet.");
             return false;
         }
         mOldestTimestampToDownloadMs = oldestTimestampToDownload;
-        Log.d(TAG, String.format("onOldestTimestampRead -> Oldest timestamp from the device %s is %d. (%d seconds ago).", getDeviceAddress(), mOldestTimestampToDownloadMs, ((System.currentTimeMillis() - mOldestTimestampToDownloadMs) / 1000)));
-        if (mNewestSampleTimestampMs == null) {
-            mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
-        } else if (mTryingToDownload) {
-            enableHistoryDataNotifications();
+        Log.d(TAG, String.format("onOldestTimestampRead -> Oldest timestamp from the device %s is from %d seconds ago.", getDeviceAddress(), calcSecondsSince(mOldestTimestampToDownloadMs)));
+        if (isReadyToDownload()) {
+            notifyNumberElementsToDownload();
+            if (canStartDownload() && !isDownloadInProgress()) {
+                enableHistoryDataNotifications();
+            }
+        }
+        return true;
+    }
+
+    private boolean canStartDownload() {
+        if (mTryingToDownload == null) {
+            Log.w(TAG, "canStartDownload -> User is not trying to download.");
+            return false;
+        }
+        return mTryingToDownload + ONE_MINUTE_MS > System.currentTimeMillis();
+    }
+
+    private boolean isReadyToDownload() {
+        if (mNewestSampleTimestampMs == null || mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null) {
+            lazyCharacteristicRequest();
+            return false;
         }
         return true;
     }
 
     private void enableHistoryDataNotifications() {
-        if (mUserOldestTimestampToDownloadMs != null && mUserOldestTimestampToDownloadMs > mOldestTimestampToDownloadMs && mUserOldestTimestampToDownloadMs < mNewestSampleTimestampMs) {
-            mPeripheral.forceWriteCharacteristic(mOldestTimestampCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+        if (isServiceSynchronized()) {
+            updateOldestTimestamp();
+            mStartLoggerDownloadCharacteristic.setValue(1, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            sleep(MAX_WAITING_TIME_BETWEEN_REQUEST_MS);
+            mPeripheral.cleanCharacteristicCache();
+            mPeripheral.forceWriteCharacteristic(mStartLoggerDownloadCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
         }
-        mStartLoggerDownloadCharacteristic.setValue(1, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-        sleep(MAX_WAITING_TIME_BETWEEN_REQUEST_MS);
-        mPeripheral.cleanCharacteristicCache();
-        mPeripheral.forceWriteCharacteristic(mStartLoggerDownloadCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+    }
+
+    private void updateOldestTimestamp() {
+        if (mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
+            Log.e(TAG, "updateOldestTimestamp -> Service needs to be synchronized in order to set the oldest timestamp to download.");
+        } else if (mUserOldestTimestampToDownloadMs == null) {
+            Log.i(TAG, "updateOldestTimestamp -> User wants to download all the data from the device. No need to update the oldest timestamp.");
+        } else if (mUserOldestTimestampToDownloadMs > mOldestTimestampToDownloadMs && mUserOldestTimestampToDownloadMs < mNewestSampleTimestampMs) {
+            mPeripheral.forceWriteCharacteristic(mOldestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+        }
     }
 
     private void notifyNumberElementsToDownload() {
-        super.notifyTotalNumberElements(getNumberLoggedElements());
+        final Integer numberLoggedElements = getNumberLoggedElements();
+        if (numberLoggedElements == null) {
+            Log.e(TAG, String.format("notifyNumberElementsToDownload -> Device %s tried to notify a null total number of elements.", getDeviceAddress()));
+        } else {
+            super.notifyTotalNumberElements(numberLoggedElements);
+        }
     }
 
     /**
@@ -218,11 +276,11 @@ public class SmartgadgetHistoryService extends HistoryService {
      */
     @Override
     public boolean startDataDownload() {
-        if (mLastSequenceNumberDownloaded > 0 && mTryingToDownload) {
+        if (isDownloadInProgress()) {
             Log.e(TAG, "startDataDownload -> The user can't download the data from the device because another download is in progress.");
             return false;
         }
-        mTryingToDownload = true;
+        mTryingToDownload = System.currentTimeMillis();
         mLastSequenceNumberDownloaded = 0;
         enableHistoryDataNotifications();
         return true;
@@ -256,14 +314,23 @@ public class SmartgadgetHistoryService extends HistoryService {
     }
 
     /**
-     * Gets the interval of the device in milliseconds.
+     * Gets the interval between history data points on the device in milliseconds.
+     * <p/>
+     * In case the value is unknown it will ask for it in a background thread.
+     * If the user calls this method again after some time it can return a different value.
      *
-     * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known
+     * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known.
      */
     @Override
-    public Integer getDownloadIntervalMs() {
+    @Nullable
+    public Integer getLoggingIntervalMs() {
         if (mLoggerIntervalMs == null) {
-            mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+                }
+            });
         }
         return mLoggerIntervalMs;
     }
@@ -275,7 +342,12 @@ public class SmartgadgetHistoryService extends HistoryService {
      */
     @Override
     public boolean resetDeviceData() {
-        return setDownloadInterval(getDownloadIntervalMs());
+        final Integer downloadIntervalMs = getLoggingIntervalMs();
+        if (downloadIntervalMs == null) {
+            Log.e(TAG, "resetDeviceData -> Device needs to be synchronized in order to reset it.");
+            return false;
+        }
+        return setDownloadInterval(downloadIntervalMs);
     }
 
     /**
@@ -311,25 +383,73 @@ public class SmartgadgetHistoryService extends HistoryService {
     }
 
     /**
-     * Checks the number of elements a device have to download.
+     * Checks the number of logged elements that the user can download.
+     * <p/>
+     * In case the value is unknown it will ask for it in a background thread.
+     * If the user calls this method again after some time it can return a different value.
      *
      * @return <code>true</code> if the device has data - <code>false</code> otherwise.
      */
     @Override
+    @Nullable
     public Integer getNumberLoggedElements() {
-        if (isServiceSynchronized()) {
+        if (mNewestSampleTimestampMs != null && mOldestTimestampToDownloadMs != null && mLoggerIntervalMs != null) {
             return (int) (mNewestSampleTimestampMs - mOldestTimestampToDownloadMs) / mLoggerIntervalMs;
         }
+        lazyCharacteristicRequest();
         return null;
     }
 
+    private void lazyCharacteristicRequest() {
+        mPeripheral.cleanCharacteristicCache();
+        if (mNewestSampleTimestampMs == null) {
+            mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
+        }
+        if (mOldestTimestampToDownloadMs == null) {
+            mPeripheral.readCharacteristic(mOldestSampleTimestampMsCharacteristic);
+        }
+        if (mLoggerIntervalMs == null) {
+            mPeripheral.readCharacteristic(mLoggerIntervalMsCharacteristic);
+        }
+    }
 
-    private void syncTimestamp() {
+    private void forceCharacteristicRequest() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                if (mNewestSampleTimestampMs == null) {
+                    mPeripheral.forceReadCharacteristic(mNewestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+                }
+                mPeripheral.cleanCharacteristicCache();
+                if (mOldestTimestampToDownloadMs == null) {
+                    mPeripheral.forceReadCharacteristic(mOldestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+                }
+                mPeripheral.cleanCharacteristicCache();
+                if (mLoggerIntervalMs == null) {
+                    mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+                }
+                mPeripheral.cleanCharacteristicCache();
+            }
+        });
+    }
+
+    private void readTimestamps() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                syncTimestamps();
+            }
+        }).start();
+    }
+
+    private void syncTimestamps() {
         final byte[] timestampLittleEndianBuffer = LittleEndianExtractor.extractLittleEndianByteArrayFromLong(System.currentTimeMillis());
         mSyncTimeCharacteristic.setValue(timestampLittleEndianBuffer);
         mPeripheral.forceWriteCharacteristic(mSyncTimeCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
         mOldestTimestampToDownloadMs = null;
         mNewestSampleTimestampMs = null;
+        mPeripheral.readCharacteristic(mOldestSampleTimestampMsCharacteristic);
+        mPeripheral.readCharacteristic(mNewestSampleTimestampMsCharacteristic);
     }
 
     /**
@@ -339,7 +459,11 @@ public class SmartgadgetHistoryService extends HistoryService {
      */
     @Override
     public boolean isDownloadInProgress() {
-        return mTryingToDownload;
+        if (mTryingToDownload == null || mLastSequenceNumberDownloaded == 0) {
+            return false;
+        }
+        Log.d(TAG, "isDownloadInProgress -> User is downloading data from the device.");
+        return mTryingToDownload + DOWNLOAD_TIMEOUT > System.currentTimeMillis();
     }
 
     /**
@@ -358,6 +482,7 @@ public class SmartgadgetHistoryService extends HistoryService {
      *
      * @return {@link java.lang.Long} with the newest sample timestamp - <code>null</code> if it's unknown.
      */
+    @Nullable
     public Long getNewestTimestampMs() {
         return mNewestSampleTimestampMs;
     }

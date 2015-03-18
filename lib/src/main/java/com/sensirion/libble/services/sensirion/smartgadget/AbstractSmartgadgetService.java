@@ -8,7 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.AbstractBleService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
 import java.io.UnsupportedEncodingException;
@@ -16,17 +16,16 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
-public abstract class SmartgadgetService<ListenerType extends NotificationListener> extends BleService<ListenerType> {
+abstract class AbstractSmartgadgetService<ListenerType extends NotificationListener> extends AbstractBleService<ListenerType> {
 
     private static final byte VALUE_SIZE = 4;
     private final String VALUE_NOTIFICATIONS_UUID; //4 Byte Float Little Endian - 20 byte [1 little endian integer (Sequence number), 4 Byte Float Little Endian]
-    protected BluetoothGattCharacteristic mValueCharacteristic;
+    private final BluetoothGattCharacteristic mValueCharacteristic;
 
     protected String mSensorName = null;
     protected Float mLastValue = null;
 
-
-    protected SmartgadgetService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String liveValueCharacteristicUUID) {
+    protected AbstractSmartgadgetService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String liveValueCharacteristicUUID) {
         super(peripheral, gatt);
 
         VALUE_NOTIFICATIONS_UUID = liveValueCharacteristicUUID;
@@ -56,7 +55,7 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
         if (descriptor.getUuid().equals(USER_CHARACTERISTIC_DESCRIPTOR_UUID)) {
             if (descriptor.getCharacteristic().getUuid().equals(mValueCharacteristic.getUuid())) {
                 if (descriptor.getCharacteristic().getInstanceId() == mValueCharacteristic.getInstanceId()) {
-                    Log.e(TAG, String.format("onDescriptorRead -> Reading descriptor %s from characteristic %s in device %s.", descriptor.getUuid(), descriptor.getCharacteristic().getUuid(), getDeviceAddress()));
+                    Log.d(TAG, String.format("onDescriptorRead -> Reading descriptor %s from characteristic %s in device %s.", descriptor.getUuid(), descriptor.getCharacteristic().getUuid(), getDeviceAddress()));
                     try {
                         final String userDescriptor = new String(descriptor.getValue(), "UTF-8");
                         final String[] userValue = userDescriptor.split(" ");
@@ -84,10 +83,10 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
         final String characteristicUUID = updatedCharacteristic.getUuid().toString();
         if (characteristicUUID.equalsIgnoreCase(VALUE_NOTIFICATIONS_UUID)) {
             if (updatedCharacteristic.getValue().length <= 8) {
-                Log.i(TAG, "onCharacteristicUpdate -> Parsing live value.");
+                Log.d(TAG, "onCharacteristicUpdate -> Parsing live value.");
                 return parseLiveValue(updatedCharacteristic);
             } else {
-                Log.e(TAG, "onCharacteristicUpdate -> Parsing historical value.");
+                Log.d(TAG, "onCharacteristicUpdate -> Parsing historical value.");
                 return parseHistoryValue(updatedCharacteristic);
             }
         }
@@ -111,8 +110,17 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
             return false;
         }
         final int sequenceNumber = extractSequenceNumber(historyValueBuffer);
-        final int historyInterval = mPeripheral.getHistoryService().getDownloadIntervalMs();
-        final long newestTimestamp = ((SmartgadgetHistoryService) mPeripheral.getHistoryService()).getNewestTimestampMs();
+        final Integer historyInterval = mPeripheral.getHistoryService().getLoggingIntervalMs();
+        if (historyInterval == null) {
+            Log.e(TAG, "parseHistoryValue -> History interval can't be null during data download.");
+            return false;
+        }
+        final SmartgadgetHistoryService historyService = (SmartgadgetHistoryService) mPeripheral.getHistoryService();
+
+        final Long newestTimestamp = historyService.getNewestTimestampMs();
+        if (newestTimestamp == null) {
+            throw new IllegalArgumentException(String.format("%s: parseHistoryValue -> Cannot obtain the newest timestamp from the history service in device %s.", TAG, getDeviceAddress()));
+        }
 
         for (int offset = 4; offset < historyValueBuffer.length; offset += 4) {
             final long timestamp = newestTimestamp - (historyInterval * ((((offset / VALUE_SIZE) - 1) + sequenceNumber)));
@@ -124,7 +132,7 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
         final int numberParsedElements = (historyValueBuffer.length / 4) - 1;
         ((SmartgadgetHistoryService) mPeripheral.getHistoryService()).setLastSequenceNumberDownloaded(sequenceNumber + numberParsedElements);
 
-        return false;
+        return true;
     }
 
     private int extractSequenceNumber(@NonNull final byte[] byteBuffer) {
@@ -161,4 +169,10 @@ public abstract class SmartgadgetService<ListenerType extends NotificationListen
      * @param valueUnit {@link java.lang.String} with the value unit specified in the device.
      */
     abstract void setValueUnit(@NonNull final String valueUnit);
+
+    /**
+     * Checks if the service has all the information it needs.
+     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
+     */
+    public abstract boolean isSynchronized();
 }

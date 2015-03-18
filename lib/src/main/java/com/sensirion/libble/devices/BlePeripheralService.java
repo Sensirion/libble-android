@@ -114,6 +114,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         Log.i(TAG, String.format("onPeripheralServiceDiscovery -> Peripheral %s discovered %d services.", peripheral.getAddress(), peripheral.getNumberServices()));
         sendLocalBroadcast(ACTION_PERIPHERAL_SERVICE_DISCOVERY, EXTRA_PERIPHERAL_ADDRESS, peripheral.getAddress());
         notifyPeripheralServiceDiscovery(peripheral);
+        for (final NotificationListener listener : mPeripheralNotificationListeners) {
+            peripheral.registerDeviceListener(listener);
+        }
     }
 
     private void notifyPeripheralConnectionChanged(@NonNull final Peripheral peripheral) {
@@ -531,12 +534,16 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     /**
-     * Register for notifications automatically when a new device is connected.
+     * Register for notifications automatically in all connected peripherals.
+     * If a new peripheral becomes connected the listener will register the listeners to it automatically.
      *
-     * @param listener that wants to register automatically for notifications on new connected devices.
+     * @param listener that wants to listen for notifications.
      */
     public void registerPeripheralListener(@NonNull final NotificationListener listener) {
         mPeripheralNotificationListeners.add(listener);
+        for (final Peripheral peripheral : mConnectedPeripherals.values()) {
+            peripheral.registerDeviceListener(listener);
+        }
     }
 
     /**
@@ -545,6 +552,9 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
      * @param listener that doesn't want to register automatically for notifications on new connected devices.
      */
     public void unregisterPeripheralListenerToAllConnected(@NonNull final NotificationListener listener) {
+        for (final Peripheral peripheral : mConnectedPeripherals.values()) {
+            peripheral.unregisterDeviceListener(listener);
+        }
         mPeripheralNotificationListeners.remove(listener);
     }
 
