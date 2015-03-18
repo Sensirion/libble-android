@@ -110,7 +110,11 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
             return false;
         }
         final int sequenceNumber = extractSequenceNumber(historyValueBuffer);
-        final int historyInterval = mPeripheral.getHistoryService().getLoggingIntervalMs();
+        final Integer historyInterval = mPeripheral.getHistoryService().getLoggingIntervalMs();
+        if (historyInterval == null) {
+            Log.e(TAG, "parseHistoryValue -> History interval can't be null during data download.");
+            return false;
+        }
         final SmartgadgetHistoryService historyService = (SmartgadgetHistoryService) mPeripheral.getHistoryService();
 
         final Long newestTimestamp = historyService.getNewestTimestampMs();
@@ -165,4 +169,10 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
      * @param valueUnit {@link java.lang.String} with the value unit specified in the device.
      */
     abstract void setValueUnit(@NonNull final String valueUnit);
+
+    /**
+     * Checks if the service has all the information it needs.
+     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
+     */
+    public abstract boolean isSynchronized();
 }

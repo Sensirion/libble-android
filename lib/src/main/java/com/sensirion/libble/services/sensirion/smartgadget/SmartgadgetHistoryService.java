@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
+import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.HistoryService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
@@ -159,6 +160,20 @@ public class SmartgadgetHistoryService extends HistoryService {
             readTimestamps();
             return false;
         }
+        return checkSmartgadgetServices();
+    }
+
+    private boolean checkSmartgadgetServices() {
+        for (final BleService service : mPeripheral.getDiscoveredServices()){
+            if (service instanceof AbstractSmartgadgetService){
+                if (((AbstractSmartgadgetService) service).isSynchronized()){
+                    Log.d(TAG, String.format("checkSmartgadgetServices -> Service %s is synchronized.", service));
+                } else {
+                    Log.i(TAG, String.format("checkSmartgadgetServices -> Service %s is not synchronized yet.", service));
+                    return false;
+                }
+            }
+        }
         return true;
     }
 
@@ -211,6 +226,7 @@ public class SmartgadgetHistoryService extends HistoryService {
 
     private boolean canStartDownload() {
         if (mTryingToDownload == null) {
+            Log.w(TAG, "canStartDownload -> User is not trying to download.");
             return false;
         }
         return mTryingToDownload + ONE_MINUTE_MS > System.currentTimeMillis();

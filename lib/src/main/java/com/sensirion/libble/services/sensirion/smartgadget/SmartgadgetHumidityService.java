@@ -74,6 +74,15 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
     }
 
     /**
+     * Checks if the service has all the information it needs.
+     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean isSynchronized() {
+        return mLastValue != null && mValueUnit != null && mSensorName != null;
+    }
+
+    /**
      * Obtains the latest relative humidity.
      *
      * @return {@link java.lang.Float} with the relative humidity - <code>null</code> if the relative humidity is not known.

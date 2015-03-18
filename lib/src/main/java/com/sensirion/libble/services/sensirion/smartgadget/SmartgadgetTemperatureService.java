@@ -81,6 +81,15 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     }
 
     /**
+     * Checks if the service has all the information it needs.
+     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean isSynchronized() {
+        return mLastValue != null && mValueUnit != null && mSensorName != null;
+    }
+
+    /**
      * Obtains the latest temperature in Celsius.
      *
      * @return {@link java.lang.Float} with the temperature in Celsius - <code>null</code> if the temperature is not known.
