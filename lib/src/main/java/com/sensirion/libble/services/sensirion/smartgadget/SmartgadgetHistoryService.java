@@ -7,13 +7,13 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
-import com.sensirion.libble.services.BleService;
-import com.sensirion.libble.services.HistoryService;
+import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
 import java.util.concurrent.Executors;
 
-public class SmartgadgetHistoryService extends HistoryService {
+public class SmartgadgetHistoryService extends AbstractHistoryService {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000f234-b38d-4985-720e-0f993a68ee41";
@@ -164,7 +164,7 @@ public class SmartgadgetHistoryService extends HistoryService {
     }
 
     private boolean checkSmartgadgetServices() {
-        for (final BleService service : mPeripheral.getDiscoveredServices()){
+        for (final AbstractBleService service : mPeripheral.getDiscoveredServices()){
             if (service instanceof AbstractSmartgadgetService){
                 if (((AbstractSmartgadgetService) service).isSynchronized()){
                     Log.d(TAG, String.format("checkSmartgadgetServices -> Service %s is synchronized.", service));

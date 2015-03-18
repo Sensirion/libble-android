@@ -5,13 +5,13 @@ import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
 
 import com.sensirion.libble.devices.Peripheral;
-import com.sensirion.libble.services.RHTService;
+import com.sensirion.libble.services.AbstractRHTService;
 import com.sensirion.libble.utils.RHTDataPoint;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class SHTC1RHTService extends RHTService {
+public class SHTC1RHTService extends AbstractRHTService {
 
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";

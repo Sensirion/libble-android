@@ -6,9 +6,9 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
-import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.AbstractBleService;
 
-public class SHTC1ConnectionSpeedService extends BleService {
+public class SHTC1ConnectionSpeedService extends AbstractBleService {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000fa10-0000-1000-8000-00805f9b34fb";

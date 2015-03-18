@@ -11,15 +11,15 @@ import com.sensirion.libble.listeners.history.HistoryListener;
 import java.util.Iterator;
 
 /**
- * This service can be used for control data download. The user can obtain this service directly from the
+ * This service can be used to control data download. The user can obtain this service directly from the
  * {@link com.sensirion.libble.devices.BleDevice} and can use it without needing to know how it is
  * implemented or which type of data it use.
  * <p/>
- * This service should be implemented by all the services which retrieves information from historical data.
+ * This service should be implemented by all the services that retrieve historical data.
  */
-public abstract class HistoryService extends BleService<HistoryListener> {
+public abstract class AbstractHistoryService extends AbstractBleService<HistoryListener> {
 
-    public HistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
+    public AbstractHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
     }
 

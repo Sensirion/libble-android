@@ -18,13 +18,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-public abstract class RHTService extends BleService<RHTListener> {
+public abstract class AbstractRHTService extends AbstractBleService<RHTListener> {
 
     private static final Set<RHTListener> mRHTListeners = Collections.synchronizedSet(new HashSet<RHTListener>());
     private static final Set<TemperatureListener> mTemperatureListeners = Collections.synchronizedSet(new HashSet<TemperatureListener>());
     private static final Set<HumidityListener> mHumidityListeners = Collections.synchronizedSet(new HashSet<HumidityListener>());
 
-    public RHTService(@NonNull final Peripheral servicePeripheral, @NonNull final BluetoothGattService bluetoothGattService) {
+    public AbstractRHTService(@NonNull final Peripheral servicePeripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         super(servicePeripheral, bluetoothGattService);
     }
 

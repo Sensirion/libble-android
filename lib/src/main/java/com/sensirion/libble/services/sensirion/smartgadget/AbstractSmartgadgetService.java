@@ -8,7 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.AbstractBleService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
 import java.io.UnsupportedEncodingException;
@@ -16,7 +16,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
-abstract class AbstractSmartgadgetService<ListenerType extends NotificationListener> extends BleService<ListenerType> {
+abstract class AbstractSmartgadgetService<ListenerType extends NotificationListener> extends AbstractBleService<ListenerType> {
 
     private static final byte VALUE_SIZE = 4;
     private final String VALUE_NOTIFICATIONS_UUID; //4 Byte Float Little Endian - 20 byte [1 little endian integer (Sequence number), 4 Byte Float Little Endian]

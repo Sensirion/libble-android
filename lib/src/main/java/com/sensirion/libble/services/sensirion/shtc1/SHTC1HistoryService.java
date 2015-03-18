@@ -11,7 +11,7 @@ import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.listeners.services.HumidityListener;
 import com.sensirion.libble.listeners.services.RHTListener;
 import com.sensirion.libble.listeners.services.TemperatureListener;
-import com.sensirion.libble.services.HistoryService;
+import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.utils.HumidityUnit;
 import com.sensirion.libble.utils.RHTDataPoint;
 import com.sensirion.libble.utils.TemperatureUnit;
@@ -28,7 +28,7 @@ import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT32;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT8;
 
-public class SHTC1HistoryService extends HistoryService {
+public class SHTC1HistoryService extends AbstractHistoryService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
 

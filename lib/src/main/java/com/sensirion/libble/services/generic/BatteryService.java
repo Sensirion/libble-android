@@ -7,12 +7,12 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.services.BatteryListener;
-import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.AbstractBleService;
 
 import java.util.Iterator;
 import java.util.concurrent.Executors;
 
-public class BatteryService extends BleService<BatteryListener> {
+public class BatteryService extends AbstractBleService<BatteryListener> {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";

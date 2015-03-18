@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
  *
  * Manages automatically the services listeners represented with the generic '<code>ListenerType extends NotificationListener</code>'
  */
-public abstract class BleService<ListenerType extends NotificationListener> {
+public abstract class AbstractBleService<ListenerType extends NotificationListener> {
 
     //Characteristic descriptor UUIDs
     protected static final UUID USER_CHARACTERISTIC_DESCRIPTOR_UUID = UUID.fromString("00002901-0000-1000-8000-00805f9b34fb");
@@ -55,7 +55,7 @@ public abstract class BleService<ListenerType extends NotificationListener> {
     private final Set<BluetoothGattCharacteristic> mRegisteredNotifyCharacteristics = Collections.synchronizedSet(new HashSet<BluetoothGattCharacteristic>());
     private boolean mIsRequestingNotifications = false;
 
-    public BleService(@NonNull final Peripheral servicePeripheral, @NonNull final BluetoothGattService bluetoothGattService) {
+    public AbstractBleService(@NonNull final Peripheral servicePeripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         mPeripheral = servicePeripheral;
         mBluetoothGattService = bluetoothGattService;
         mNotificationClassType = getListenerClassType();
@@ -69,16 +69,16 @@ public abstract class BleService<ListenerType extends NotificationListener> {
     }
 
     /**
-     * Obtain the class type of <code>ListenerType</code> in case it's set by the {@link com.sensirion.libble.services.BleService} implementation.
+     * Obtain the class type of <code>ListenerType</code> in case it's set by the {@link AbstractBleService} implementation.
      * @return <code>Class<ListenerType></code> in case the service wants the listeners to be managed automatically - <code>null</code> otherwise.
      */
     @Nullable
     private Class<ListenerType> getListenerClassType() {
-        final Stack<Class<? extends BleService>> classInheritanceStack = new Stack<>();
-        Class<? extends BleService> serviceClass = getClass();
-        while (serviceClass.getSuperclass() != BleService.class){
+        final Stack<Class<? extends AbstractBleService>> classInheritanceStack = new Stack<>();
+        Class<? extends AbstractBleService> serviceClass = getClass();
+        while (serviceClass.getSuperclass() != AbstractBleService.class){
             classInheritanceStack.push(serviceClass);
-            serviceClass = (Class<? extends BleService>) serviceClass.getSuperclass();
+            serviceClass = (Class<? extends AbstractBleService>) serviceClass.getSuperclass();
         }
         do {
             Type genericSuperclass = serviceClass.getGenericSuperclass();
@@ -101,8 +101,9 @@ public abstract class BleService<ListenerType extends NotificationListener> {
      * Asks the bluetooth service for a characteristic.
      *
      * @param uuid {@link java.lang.String} from the characteristic requested by the user.
-     * @return {@link android.bluetooth.BluetoothGattCharacteristic} requested by the user.
+     * @return {@link android.bluetooth.BluetoothGattCharacteristic} requested by the user - <code>null</code> if no service is found.
      */
+    @Nullable
     protected BluetoothGattCharacteristic getCharacteristic(@NonNull final String uuid) {
         return mBluetoothGattService.getCharacteristic(UUID.fromString(uuid.trim().toLowerCase()));
     }
@@ -121,7 +122,7 @@ public abstract class BleService<ListenerType extends NotificationListener> {
      * This method is called when a characteristic was written in the device.
      *
      * @param characteristic that was written in the device with success.
-     *                       return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
+     * @return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
      */
     public boolean onCharacteristicWrite(@NonNull final BluetoothGattCharacteristic characteristic) {
         return mBluetoothGattService.getCharacteristics().contains(characteristic);
@@ -156,22 +157,19 @@ public abstract class BleService<ListenerType extends NotificationListener> {
      *
      * @return {@link java.lang.String} of the UUID.
      */
+    @NonNull
     public String getUUIDString() {
         return mBluetoothGattService.getUuid().toString();
     }
 
     /**
-     * Checks if the service implementation is from a given type.
+     * Check if the service implementation could match a given type, based on its class name.
      *
-     * @param serviceDescription name or simple name of the class from the service.
+     * @param serviceDescription simple name of the class from the service.
      * @return <code>true</code> if the service implementation is from the given type - <code>false</code> otherwise.
      */
-    public boolean isExplicitService(final String serviceDescription) {
-        if (BleService.class.getName().endsWith(serviceDescription)) {
-            Log.w(TAG, "isExplicitService -> A generic service can't be retrieved.");
-            return false; //A generic service can't be retrieved.
-        }
-        return this.getClass().getName().endsWith(serviceDescription);
+    public boolean isExplicitService(@NonNull final String serviceDescription) {
+        return this.getClass().getSimpleName().equals(serviceDescription);
     }
 
     /**
@@ -179,10 +177,10 @@ public abstract class BleService<ListenerType extends NotificationListener> {
      *
      * @return {@link java.lang.String} with the device address.
      */
+    @NonNull
     public String getDeviceAddress() {
         return mPeripheral.getAddress();
     }
-
 
     protected void registerNotification(@NonNull final BluetoothGattCharacteristic characteristic) {
         final int properties = characteristic.getProperties();
@@ -326,8 +324,8 @@ public abstract class BleService<ListenerType extends NotificationListener> {
     public boolean equals(@Nullable final Object otherService) {
         if (otherService == null) {
             return false;
-        } else if (otherService instanceof BleService) {
-            return ((BleService) otherService).getClass().getSimpleName().equals(TAG);
+        } else if (otherService instanceof AbstractBleService) {
+            return ((AbstractBleService) otherService).getClass().getSimpleName().equals(TAG);
         } else if (otherService instanceof String) {
             return isExplicitService((String) otherService);
         }

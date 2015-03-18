@@ -8,7 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.AbstractBleService;
 
 import java.util.List;
 import java.util.UUID;
@@ -278,10 +278,10 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
      *
      * @param deviceAddress of the device.
      * @param serviceName   name of the service.
-     * @return {@link com.sensirion.libble.services.BleService}
+     * @return {@link com.sensirion.libble.services.AbstractBleService}
      */
     @SuppressWarnings("unused")
-    public BleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
+    public AbstractBleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
         return mBleManager.getServiceWithName(deviceAddress, serviceName);
     }
 

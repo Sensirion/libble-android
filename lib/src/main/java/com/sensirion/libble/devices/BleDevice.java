@@ -5,8 +5,8 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.services.BleService;
-import com.sensirion.libble.services.HistoryService;
+import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.AbstractHistoryService;
 
 /**
  * Interface for any device that supports Bluetooth Low Energy (BLE)
@@ -63,34 +63,34 @@ public interface BleDevice {
     int getRSSI();
 
     /**
-     * NOTE: Returns the first {@link com.sensirion.libble.services.BleService} found for the given type.
-     * Obtain a {@link com.sensirion.libble.services.BleService} in case the peripheral has one.
+     * NOTE: Returns the first {@link com.sensirion.libble.services.AbstractBleService} found for the given type.
+     * Obtain a {@link com.sensirion.libble.services.AbstractBleService} in case the peripheral has one.
      *
      * @param type service class that the user wants to obtain.
      * @param <T>  Class of the service.
-     * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given class.
+     * @return {@link com.sensirion.libble.services.AbstractBleService} that corresponds to the given class.
      */
     @Nullable
-    <T extends BleService> T getDeviceService(@NonNull Class<T> type);
+    <T extends AbstractBleService> T getDeviceService(@NonNull Class<T> type);
 
     /**
-     * Obtains a {@link com.sensirion.libble.services.BleService} with a particular name.
+     * Obtains a {@link com.sensirion.libble.services.AbstractBleService} with a particular name.
      * NOTE: Returns the first service found with the given name.
      *
      * @param serviceName name of the service.
-     * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given name
+     * @return {@link com.sensirion.libble.services.AbstractBleService} that corresponds to the given name
      */
     @Nullable
-    BleService getDeviceService(@NonNull String serviceName);
+    AbstractBleService getDeviceService(@NonNull String serviceName);
 
     /**
-     * Obtains a list of the discovered {@link com.sensirion.libble.services.BleService}.
+     * Obtains a list of the discovered {@link com.sensirion.libble.services.AbstractBleService}.
      *
      * @return Iterable with a list of the discovered services.
      */
     @SuppressWarnings("unused")
     @NonNull
-    Iterable<BleService> getDiscoveredServices();
+    Iterable<AbstractBleService> getDiscoveredServices();
 
     /**
      * Obtains a list with the name of the discovered services.
@@ -101,9 +101,9 @@ public interface BleDevice {
     Iterable<String> getDiscoveredServicesNames();
 
     /**
-     * Counts the number of {@link com.sensirion.libble.services.BleService}.
+     * Counts the number of {@link com.sensirion.libble.services.AbstractBleService}.
      *
-     * @return <code>int</code> with the number of {@link com.sensirion.libble.services.BleService}.
+     * @return <code>int</code> with the number of {@link com.sensirion.libble.services.AbstractBleService}.
      */
     int getNumberServices();
 
@@ -135,7 +135,7 @@ public interface BleDevice {
      * Retrieves the device history service in case it has one.
      * NOTE: In case the device has more than one history service it will only return the first one.
      *
-     * @return {@link com.sensirion.libble.services.HistoryService} of the device - <code>null</code> if it doesn't haves one.
+     * @return {@link com.sensirion.libble.services.AbstractHistoryService} of the device - <code>null</code> if it doesn't haves one.
      */
-    HistoryService getHistoryService();
+    AbstractHistoryService getHistoryService();
 }
