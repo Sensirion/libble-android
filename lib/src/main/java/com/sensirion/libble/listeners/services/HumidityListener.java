@@ -1,5 +1,7 @@
 package com.sensirion.libble.listeners.services;
 
+import android.support.annotation.NonNull;
+
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.utils.HumidityUnit;
@@ -17,7 +19,7 @@ public interface HumidityListener extends NotificationListener {
      * @param humidity   {@link java.lang.Float} with the humidity value.
      * @param sensorName {@link java.lang.String} with the name of the sensor that reported the humidity data.
      */
-    void onNewHumidity(BleDevice device, float humidity, String sensorName, HumidityUnit unit);
+    void onNewHumidity(@NonNull BleDevice device, float humidity, @NonNull String sensorName, @NonNull HumidityUnit unit);
 
     /**
      * Sends to the user the latest historical humidity.
@@ -27,5 +29,5 @@ public interface HumidityListener extends NotificationListener {
      * @param timestamp        in milliseconds that determines when the humidity was obtained.
      * @param sensorName       of the sensor that reported the humidity.
      */
-    void onNewHistoricalHumidity(BleDevice device, float relativeHumidity, long timestamp, String sensorName, HumidityUnit unit);
+    void onNewHistoricalHumidity(@NonNull BleDevice device, float relativeHumidity, long timestamp, @NonNull String sensorName, @NonNull HumidityUnit unit);
 }

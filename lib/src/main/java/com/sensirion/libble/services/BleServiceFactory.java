@@ -27,7 +27,7 @@ public class BleServiceFactory {
 
     private static BleServiceFactory mInstance = new BleServiceFactory();
 
-    private final Map<String, Class<? extends BleService>> mServiceLookUp = Collections.synchronizedMap(new HashMap<String, Class<? extends BleService>>());
+    private final Map<String, Class<? extends AbstractBleService>> mServiceLookUp = Collections.synchronizedMap(new HashMap<String, Class<? extends AbstractBleService>>());
 
     private BleServiceFactory() {
         registerGenericServices();
@@ -62,13 +62,13 @@ public class BleServiceFactory {
     }
 
     /**
-     * Wraps a given {@link android.bluetooth.BluetoothGattService} to a {@link BleService}
+     * Wraps a given {@link android.bluetooth.BluetoothGattService} to a {@link AbstractBleService}
      *
      * @param parent  {@link com.sensirion.libble.devices.Peripheral} that discovered the service.
      * @param service {@link android.bluetooth.BluetoothGattService} that should be wrapped.
-     * @return {@link BleService} with the service class with the same lookup UUID as the BluetoothGattService. <code>null</code> if the class is not a valid class.
+     * @return {@link AbstractBleService} with the service class with the same lookup UUID as the BluetoothGattService. <code>null</code> if the class is not a valid class.
      */
-    public BleService createServiceFor(@NonNull final Peripheral parent, @NonNull final BluetoothGattService service) {
+    public AbstractBleService createServiceFor(@NonNull final Peripheral parent, @NonNull final BluetoothGattService service) {
         final String uuid = service.getUuid().toString();
         final Class serviceClass = mServiceLookUp.get(uuid);
 
@@ -79,7 +79,7 @@ public class BleServiceFactory {
 
         Log.i(TAG, String.format("createServiceFor -> Create known service with uuid %s from class %s", uuid, serviceClass.getSimpleName()));
         try {
-            final Constructor<? extends BleService> constructor = serviceClass.getDeclaredConstructor(Peripheral.class, BluetoothGattService.class);
+            final Constructor<? extends AbstractBleService> constructor = serviceClass.getDeclaredConstructor(Peripheral.class, BluetoothGattService.class);
             return constructor.newInstance(parent, service);
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             Log.e(TAG, "createServiceFor -> During the creation of a service the following exception was thrown -> ", e);
@@ -89,12 +89,12 @@ public class BleServiceFactory {
 
     /**
      * Lets you add your own specific service implementations that are created on app-level.
-     * Make sure that these classes extend {@link BleService}.
+     * Make sure that these classes extend {@link AbstractBleService}.
      *
      * @param uuid       of the service.
      * @param newService class that is going to be instantiate.
      */
-    public void registerServiceImplementation(@NonNull final String uuid, @NonNull final Class<? extends BleService> newService) {
+    public void registerServiceImplementation(@NonNull final String uuid, @NonNull final Class<? extends AbstractBleService> newService) {
         if (mServiceLookUp.containsKey(uuid)) {
             Log.w(TAG, String.format("registerServiceImplementation -> The service with UUID %s was replaced by another service version.", uuid));
             mServiceLookUp.remove(uuid);

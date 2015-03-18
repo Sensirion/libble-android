@@ -2,6 +2,7 @@ package com.sensirion.libble.services;
 
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -10,15 +11,15 @@ import com.sensirion.libble.listeners.history.HistoryListener;
 import java.util.Iterator;
 
 /**
- * This service can be used for control data download. The user can obtain this service directly from the
+ * This service can be used to control data download. The user can obtain this service directly from the
  * {@link com.sensirion.libble.devices.BleDevice} and can use it without needing to know how it is
  * implemented or which type of data it use.
  * <p/>
- * This service should be implemented by all the services which retrieves information from historical data.
+ * This service should be implemented by all the services that retrieve historical data.
  */
-public abstract class HistoryService extends BleService<HistoryListener> {
+public abstract class AbstractHistoryService extends AbstractBleService<HistoryListener> {
 
-    public HistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
+    public AbstractHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
     }
 
@@ -116,12 +117,13 @@ public abstract class HistoryService extends BleService<HistoryListener> {
     public abstract boolean setDownloadInterval(int loggerIntervalInMilliseconds);
 
     /**
-     * Gets the interval of the device in milliseconds.
+     * Gets the interval between history data points on the device in milliseconds.
      *
-     * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known
+     * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known.
      */
     @SuppressWarnings("unused")
-    public abstract Integer getDownloadIntervalMs();
+    @Nullable
+    public abstract Integer getLoggingIntervalMs();
 
     /**
      * Deletes all the data from the device.
@@ -157,11 +159,12 @@ public abstract class HistoryService extends BleService<HistoryListener> {
     public abstract boolean setLoggingState(boolean enabled);
 
     /**
-     * Checks the number of elements a device have to download.
+     * Checks the number of logged elements that the user can download.
      *
      * @return {@link java.lang.Integer} with the number of logged elements. <code>null</code> if it's unknown.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public abstract Integer getNumberLoggedElements();
 
     /**

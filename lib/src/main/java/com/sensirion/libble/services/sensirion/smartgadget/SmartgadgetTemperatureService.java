@@ -14,7 +14,7 @@ import static com.sensirion.libble.utils.TemperatureConverter.convertTemperature
 import static com.sensirion.libble.utils.TemperatureConverter.convertTemperatureToFahrenheit;
 import static com.sensirion.libble.utils.TemperatureConverter.convertTemperatureToKelvin;
 
-public class SmartgadgetTemperatureService extends SmartgadgetRHTService<TemperatureListener> {
+public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService<TemperatureListener> {
 
     //SERVICE UUID.
     public static final String SERVICE_UUID = "00002234-b38d-4985-720e-0f993a68ee41";
@@ -78,6 +78,15 @@ public class SmartgadgetTemperatureService extends SmartgadgetRHTService<Tempera
         } else {
             Log.e(TAG, String.format("setValueUnit -> The service does not know how to manage value unit %s.", valueUnit));
         }
+    }
+
+    /**
+     * Checks if the service has all the information it needs.
+     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean isSynchronized() {
+        return mLastValue != null && mValueUnit != null && mSensorName != null;
     }
 
     /**

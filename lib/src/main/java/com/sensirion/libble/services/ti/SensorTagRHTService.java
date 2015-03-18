@@ -6,11 +6,11 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
-import com.sensirion.libble.services.RHTService;
+import com.sensirion.libble.services.AbstractRHTService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 import com.sensirion.libble.utils.RHTDataPoint;
 
-public class SensorTagRHTService extends RHTService {
+public class SensorTagRHTService extends AbstractRHTService {
 
     //SERVICE UUID
     public static final String SERVICE_UUID = "f000aa20-0451-4000-b000-000000000000";
