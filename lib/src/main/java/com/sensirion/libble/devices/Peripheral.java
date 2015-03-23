@@ -61,7 +61,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
         @Override
-        public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
+        public void onConnectionStateChange(@NonNull final BluetoothGatt gatt, final int status, final int newState) {
             super.onConnectionStateChange(gatt, status, newState);
             final String address = gatt.getDevice().getAddress();
 
