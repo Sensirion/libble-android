@@ -2,6 +2,7 @@ package com.sensirion.libble.services.sensirion.smartgadget;
 
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -69,27 +70,31 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
         if (valueUnit.endsWith("RH")) {
             mValueUnit = HumidityUnit.RELATIVE_HUMIDITY;
         } else {
-            Log.w(TAG, String.format("setValueUnit -> Value unit %s is unknown.", valueUnit));
+            Log.e(TAG, String.format("setValueUnit -> Value unit %s is unknown.", valueUnit));
         }
     }
 
-    /**
-     * Checks if the service has all the information it needs.
-     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
-     */
     @Override
-    public boolean isSynchronized() {
-        return mLastValue != null && mValueUnit != null && mSensorName != null;
+    public boolean isServiceReady() {
+        if (mLastValue == null) {
+            registerDeviceCharacteristicNotifications();
+        } else if (getSensorName() != null && mValueUnit != null) {
+            return true;
+        }
+        return false;
     }
 
     /**
      * Obtains the latest relative humidity.
      *
-     * @return {@link java.lang.Float} with the relative humidity - <code>null</code> if the relative humidity is not known.
+     * @return {@link java.lang.Float} with the relative humidity - <code>null</code> if the relative humidity is not available yet.
      */
+    @SuppressWarnings("unused")
+    @Nullable
     public Float getRelativeHumidity() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getRelativeHumidity -> Humidity is not known yet.");
+        if (mLastValue == null || mValueUnit == null) {
+            Log.w(TAG, "getRelativeHumidity -> Relative humidity is not available yet.");
+            registerDeviceCharacteristicNotifications();
             return null;
         }
         return mLastValue;

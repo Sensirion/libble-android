@@ -3,6 +3,7 @@ package com.sensirion.libble.services.sensirion.shtc1;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -15,8 +16,8 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
 
     //FORCE READING CONSTANTS
     private static final int MAX_WAIT_TIME_BETWEEN_READ_OR_WRITE_TRIES = 75;
-    private static final int MAX_TIME_FOR_READ_OR_WRITE = 1800; //1.8 seconds
-    private static final int MAX_READ_TRIES = MAX_TIME_FOR_READ_OR_WRITE / MAX_WAIT_TIME_BETWEEN_READ_OR_WRITE_TRIES;
+    private static final int TIME_BETWEEN_WRITE_REQUESTS = 1800; //1.8 seconds
+    private static final int MAX_WRITE_TRIES = TIME_BETWEEN_WRITE_REQUESTS / MAX_WAIT_TIME_BETWEEN_READ_OR_WRITE_TRIES;
 
     //UUIDs
     private static final String NOTIFICATION_CHARACTERISTIC_UUID = "0000fa11-0000-1000-8000-00805f9b34fb";
@@ -37,11 +38,12 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
      *
      * @return <code>true</code> if the notification speed is high. <code>false</code> if it's slow. <code>null</code> if it's not known.
      */
+    @SuppressWarnings("unused")
+    @Nullable
     public Boolean isNotificationSpeedValueSetHigh() {
         //If it doesn't have the speed value it asks for it.
         if (mNotificationSpeedLevel == null) {
-            mPeripheral.forceReadCharacteristic(mNotificationSpeedCharacteristic, MAX_WAIT_TIME_BETWEEN_READ_OR_WRITE_TRIES, MAX_READ_TRIES);
-            mPeripheral.cleanCharacteristicCache();
+            mPeripheral.readCharacteristic(mNotificationSpeedCharacteristic);
             if (mNotificationSpeedLevel == null) {
                 return null;
             }
@@ -59,7 +61,7 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
      * @return <code>true</code> if the connection speed was set in the device - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    public boolean setNotificationSpeed(final CONNECTION_SPEED connectionSpeed) {
+    public boolean setNotificationSpeed(@NonNull final CONNECTION_SPEED connectionSpeed) {
         switch (connectionSpeed) {
             case HIGH:
                 return setConnectionSpeed(true);
@@ -78,15 +80,15 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
      * @return <code>true</code> if the notification speed was set correctly - <code>false</code> otherwise.
      */
     public boolean setConnectionSpeed(final boolean connectionSpeed) {
-        if (isConnectionSpeedKnown()) {
+        if (isServiceReady()) {
             final byte notificationSpeedRequested = (connectionSpeed) ? CONNECTION_SPEED.HIGH.value : CONNECTION_SPEED.LOW.value;
             if (notificationSpeedRequested == mNotificationSpeedLevel) {
-                Log.w(TAG, String.format("In device %s the notification speed level was already set to %s speed.", mPeripheral.getAddress(), ((connectionSpeed) ? "HIGH" : "LOW")));
+                Log.w(TAG, String.format("In device %s the notification speed level was already set to %s speed.", getDeviceAddress(), ((connectionSpeed) ? "HIGH" : "LOW")));
                 return true;
             }
             mNotificationSpeedCharacteristic.setValue(notificationSpeedRequested, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-            if (mPeripheral.forceWriteCharacteristic(mNotificationSpeedCharacteristic, MAX_TIME_FOR_READ_OR_WRITE, MAX_WAIT_TIME_BETWEEN_READ_OR_WRITE_TRIES)) {
-                if (mPeripheral.forceReadCharacteristic(mNotificationSpeedCharacteristic, MAX_TIME_FOR_READ_OR_WRITE, MAX_WAIT_TIME_BETWEEN_READ_OR_WRITE_TRIES)) {
+            if (mPeripheral.forceWriteCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
+                if (mPeripheral.forceReadCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
                     return mNotificationSpeedLevel.equals(notificationSpeedRequested);
                 }
             }
@@ -95,11 +97,12 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
         return false;
     }
 
-    private boolean isConnectionSpeedKnown() {
+    @Override
+    public boolean isServiceReady() {
         if (mNotificationSpeedLevel == null) {
-            if (isNotificationSpeedValueSetHigh() == null) {
-                return false;
-            }
+            mPeripheral.readCharacteristic(mNotificationSpeedCharacteristic);
+            Log.w(TAG, "isServiceReady -> Service is not ready, asking for the remaining values in the background.");
+            return false;
         }
         return true;
     }

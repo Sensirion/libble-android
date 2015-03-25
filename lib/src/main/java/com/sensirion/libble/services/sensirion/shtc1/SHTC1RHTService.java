@@ -3,6 +3,7 @@ package com.sensirion.libble.services.sensirion.shtc1;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractRHTService;
@@ -25,7 +26,8 @@ public class SHTC1RHTService extends AbstractRHTService {
         bluetoothGattService.addCharacteristic(mHumidityTemperatureCharacteristic);
     }
 
-    private static RHTDataPoint convertToHumanReadableValues(final byte[] rawData) {
+    @NonNull
+    private static RHTDataPoint convertToHumanReadableValues(@NonNull final byte[] rawData) {
         final short[] humidityAndTemperature = new short[2];
 
         ByteBuffer.wrap(rawData).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(humidityAndTemperature);
@@ -63,6 +65,14 @@ public class SHTC1RHTService extends AbstractRHTService {
         registerNotification(mHumidityTemperatureCharacteristic);
     }
 
+    @Override
+    public boolean isServiceReady() {
+        if (getLastDatapoint() == null) {
+            registerDeviceCharacteristicNotifications();
+        }
+        return getLastDatapoint() != null;
+    }
+
     /**
      * Obtains the sensor name of the service.
      *
@@ -85,7 +95,7 @@ public class SHTC1RHTService extends AbstractRHTService {
      *
      * @return {@link com.sensirion.libble.utils.RHTDataPoint} with the last RHT data obtained from the sensor.
      */
-    @SuppressWarnings("unused")
+    @Nullable
     public RHTDataPoint getLastDatapoint() {
         return mLastDatapoint;
     }

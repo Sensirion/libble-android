@@ -7,7 +7,6 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
-import com.sensirion.libble.services.AbstractBleService;
 import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
@@ -135,44 +134,15 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
         super.registerNotification(mStartLoggerDownloadCharacteristic);
     }
 
-    /**
-     * Checks if the history service has the updated information from the BleDevice.
-     *
-     * @return <code>true</code> if the service is synchronized. <code>false</code> otherwise.
-     */
     @Override
-    public boolean isServiceSynchronized() {
-        if (mLoggerIntervalMs == null) {
+    public boolean isServiceReady() {
+        if (mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
             forceCharacteristicRequest();
             return false;
         }
-        if (mOldestTimestampToDownloadMs == null) {
-            forceCharacteristicRequest();
-            return false;
-        } else if (mOldestTimestampToDownloadMs == 0) {
+        if (mOldestTimestampToDownloadMs == 0 || mNewestSampleTimestampMs == 0) {
             readTimestamps();
             return false;
-        }
-        if (mNewestSampleTimestampMs == null) {
-            forceCharacteristicRequest();
-            return false;
-        } else if (mNewestSampleTimestampMs == 0) {
-            readTimestamps();
-            return false;
-        }
-        return checkSmartgadgetServices();
-    }
-
-    private boolean checkSmartgadgetServices() {
-        for (final AbstractBleService service : mPeripheral.getDiscoveredServices()){
-            if (service instanceof AbstractSmartgadgetService){
-                if (((AbstractSmartgadgetService) service).isSynchronized()){
-                    Log.d(TAG, String.format("checkSmartgadgetServices -> Service %s is synchronized.", service));
-                } else {
-                    Log.i(TAG, String.format("checkSmartgadgetServices -> Service %s is not synchronized yet.", service));
-                    return false;
-                }
-            }
         }
         return true;
     }
@@ -241,7 +211,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     private void enableHistoryDataNotifications() {
-        if (isServiceSynchronized()) {
+        if (isServiceReady()) {
             updateOldestTimestamp();
             mStartLoggerDownloadCharacteristic.setValue(1, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
             sleep(MAX_WAITING_TIME_BETWEEN_REQUEST_MS);
@@ -467,8 +437,9 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
+     * Informs the history service of the last sequence number downloaded.
+     *
      * @param sequenceNumber that has been downloaded by the user.
-     *                       NOTE: This method should only be called by other smartgadget services.
      */
     void setLastSequenceNumberDownloaded(final int sequenceNumber) {
         if (sequenceNumber > mLastSequenceNumberDownloaded) {

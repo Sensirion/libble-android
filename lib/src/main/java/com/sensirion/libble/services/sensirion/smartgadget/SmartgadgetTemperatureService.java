@@ -2,6 +2,7 @@ package com.sensirion.libble.services.sensirion.smartgadget;
 
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -80,60 +81,61 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
         }
     }
 
-    /**
-     * Checks if the service has all the information it needs.
-     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
-     */
     @Override
-    public boolean isSynchronized() {
-        return mLastValue != null && mValueUnit != null && mSensorName != null;
+    public boolean isServiceReady() {
+        if (mLastValue == null) {
+            registerDeviceCharacteristicNotifications();
+        } else if (getSensorName() != null && mValueUnit == null) {
+            return true;
+        }
+        return false;
     }
 
     /**
      * Obtains the latest temperature in Celsius.
      *
-     * @return {@link java.lang.Float} with the temperature in Celsius - <code>null</code> if the temperature is not known.
+     * @return {@link java.lang.Float} with the temperature in Celsius - <code>null</code> if the temperature is not available yet.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public Float getTemperatureInCelsius() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getTemperatureInCelsius -> Temperature is not known yet.");
+        if (mLastValue == null || mValueUnit == null) {
+            registerDeviceCharacteristicNotifications();
+            Log.w(TAG, "getTemperatureInCelsius -> Temperature is not available yet.");
             return null;
         }
-
-        Log.d(TAG, String.format("getTemperatureInCelsius -> Requested Temperature in celsius in peripheral %s.", getDeviceAddress()));
         return convertTemperatureToCelsius(mLastValue, mValueUnit);
     }
 
     /**
      * Obtains the latest temperature in Fahrenheit.
      *
-     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not known.
+     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not available yet.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public Float getTemperatureInFahrenheit() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getTemperatureInCelsius -> Temperature is not known yet.");
+        if (mLastValue == null || mValueUnit == null) {
+            registerDeviceCharacteristicNotifications();
+            Log.w(TAG, "getTemperatureInFahrenheit -> Temperature is not available yet.");
             return null;
         }
-
-        Log.d(TAG, String.format("getTemperatureInFahrenheit -> Requested Temperature in celsius in peripheral %s.", getDeviceAddress()));
         return convertTemperatureToFahrenheit(mLastValue, mValueUnit);
     }
 
     /**
      * Obtains the latest temperature in Kelvin.
      *
-     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not known.
+     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not available yet.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public Float getTemperatureInKelvin() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getTemperatureInCelsius -> Temperature is not known yet.");
+        if (mLastValue == null || mValueUnit == null) {
+            Log.w(TAG, "getTemperatureInKelvin -> Temperature is not available yet.");
+            registerDeviceCharacteristicNotifications();
             return null;
         }
-
-        Log.d(TAG, String.format("getTemperatureInFahrenheit -> Requested Temperature in celsius in peripheral %s.", getDeviceAddress()));
         return convertTemperatureToKelvin(mLastValue, mValueUnit);
     }
 }

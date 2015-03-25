@@ -3,6 +3,7 @@ package com.sensirion.libble.services.generic;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -12,10 +13,6 @@ public class DeviceInformationService extends AbstractBleService {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000180a-0000-1000-8000-00805f9b34fb";
-
-    //FORCE READING CONSTANTS
-    private static final int WAITING_TIME_BETWEEN_READS_MS = 75;
-    private static final int MAX_READ_TRIES = 3000 / WAITING_TIME_BETWEEN_READS_MS;
 
     //UUIDs
     private static final String MANUFACTURER_NAME_CHARACTERISTIC_UUID = "00002A29-0000-1000-8000-00805f9b34fb";
@@ -34,11 +31,17 @@ public class DeviceInformationService extends AbstractBleService {
     private final BluetoothGattCharacteristic mSoftwareRevisionCharacteristic;
 
     //CHARACTERISTIC VALUES
+    @Nullable
     private String mManufacturerName;
+    @Nullable
     private String mModelNumber;
+    @Nullable
     private String mSerialNumber;
+    @Nullable
     private String mHardwareRevision;
+    @Nullable
     private String mFirmwareRevision;
+    @Nullable
     private String mSoftwareRevision;
 
     public DeviceInformationService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
@@ -61,6 +64,12 @@ public class DeviceInformationService extends AbstractBleService {
 
         mSoftwareRevisionCharacteristic = getCharacteristic(SOFTWARE_REVISION_CHARACTERISTIC_UUID);
         parent.readCharacteristic(mSoftwareRevisionCharacteristic);
+    }
+
+    @Override
+    public boolean isServiceReady() {
+        return getManufacturerName() != null & getModelNumber() != null & getSerialNumber() != null
+                & getHardwareRevision() != null & getFirmwareRevision() != null & getSoftwareRevision() != null;
     }
 
     /**
@@ -100,103 +109,85 @@ public class DeviceInformationService extends AbstractBleService {
     }
 
     /**
-     * Returns the manufacter name of the device.
+     * Returns the manufacturer name of the device. If its not available it request it in a background thread.
      *
-     * @return {@link java.lang.String} with the manufacter name of the device.
+     * @return {@link java.lang.String} with the manufacturer name of the device - <code>null</code> if its not available yet.
      */
-    @SuppressWarnings("unused")
-    public String getManufacterName() {
+    @Nullable
+    public String getManufacturerName() {
         if (mManufacturerName == null) {
-            mPeripheral.forceReadCharacteristic(mManufacturerNameCharacteristic, WAITING_TIME_BETWEEN_READS_MS, MAX_READ_TRIES);
-            if (mManufacturerName == null) {
-                Log.e(TAG, "getManufacterName -> Manufacter Name is not known yet.");
-                return null;
-            }
+            Log.w(TAG, "getManufacturerName -> Manufacturer Name is not available yet. Requesting it in a background thread");
+            mPeripheral.readCharacteristic(mManufacturerNameCharacteristic);
         }
         return mManufacturerName;
     }
 
     /**
-     * Returns the model number of the device.
+     * Returns the model number of the device. If its not available it request it in a background thread.
      *
-     * @return {@link java.lang.String} with the model number of the device.
+     * @return {@link java.lang.String} with the model number of the device - <code>null</code> if its not available yet.
      */
-    @SuppressWarnings("unused")
+    @Nullable
     public String getModelNumber() {
         if (mModelNumber == null) {
-            mPeripheral.forceReadCharacteristic(mModelNumberCharacteristic, WAITING_TIME_BETWEEN_READS_MS, MAX_READ_TRIES);
-            if (mModelNumber == null) {
-                Log.e(TAG, "getModelNumber -> Model Number is not known yet.");
-                return null;
-            }
+            Log.w(TAG, "getModelNumber -> Model Number is not available yet. Requesting it in a background thread");
+            mPeripheral.readCharacteristic(mModelNumberCharacteristic);
         }
         return mModelNumber;
     }
 
     /**
-     * Returns the serial number of the device.
+     * Returns the serial number of the device. If its not available it request it in a background thread.
      *
-     * @return {@link java.lang.String} with the serial number of the device.
+     * @return {@link java.lang.String} with the serial number of the device - <code>null</code> if its not available yet.
      */
-    @SuppressWarnings("unused")
+    @Nullable
     public String getSerialNumber() {
         if (mSerialNumber == null) {
-            mPeripheral.forceReadCharacteristic(mSerialNumberCharacteristic, WAITING_TIME_BETWEEN_READS_MS, MAX_READ_TRIES);
-            if (mSerialNumber == null) {
-                Log.e(TAG, "getSerialNumber -> Serial Number is not known yet.");
-                return null;
-            }
+            mPeripheral.readCharacteristic(mSerialNumberCharacteristic);
+            Log.w(TAG, "getSerialNumber -> Serial number is not available yet. Requesting it in a background thread");
         }
         return mSerialNumber;
     }
 
     /**
-     * Returns the hardware revision of the device.
+     * Returns the hardware revision of the device. If its not available it request it in a background thread.
      *
-     * @return {@link java.lang.String} with the hardware revision.
+     * @return {@link java.lang.String} with the hardware revision - <code>null</code> if its not available yet.
      */
-    @SuppressWarnings("unused")
+    @Nullable
     public String getHardwareRevision() {
         if (mHardwareRevision == null) {
-            mPeripheral.forceReadCharacteristic(mHardwareRevisionCharacteristic, WAITING_TIME_BETWEEN_READS_MS, MAX_READ_TRIES);
-            if (mHardwareRevision == null) {
-                Log.e(TAG, "getHardwareRevision -> Hardware Revision is not known yet.");
-                return null;
-            }
+            mPeripheral.readCharacteristic(mHardwareRevisionCharacteristic);
+            Log.w(TAG, "getHardwareRevision -> Hardware revision is not available yet. Requesting it in a background thread");
         }
         return mHardwareRevision;
     }
 
     /**
-     * Returns the firmware revision of the device.
+     * Returns the firmware revision of the device. If its not available it request it in a background thread.
      *
-     * @return {@link java.lang.String} with the firmware revision.
+     * @return {@link java.lang.String} with the firmware revision - <code>null</code> if its not available yet.
      */
-    @SuppressWarnings("unused")
+    @Nullable
     public String getFirmwareRevision() {
         if (mFirmwareRevision == null) {
-            mPeripheral.forceReadCharacteristic(mFirmwareRevisionCharacteristic, WAITING_TIME_BETWEEN_READS_MS, MAX_READ_TRIES);
-            if (mFirmwareRevision == null) {
-                Log.e(TAG, "getFirmwareRevision -> Firmware Revision is not known yet.");
-                return null;
-            }
+            mPeripheral.readCharacteristic(mFirmwareRevisionCharacteristic);
+            Log.w(TAG, "getFirmwareRevision -> Firmware revision is not available yet. Requesting it in a background thread");
         }
         return mHardwareRevision;
     }
 
     /**
-     * Returns the software revision of the device.
+     * Returns the software revision of the device. If its not available it request it in a background thread.
      *
-     * @return {@link java.lang.String} with the software revision of the device.
+     * @return {@link java.lang.String} with the software revision of the device - <code>null</code> if its not available yet.
      */
-    @SuppressWarnings("unused")
+    @Nullable
     public String getSoftwareRevision() {
         if (mSoftwareRevision == null) {
-            mPeripheral.forceReadCharacteristic(mSoftwareRevisionCharacteristic, WAITING_TIME_BETWEEN_READS_MS, MAX_READ_TRIES);
-            if (mSoftwareRevision == null) {
-                Log.e(TAG, "getSoftwareRevision -> Software Revision is not known yet.");
-                return null;
-            }
+            mPeripheral.readCharacteristic(mSoftwareRevisionCharacteristic);
+            Log.w(TAG, "getSoftwareRevision -> Software revision is not available yet. Requesting it in a background thread");
         }
         return mSoftwareRevision;
     }
