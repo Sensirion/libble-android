@@ -174,11 +174,4 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      */
     @SuppressWarnings("unused")
     public abstract boolean isDownloadInProgress();
-
-    /**
-     * Checks if the service is synchronized with the {@link com.sensirion.libble.devices.BleDevice}.
-     *
-     * @return <code>true</code> if the service is synchronized. <code>false</code> otherwise.
-     */
-    public abstract boolean isServiceSynchronized();
 }

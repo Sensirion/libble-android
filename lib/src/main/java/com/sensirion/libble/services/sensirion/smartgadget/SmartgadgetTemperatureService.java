@@ -2,6 +2,7 @@ package com.sensirion.libble.services.sensirion.smartgadget;
 
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -80,60 +81,60 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
         }
     }
 
-    /**
-     * Checks if the service has all the information it needs.
-     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
-     */
     @Override
-    public boolean isSynchronized() {
+    public void synchronizeService() {
+        if (mLastValue == null) {
+            registerDeviceCharacteristicNotifications();
+        }
+    }
+
+    @Override
+    public boolean isServiceReady() {
         return mLastValue != null && mValueUnit != null && mSensorName != null;
     }
 
     /**
      * Obtains the latest temperature in Celsius.
      *
-     * @return {@link java.lang.Float} with the temperature in Celsius - <code>null</code> if the temperature is not known.
+     * @return {@link java.lang.Float} with the temperature in Celsius - <code>null</code> if the temperature is not available yet.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public Float getTemperatureInCelsius() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getTemperatureInCelsius -> Temperature is not known yet.");
-            return null;
+        if (isServiceReady()) {
+            return convertTemperatureToCelsius(mLastValue, mValueUnit);
         }
-
-        Log.d(TAG, String.format("getTemperatureInCelsius -> Requested Temperature in celsius in peripheral %s.", getDeviceAddress()));
-        return convertTemperatureToCelsius(mLastValue, mValueUnit);
+        Log.e(TAG, "getTemperatureInCelsius -> Service is not synchronized yet. (HINT -> call synchronizeService first).");
+        return null;
     }
 
     /**
      * Obtains the latest temperature in Fahrenheit.
      *
-     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not known.
+     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not available yet.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public Float getTemperatureInFahrenheit() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getTemperatureInCelsius -> Temperature is not known yet.");
-            return null;
+        if (isServiceReady()) {
+            return convertTemperatureToFahrenheit(mLastValue, mValueUnit);
         }
-
-        Log.d(TAG, String.format("getTemperatureInFahrenheit -> Requested Temperature in celsius in peripheral %s.", getDeviceAddress()));
-        return convertTemperatureToFahrenheit(mLastValue, mValueUnit);
+        Log.e(TAG, "getTemperatureInFahrenheit -> Service is not synchronized yet. (HINT -> call synchronizeService first).");
+        return null;
     }
 
     /**
      * Obtains the latest temperature in Kelvin.
      *
-     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not known.
+     * @return {@link java.lang.Float} with the temperature in Fahrenheit - <code>null</code> if the temperature is not available yet.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public Float getTemperatureInKelvin() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getTemperatureInCelsius -> Temperature is not known yet.");
-            return null;
+        if (isServiceReady()) {
+            return convertTemperatureToKelvin(mLastValue, mValueUnit);
         }
-
-        Log.d(TAG, String.format("getTemperatureInFahrenheit -> Requested Temperature in celsius in peripheral %s.", getDeviceAddress()));
-        return convertTemperatureToKelvin(mLastValue, mValueUnit);
+        Log.e(TAG, "getTemperatureInKelvin -> Service is not synchronized yet. (HINT -> call synchronizeService first).");
+        return null;
     }
 }

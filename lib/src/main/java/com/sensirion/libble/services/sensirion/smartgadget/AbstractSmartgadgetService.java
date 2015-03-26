@@ -4,11 +4,13 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
 import java.io.UnsupportedEncodingException;
@@ -41,6 +43,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
      */
     @Override
     public void registerDeviceCharacteristicNotifications() {
+        Log.d(TAG, "registerDeviceCharacteristicNotifications -> Requesting characteristic notifications.");
         registerNotification(mValueCharacteristic);
     }
 
@@ -109,13 +112,26 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
             Log.e(TAG, "parseHistoryValue -> Received History value does not have a valid length.");
             return false;
         }
+
+        final SmartgadgetHistoryService historyService;
+
+        if (mPeripheral.getHistoryService() == null) {
+            Log.e(TAG, "parseHistoryValue -> The device does not have a valid history service.");
+            return false;
+        } else if (mPeripheral.getHistoryService() instanceof SmartgadgetHistoryService) {
+            historyService = (SmartgadgetHistoryService) mPeripheral.getHistoryService();
+        } else {
+            Log.e(TAG, String.format("parseHistoryValue -> The history service %s does not inherit %s.", mPeripheral.getHistoryService(), AbstractHistoryService.class));
+            return false;
+        }
+
         final int sequenceNumber = extractSequenceNumber(historyValueBuffer);
-        final Integer historyInterval = mPeripheral.getHistoryService().getLoggingIntervalMs();
+        final Integer historyInterval = historyService.getLoggingIntervalMs();
+
         if (historyInterval == null) {
             Log.e(TAG, "parseHistoryValue -> History interval can't be null during data download.");
             return false;
         }
-        final SmartgadgetHistoryService historyService = (SmartgadgetHistoryService) mPeripheral.getHistoryService();
 
         final Long newestTimestamp = historyService.getNewestTimestampMs();
         if (newestTimestamp == null) {
@@ -148,8 +164,11 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
      *
      * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known yet.
      */
-    @SuppressWarnings("unused")
+    @Nullable
     public String getSensorName() {
+        if (mSensorName == null) {
+            mPeripheral.readDescriptor(mValueCharacteristic.getDescriptor(USER_CHARACTERISTIC_DESCRIPTOR_UUID));
+        }
         return mSensorName;
     }
 
@@ -169,10 +188,4 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
      * @param valueUnit {@link java.lang.String} with the value unit specified in the device.
      */
     abstract void setValueUnit(@NonNull final String valueUnit);
-
-    /**
-     * Checks if the service has all the information it needs.
-     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
-     */
-    public abstract boolean isSynchronized();
 }

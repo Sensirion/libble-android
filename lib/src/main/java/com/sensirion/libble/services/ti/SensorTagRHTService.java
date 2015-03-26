@@ -3,6 +3,7 @@ package com.sensirion.libble.services.ti;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -21,13 +22,18 @@ public class SensorTagRHTService extends AbstractRHTService {
     //CHARACTERISTIC UUID
     private static final String RHT_CHARACTERISTIC_UUID = "f000aa21-0451-4000-b000-000000000000";
     private static final String CONFIG_CHARACTERISTIC_UUID = "f000aa22-0451-4000-b000-000000000000";
+
     //FORCE WRITING ATTRIBUTES
     private static final int TIME_BETWEEN_REQUEST_MS = 1000;
     private static final int MAX_NUMBER_REQUEST = 5;
+
     //CHARACTERISTIC UUID
     private final BluetoothGattCharacteristic mRHTCharacteristic;
     private final BluetoothGattCharacteristic mConfigurationCharacteristic;
 
+    //CLASS ATTRIBUTES
+    @Nullable
+    private RHTDataPoint mLastDatapoint = null;
 
     public SensorTagRHTService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService);
@@ -43,8 +49,9 @@ public class SensorTagRHTService extends AbstractRHTService {
             Log.d(TAG, String.format("onCharacteristicUpdate -> Received characteristic with UUID: %s.", characteristic.getUuid()));
             final float temperature = extractTemperatureData(characteristic);
             final float humidity = extractHumidityData(characteristic);
-            Log.i(TAG, String.format("onCharacteristicUpdate -> Received new RHT data from %s. Humidity = %f  Temperature = %f.", mPeripheral.getAddress(), humidity, temperature));
-            notifyRHTDatapoint(new RHTDataPoint(temperature, humidity, System.currentTimeMillis()), false);
+            Log.i(TAG, String.format("onCharacteristicUpdate -> Received new RHT data from %s. Humidity = %f  Temperature = %f.", getDeviceAddress(), humidity, temperature));
+            mLastDatapoint = new RHTDataPoint(temperature, humidity, System.currentTimeMillis());
+            notifyRHTDatapoint(mLastDatapoint, false);
             return true;
         }
         return false;
@@ -72,12 +79,25 @@ public class SensorTagRHTService extends AbstractRHTService {
         registerNotification(mRHTCharacteristic);
     }
 
+    @Override
+    public boolean isServiceReady() {
+        return mLastDatapoint != null;
+    }
+
+    @Override
+    public void synchronizeService() {
+        if (mLastDatapoint == null) {
+            registerDeviceCharacteristicNotifications();
+        }
+    }
+
     /**
      * Obtains the sensor name of the device.
      *
      * @return {@link java.lang.String} with the sensor name.
      */
     @Override
+    @NonNull
     public String getSensorName() {
         return SENSOR_NAME;
     }

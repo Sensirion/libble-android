@@ -13,8 +13,8 @@ import android.util.Log;
 
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.AbstractBleService;
-import com.sensirion.libble.services.BleServiceFactory;
 import com.sensirion.libble.services.AbstractHistoryService;
+import com.sensirion.libble.services.BleServiceFactory;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -61,7 +61,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
         @Override
-        public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
+        public void onConnectionStateChange(@NonNull final BluetoothGatt gatt, final int status, final int newState) {
             super.onConnectionStateChange(gatt, status, newState);
             final String address = gatt.getDevice().getAddress();
 
@@ -477,7 +477,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Convenience method for forcing the read of a descritor.
+     * Convenience method for forcing the read of a descriptor.
      * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
      *
      * @param descriptor       that is going to be written. Cannot be <code>null</code>
@@ -665,6 +665,21 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             return mAddress.equals(((Peripheral) otherPeripheral).getAddress());
         }
         return false;
+    }
+
+    /**
+     * Checks if the peripheral has all its services synchronized.
+     *
+     * @return <code>true</code> if the services are synchronized - <code>false</code> otherwise.
+     */
+    @Override
+    public boolean areAllServicesReady() {
+        for (final AbstractBleService service : mServices) {
+            if (!service.isServiceReady()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

@@ -2,6 +2,7 @@ package com.sensirion.libble.services.sensirion.smartgadget;
 
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -69,29 +70,34 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
         if (valueUnit.endsWith("RH")) {
             mValueUnit = HumidityUnit.RELATIVE_HUMIDITY;
         } else {
-            Log.w(TAG, String.format("setValueUnit -> Value unit %s is unknown.", valueUnit));
+            Log.e(TAG, String.format("setValueUnit -> Value unit %s is unknown.", valueUnit));
         }
     }
 
-    /**
-     * Checks if the service has all the information it needs.
-     * @return <code>true</code> if the service is ready - <code>false</code> otherwise.
-     */
     @Override
-    public boolean isSynchronized() {
+    public boolean isServiceReady() {
         return mLastValue != null && mValueUnit != null && mSensorName != null;
+    }
+
+    @Override
+    public void synchronizeService() {
+        if (mLastValue == null) {
+            registerDeviceCharacteristicNotifications();
+        }
     }
 
     /**
      * Obtains the latest relative humidity.
      *
-     * @return {@link java.lang.Float} with the relative humidity - <code>null</code> if the relative humidity is not known.
+     * @return {@link java.lang.Float} with the relative humidity - <code>null</code> if the relative humidity is not available yet.
      */
+    @SuppressWarnings("unused")
+    @Nullable
     public Float getRelativeHumidity() {
-        if (mLastValue == null) {
-            Log.e(TAG, "getRelativeHumidity -> Humidity is not known yet.");
-            return null;
+        if (isServiceReady()) {
+            return mLastValue;
         }
-        return mLastValue;
+        Log.e(TAG, "getRelativeHumidity -> Service is not synchronize yet. (HINT -> Call synchronizeService first.)");
+        return null;
     }
 }

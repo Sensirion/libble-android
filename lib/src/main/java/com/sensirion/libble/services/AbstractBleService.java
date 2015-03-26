@@ -22,7 +22,7 @@ import java.util.concurrent.Executors;
 /**
  * Represents a {@link android.bluetooth.BluetoothGattService} as defined in org.bluetooth.service.*
  * or a proprietary implementation.
- *
+ * <p/>
  * Manages automatically the services listeners represented with the generic '<code>ListenerType extends NotificationListener</code>'
  */
 public abstract class AbstractBleService<ListenerType extends NotificationListener> {
@@ -39,28 +39,30 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     protected final String TAG = this.getClass().getSimpleName();
     @NonNull
     protected final Peripheral mPeripheral;
-    @Nullable
-    private final Class<ListenerType> mNotificationClassType;
-    @NonNull
-    private final BluetoothGattService mBluetoothGattService;
 
-    //Listeners
+    //Listeners.
     @Nullable
     protected final Set<ListenerType> mListeners;
 
-    //Notifications
+    //Parent service.
+    @NonNull
+    private final BluetoothGattService mBluetoothGattService;
+
+    //Notification attributes.
     @NonNull
     private final Set<BluetoothGattCharacteristic> mNotifyCharacteristics = Collections.synchronizedSet(new HashSet<BluetoothGattCharacteristic>());
     @NonNull
     private final Set<BluetoothGattCharacteristic> mRegisteredNotifyCharacteristics = Collections.synchronizedSet(new HashSet<BluetoothGattCharacteristic>());
+    @Nullable
+    private final Class<ListenerType> mNotificationClassType;
     private boolean mIsRequestingNotifications = false;
 
     public AbstractBleService(@NonNull final Peripheral servicePeripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         mPeripheral = servicePeripheral;
         mBluetoothGattService = bluetoothGattService;
         mNotificationClassType = getListenerClassType();
-        if (mNotificationClassType == null){
-            Log.d(TAG, String.format("BleService -> Service %s don't use the automatic listener system.", TAG));
+        if (mNotificationClassType == null) {
+            Log.d(TAG, String.format("BleService -> Service %s does not use the automatic listener system.", TAG));
             mListeners = null;
         } else {
             Log.d(TAG, String.format("BleService -> Service %s manages automatically listeners from type: %s", TAG, mNotificationClassType.getSimpleName()));
@@ -70,26 +72,27 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
 
     /**
      * Obtain the class type of <code>ListenerType</code> in case it's set by the {@link AbstractBleService} implementation.
+     *
      * @return <code>Class<ListenerType></code> in case the service wants the listeners to be managed automatically - <code>null</code> otherwise.
      */
     @Nullable
     private Class<ListenerType> getListenerClassType() {
         final Stack<Class<? extends AbstractBleService>> classInheritanceStack = new Stack<>();
         Class<? extends AbstractBleService> serviceClass = getClass();
-        while (serviceClass.getSuperclass() != AbstractBleService.class){
+        while (serviceClass.getSuperclass() != AbstractBleService.class) {
             classInheritanceStack.push(serviceClass);
             serviceClass = (Class<? extends AbstractBleService>) serviceClass.getSuperclass();
         }
         do {
             Type genericSuperclass = serviceClass.getGenericSuperclass();
-            if (genericSuperclass instanceof Class){
+            if (genericSuperclass instanceof Class) {
                 return null; //The BleService implementation does not use Generics.
             }
             final Type[] actualTypeArguments = ((ParameterizedType) genericSuperclass).getActualTypeArguments();
             if (actualTypeArguments.length == 0) {
                 return null; //The arguments don't have actual type parameters.
             }
-            if (actualTypeArguments[0] instanceof Class){
+            if (actualTypeArguments[0] instanceof Class) {
                 return (Class<ListenerType>) actualTypeArguments[0];
             }
             serviceClass = classInheritanceStack.pop();
@@ -279,7 +282,7 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
      */
     public boolean registerNotificationListener(@NonNull final NotificationListener listener) {
         if (mNotificationClassType == null || mListeners == null) {
-            if (mIsRequestingNotifications){
+            if (mIsRequestingNotifications) {
                 setNotificationsEnabled(true);
             }
             return false; //This service does not implement a listener interface. It would not manage notifications automatically.
@@ -336,4 +339,16 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     public String toString() {
         return String.format("%s of the device: %s", getClass().getSimpleName(), getDeviceAddress());
     }
+
+    /**
+     * Checks if a service is ready to use.
+     *
+     * @return <code>true</code> if the service if the service is synchronized - <code>false</code> otherwise.
+     */
+    public abstract boolean isServiceReady();
+
+    /**
+     * Tries to synchronize a service, in case some of it's data is missing.
+     */
+    public abstract void synchronizeService();
 }

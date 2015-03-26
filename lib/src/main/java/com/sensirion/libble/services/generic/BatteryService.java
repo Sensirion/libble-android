@@ -3,6 +3,7 @@ package com.sensirion.libble.services.generic;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
@@ -10,16 +11,11 @@ import com.sensirion.libble.listeners.services.BatteryListener;
 import com.sensirion.libble.services.AbstractBleService;
 
 import java.util.Iterator;
-import java.util.concurrent.Executors;
 
 public class BatteryService extends AbstractBleService<BatteryListener> {
 
     //SERVICE UUIDs
     public static final String SERVICE_UUID = "0000180f-0000-1000-8000-00805f9b34fb";
-
-    //FORCE READING CONSTANTS
-    private static final int WAITING_TIME_BETWEEN_READS = 125;
-    private static final int MAX_READ_TRIES = 3000 / WAITING_TIME_BETWEEN_READS;
 
     //UUIDs
     private static final String BATTERY_LEVEL_CHARACTERISTIC_UUID = "00002a19-0000-1000-8000-00805f9b34fb";
@@ -37,21 +33,13 @@ public class BatteryService extends AbstractBleService<BatteryListener> {
     }
 
     /**
-     * Returns battery level as percentage
+     * Returns battery level as percentage. It asks for an updated battery level in a background thread.
      *
      * @return {@link java.lang.Integer} between 0 and 100 if the battery level could be read, <code>null</code> otherwise.
      */
     @SuppressWarnings("unused")
+    @Nullable
     public Integer getBatteryLevel() {
-        if (mBatteryLevel == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    mPeripheral.forceReadCharacteristic(mBatteryLevelCharacteristic, WAITING_TIME_BETWEEN_READS, MAX_READ_TRIES);
-                }
-            });
-            return mBatteryLevel;
-        }
         mPeripheral.readCharacteristic(mBatteryLevelCharacteristic);
         return mBatteryLevel;
     }
@@ -82,6 +70,18 @@ public class BatteryService extends AbstractBleService<BatteryListener> {
                 Log.e(TAG, "notifyListeners -> An error was thrown when notifying the listeners -> ", e);
                 iterator.remove();
             }
+        }
+    }
+
+    @Override
+    public boolean isServiceReady() {
+        return mBatteryLevel != null;
+    }
+
+    @Override
+    public void synchronizeService() {
+        if (mBatteryLevel == null) {
+            getBatteryLevel();
         }
     }
 
