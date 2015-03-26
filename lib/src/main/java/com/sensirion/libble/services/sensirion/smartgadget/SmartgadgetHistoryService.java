@@ -144,8 +144,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     public void synchronizeService() {
         if (mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
             forceCharacteristicRequest();
-        }
-        if (mOldestTimestampToDownloadMs == 0 || mNewestSampleTimestampMs == 0) {
+        } else if (mOldestTimestampToDownloadMs == 0 || mNewestSampleTimestampMs == 0) {
             readTimestamps();
         }
     }
@@ -407,12 +406,12 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     private void readTimestamps() {
-        new Thread(new Runnable() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
                 syncTimestamps();
             }
-        }).start();
+        });
     }
 
     private void syncTimestamps() {
