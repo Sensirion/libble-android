@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractRHTService;
@@ -67,10 +68,14 @@ public class SHTC1RHTService extends AbstractRHTService {
 
     @Override
     public boolean isServiceReady() {
+        return mLastDatapoint != null;
+    }
+
+    @Override
+    public void synchronizeService() {
         if (getLastDatapoint() == null) {
             registerDeviceCharacteristicNotifications();
         }
-        return getLastDatapoint() != null;
     }
 
     /**
@@ -79,6 +84,7 @@ public class SHTC1RHTService extends AbstractRHTService {
      * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known.
      */
     @Override
+    @Nullable
     public String getSensorName() {
         switch (mPeripheral.getAdvertisedName()) {
             case "SHTC1 smart gadget":
@@ -97,6 +103,10 @@ public class SHTC1RHTService extends AbstractRHTService {
      */
     @Nullable
     public RHTDataPoint getLastDatapoint() {
-        return mLastDatapoint;
+        if (isServiceReady()) {
+            return mLastDatapoint;
+        }
+        Log.e(TAG, "getLastDataPoint -> Service is not synchronized yet. (HINT -> Call synchronizeService() first)");
+        return null;
     }
 }

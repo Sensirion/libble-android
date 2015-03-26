@@ -80,31 +80,35 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
      * @return <code>true</code> if the notification speed was set correctly - <code>false</code> otherwise.
      */
     public boolean setConnectionSpeed(final boolean connectionSpeed) {
-        if (isServiceReady()) {
-            final byte notificationSpeedRequested = (connectionSpeed) ? CONNECTION_SPEED.HIGH.value : CONNECTION_SPEED.LOW.value;
-            if (notificationSpeedRequested == mNotificationSpeedLevel) {
-                Log.w(TAG, String.format("In device %s the notification speed level was already set to %s speed.", getDeviceAddress(), ((connectionSpeed) ? "HIGH" : "LOW")));
-                return true;
-            }
-            mNotificationSpeedCharacteristic.setValue(notificationSpeedRequested, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-            if (mPeripheral.forceWriteCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
-                if (mPeripheral.forceReadCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
-                    return mNotificationSpeedLevel.equals(notificationSpeedRequested);
-                }
-            }
+        if (!isServiceReady()) {
+            Log.e(TAG, "setConnectionSpeed -> Service is not synchronized. (HINT -> Use synchronize()).");
             return false;
+        }
+        final byte notificationSpeedRequested = (connectionSpeed) ? CONNECTION_SPEED.HIGH.value : CONNECTION_SPEED.LOW.value;
+        if (notificationSpeedRequested == mNotificationSpeedLevel) {
+            Log.w(TAG, String.format("In device %s the notification speed level was already set to %s speed.", getDeviceAddress(), ((connectionSpeed) ? "HIGH" : "LOW")));
+            return true;
+        }
+        mNotificationSpeedCharacteristic.setValue(notificationSpeedRequested, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+        if (mPeripheral.forceWriteCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
+            if (mPeripheral.forceReadCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
+                return mNotificationSpeedLevel.equals(notificationSpeedRequested);
+            }
         }
         return false;
     }
 
     @Override
     public boolean isServiceReady() {
+        return mNotificationSpeedLevel != null;
+    }
+
+    @Override
+    public void synchronizeService() {
         if (mNotificationSpeedLevel == null) {
             mPeripheral.readCharacteristic(mNotificationSpeedCharacteristic);
-            Log.w(TAG, "isServiceReady -> Service is not ready, asking for the remaining values in the background.");
-            return false;
+            Log.w(TAG, "synchronizeService -> Service is not ready, asking for the remaining values in the background.");
         }
-        return true;
     }
 
     //CONNECTION SPEED SETTINGS

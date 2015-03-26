@@ -76,12 +76,14 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
 
     @Override
     public boolean isServiceReady() {
+        return mLastValue != null && mValueUnit != null && mSensorName != null;
+    }
+
+    @Override
+    public void synchronizeService() {
         if (mLastValue == null) {
             registerDeviceCharacteristicNotifications();
-        } else if (getSensorName() != null && mValueUnit != null) {
-            return true;
         }
-        return false;
     }
 
     /**
@@ -92,11 +94,10 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
     @SuppressWarnings("unused")
     @Nullable
     public Float getRelativeHumidity() {
-        if (mLastValue == null || mValueUnit == null) {
-            Log.w(TAG, "getRelativeHumidity -> Relative humidity is not available yet.");
-            registerDeviceCharacteristicNotifications();
-            return null;
+        if (isServiceReady()) {
+            return mLastValue;
         }
-        return mLastValue;
+        Log.e(TAG, "getRelativeHumidity -> Service is not synchronize yet. (HINT -> Call synchronizeService first.)");
+        return null;
     }
 }

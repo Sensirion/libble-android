@@ -81,11 +81,14 @@ public class SensorTagRHTService extends AbstractRHTService {
 
     @Override
     public boolean isServiceReady() {
-        if (mLastDatapoint == null){
+        return mLastDatapoint != null;
+    }
+
+    @Override
+    public void synchronizeService() {
+        if (mLastDatapoint == null) {
             registerDeviceCharacteristicNotifications();
-            return false;
         }
-        return true;
     }
 
     /**

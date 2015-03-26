@@ -342,9 +342,13 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
 
     /**
      * Checks if a service is ready to use.
-     * In case the service does not have all the information it needs, it will ask for it in a background thread.
      *
-     * @return <code>true</code> if the service has the information - <code>false</code> otherwise.
+     * @return <code>true</code> if the service if the service is synchronized - <code>false</code> otherwise.
      */
     public abstract boolean isServiceReady();
+
+    /**
+     * Tries to synchronize a service, in case some of it's data is missing.
+     */
+    public abstract void synchronizeService();
 }

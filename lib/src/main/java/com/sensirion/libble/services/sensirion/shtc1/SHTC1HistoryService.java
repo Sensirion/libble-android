@@ -93,7 +93,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
         mUserDataCharacteristic = super.getCharacteristic(USER_DATA_UUID);
         addCharacteristicsTo(bluetoothGattService);
         prepareCharacteristics();
-        isServiceReady();
+        synchronizeService();
     }
 
     private void addCharacteristicsTo(@NonNull final BluetoothGattService bluetoothGattService) {
@@ -157,31 +157,31 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     @Override
-    public synchronized boolean isServiceReady() {
+    public boolean isServiceReady() {
+        return mLoggingIsEnabled != null && mInterval != null && mCurrentPointer != null &&
+                mStartPointer != null && mEndPointer != null && mUserData != null;
+    }
+
+    @Override
+    public synchronized void synchronizeService() {
         if (checkGadgetLoggingState() == null) {
-            Log.w(TAG, "isServiceReady -> Logging state is not synchronized");
+            Log.w(TAG, "synchronizeService -> Logging state is not available yet");
         }
         if (getDownloadIntervalSeconds() == null) {
-            Log.w(TAG, "isServiceReady -> Download interval is not synchronized.");
+            Log.w(TAG, "synchronizeService -> Download interval is not available yet.");
         }
         if (getCurrentPoint() == null) {
-            Log.w(TAG, "isServiceReady -> Current pointer is not synchronized.");
+            Log.w(TAG, "synchronizeService -> Current pointer is not available yet.");
         }
         if (getStartPointer() == null) {
-            Log.w(TAG, "isServiceReady -> Start pointer is not synchronized.");
+            Log.w(TAG, "synchronizeService -> Start pointer is not available yet.");
         }
         if (getEndPointer() == null) {
-            Log.w(TAG, "isServiceReady -> End pointer is not synchronized.");
+            Log.w(TAG, "synchronizeService -> End pointer is not available yet.");
         }
         if (getUserData() == null) {
-            Log.w(TAG, "isServiceReady -> User data is not synchronized.");
+            Log.w(TAG, "synchronizeService -> User data is not available yet.");
         }
-
-        if (mLoggingIsEnabled == null || mInterval == null || mCurrentPointer == null || mEndPointer == null || mUserData == null || mStartPointer == null) {
-            Log.e(TAG, "isServiceReady -> Service is not synchronized yet.");
-            return false;
-        }
-        return true;
     }
 
     /**
@@ -757,7 +757,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     @Nullable
     public Integer getNumberLoggedElements() {
         if (mCurrentPointer == null || mCurrentPointer == 0) {
-            Log.e(TAG, "getNumberLoggedElements -> The device is not synchronized yet. (hint -> Call 'isServiceReady()' first)");
+            Log.e(TAG, "getNumberLoggedElements -> The device is not synchronized yet. (hint -> Call 'synchronizeService()' first)");
             return null;
         }
         resetStartPointer();

@@ -136,15 +136,18 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
 
     @Override
     public boolean isServiceReady() {
+        return mLoggerIntervalMs != null && mOldestTimestampToDownloadMs != null && mNewestSampleTimestampMs != null
+                && mOldestTimestampToDownloadMs != 0 && mNewestSampleTimestampMs != 0;
+    }
+
+    @Override
+    public void synchronizeService() {
         if (mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
             forceCharacteristicRequest();
-            return false;
         }
         if (mOldestTimestampToDownloadMs == 0 || mNewestSampleTimestampMs == 0) {
             readTimestamps();
-            return false;
         }
-        return true;
     }
 
     private void sleep(final long millis) {

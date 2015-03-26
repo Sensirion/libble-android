@@ -82,13 +82,15 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     }
 
     @Override
-    public boolean isServiceReady() {
+    public void synchronizeService() {
         if (mLastValue == null) {
             registerDeviceCharacteristicNotifications();
-        } else if (getSensorName() != null && mValueUnit == null) {
-            return true;
         }
-        return false;
+    }
+
+    @Override
+    public boolean isServiceReady() {
+        return mLastValue != null && mValueUnit != null && mSensorName != null;
     }
 
     /**
@@ -99,12 +101,11 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     @SuppressWarnings("unused")
     @Nullable
     public Float getTemperatureInCelsius() {
-        if (mLastValue == null || mValueUnit == null) {
-            registerDeviceCharacteristicNotifications();
-            Log.w(TAG, "getTemperatureInCelsius -> Temperature is not available yet.");
-            return null;
+        if (isServiceReady()) {
+            return convertTemperatureToCelsius(mLastValue, mValueUnit);
         }
-        return convertTemperatureToCelsius(mLastValue, mValueUnit);
+        Log.e(TAG, "getTemperatureInCelsius -> Service is not synchronized yet. (HINT -> call synchronizeService first).");
+        return null;
     }
 
     /**
@@ -115,12 +116,11 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     @SuppressWarnings("unused")
     @Nullable
     public Float getTemperatureInFahrenheit() {
-        if (mLastValue == null || mValueUnit == null) {
-            registerDeviceCharacteristicNotifications();
-            Log.w(TAG, "getTemperatureInFahrenheit -> Temperature is not available yet.");
-            return null;
+        if (isServiceReady()) {
+            return convertTemperatureToFahrenheit(mLastValue, mValueUnit);
         }
-        return convertTemperatureToFahrenheit(mLastValue, mValueUnit);
+        Log.e(TAG, "getTemperatureInFahrenheit -> Service is not synchronized yet. (HINT -> call synchronizeService first).");
+        return null;
     }
 
     /**
@@ -131,11 +131,10 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     @SuppressWarnings("unused")
     @Nullable
     public Float getTemperatureInKelvin() {
-        if (mLastValue == null || mValueUnit == null) {
-            Log.w(TAG, "getTemperatureInKelvin -> Temperature is not available yet.");
-            registerDeviceCharacteristicNotifications();
-            return null;
+        if (isServiceReady()) {
+            return convertTemperatureToKelvin(mLastValue, mValueUnit);
         }
-        return convertTemperatureToKelvin(mLastValue, mValueUnit);
+        Log.e(TAG, "getTemperatureInKelvin -> Service is not synchronized yet. (HINT -> call synchronizeService first).");
+        return null;
     }
 }
