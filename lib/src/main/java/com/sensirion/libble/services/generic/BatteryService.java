@@ -11,6 +11,7 @@ import com.sensirion.libble.listeners.services.BatteryListener;
 import com.sensirion.libble.services.AbstractBleService;
 
 import java.util.Iterator;
+import java.util.concurrent.Executors;
 
 public class BatteryService extends AbstractBleService<BatteryListener> {
 
@@ -81,7 +82,12 @@ public class BatteryService extends AbstractBleService<BatteryListener> {
     @Override
     public void synchronizeService() {
         if (mBatteryLevel == null) {
-            getBatteryLevel();
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    mPeripheral.forceReadCharacteristic(mBatteryLevelCharacteristic);
+                }
+            });
         }
     }
 

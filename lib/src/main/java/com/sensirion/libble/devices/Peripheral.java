@@ -34,7 +34,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private static final String TAG = Peripheral.class.getSimpleName();
 
     // Force reading attributes.
-    private static final byte INTERVAL_BETWEEN_CHECKS_MILLISECONDS = 51;
+    private static final byte INTERVAL_BETWEEN_CHECKS_MILLISECONDS = 51; // Every connection interval.
+    private static final short DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS = 205; // Every 4 connection intervals.
+    private static final short DEFAULT_NUMBER_FORCE_REQUEST = 5;
+    @NonNull
     private final Queue<Object> mLastActionUsedQueue = new LinkedBlockingQueue<>();
 
     //Peripheral attributes
@@ -48,15 +51,18 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private final String mAddress;
 
     //Listener list
+    @NonNull
     private final Set<NotificationListener> mNotificationListeners = Collections.synchronizedSet(new HashSet<NotificationListener>());
 
     //Services List
+    @NonNull
     private final Set<AbstractBleService> mServices = Collections.synchronizedSet(new HashSet<AbstractBleService>());
     private volatile boolean mForceOperationRunning = false;
     private boolean mIsConnected = false;
     private int mRSSI;
 
     //Gathering controller.
+    @Nullable
     private BluetoothGatt mBluetoothGatt;
 
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
@@ -384,33 +390,46 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      *
      * @param characteristic The characteristic to read from.
      */
-    public void readCharacteristic(final BluetoothGattCharacteristic characteristic) {
+    public void readCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
         mBleStackProtector.addReadCharacteristic(characteristic);
         mBleStackProtector.execute(mBluetoothGatt);
     }
 
     /**
      * Method that send once a characteristic to the device, informing the user if the characteristic was retrieved.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic that is going to be readed. Cannot be <code>null</code>
      * @param maxWaitingTime acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    public boolean readCharacteristicWithConfirmation(final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
+    public boolean readCharacteristicWithConfirmation(@NonNull final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
         return forceReadCharacteristic(characteristic, maxWaitingTime, 1);
     }
 
     /**
      * Convenience method for forcing a characteristic read, in case we want to be sure to read the characteristic.
-     * It blocks the UI thread until it receives a response or a timeout is produced.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
+     *
+     * @param characteristic       that is going to be readed. Cannot be <code>null</code>
+     * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public boolean forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic){
+        return forceReadCharacteristic(characteristic, DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS, DEFAULT_NUMBER_FORCE_REQUEST);
+    }
+
+    /**
+     * Convenience method for forcing a characteristic read, in case we want to be sure to read the characteristic.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic       that is going to be readed. Cannot be <code>null</code>
      * @param timeoutMs            acceptable time without receiving an answer from the peripheral.
      * @param maxNumberConnections maximumNumberOfReads. It has to be a positive number.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
-    public boolean forceReadCharacteristic(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxNumberConnections) {
+    public boolean forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxNumberConnections) {
         return forceActionReadOrWrite(characteristic, timeoutMs, maxNumberConnections, true);
     }
 
@@ -428,20 +447,32 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Method that send once a characteristic to the device, informing the user if the characteristic was retrieved.
-     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     * It blocks the UI thread until it receives a response or a timeout is produced.
      *
-     * @param characteristic that is going to be readed. Cannot be <code>null</code>
+     * @param characteristic that is going to be updated in the device. Cannot be <code>null</code>
      * @param maxWaitingTime acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    public boolean writeCharacteristicWithConfirmation(final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
+    public boolean writeCharacteristicWithConfirmation(@NonNull final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
         return forceWriteCharacteristic(characteristic, maxWaitingTime, 1);
     }
 
     /**
      * Convenience method for forcing a characteristic to write, in case we want to be sure to write the characteristic.
-     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
+     *
+     * @param characteristic  that is going to be wrote. Cannot be <code>null</code>
+     * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public boolean forceWriteCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
+        return forceWriteCharacteristic(characteristic, DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS, DEFAULT_NUMBER_FORCE_REQUEST);
+    }
+
+    /**
+     * Convenience method for forcing a characteristic to write, in case we want to be sure to write the characteristic.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic  that is going to be wrote. Cannot be <code>null</code>
      * @param timeoutMs       acceptable time without receiving an answer from the peripheral.
@@ -451,7 +482,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     public boolean forceWriteCharacteristic(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxRequestCount) {
         return forceActionReadOrWrite(characteristic, timeoutMs, maxRequestCount, false);
     }
-
 
     /**
      * Reads a {@link android.bluetooth.BluetoothGattDescriptor} in the bluetooth gatherer.
@@ -465,7 +495,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Method that send a read request of a descriptor to device, informing the user if the characteristic was retrieved.
-     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor that is going to be readed. Cannot be <code>null</code>
      * @param timeoutMs  acceptable time without receiving an answer from the peripheral.
@@ -478,7 +508,19 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Convenience method for forcing the read of a descriptor.
-     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
+     *
+     * @param descriptor       that is going to be written. Cannot be <code>null</code>
+     * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
+     */
+    @SuppressWarnings("unused")
+    public boolean forceDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor) {
+        return forceDescriptorRead(descriptor, DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS, DEFAULT_NUMBER_FORCE_REQUEST);
+    }
+
+    /**
+     * Convenience method for forcing the read of a descriptor.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor       that is going to be written. Cannot be <code>null</code>
      * @param timeoutMs        acceptable time without receiving an answer from the peripheral.
@@ -492,18 +534,18 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     /**
      * Writes a {@link android.bluetooth.BluetoothGattDescriptor} in the bluetooth gatherer.
      *
-     * @param descriptor the descriptor we want to store.
+     * @param descriptor the descriptor we want to write in the device.
      */
-    public void writeDescriptor(final BluetoothGattDescriptor descriptor) {
+    public void writeDescriptor(@NonNull final BluetoothGattDescriptor descriptor) {
         mBleStackProtector.addWriteDescriptor(descriptor);
         mBleStackProtector.execute(mBluetoothGatt);
     }
 
     /**
      * Method that send a read request of a descriptor to device, informing the user if the characteristic was retrieved.
-     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
-     * @param descriptor that is going to be readed. Cannot be <code>null</code>
+     * @param descriptor that is going to be written. Cannot be <code>null</code>
      * @param timeoutMs  acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
@@ -513,8 +555,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Convenience method for forcing the write of a descritor.
-     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     * Convenience method for forcing the write of a descriptor.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor       that is going to be written. Cannot be <code>null</code>
      * @param timeoutMs        acceptable time without receiving an answer from the peripheral.
@@ -527,7 +569,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Convenience method for forcing a characteristic read or write, in case we want to be sure to read the characteristic.
-     * It blocks the UI thread until it receives a response or a timeout is produced. It should be called by other thread.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param action          that is going to be processed. Needs to be {@link android.bluetooth.BluetoothGattCharacteristic} or a {@link android.bluetooth.BluetoothGattDescriptor}. Cannot be <code>null</code>
      * @param timeoutMs       acceptable time without receiving an answer from the peripheral.
@@ -585,7 +627,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * Enables or disables notification on a given characteristic.
      *
      * @param characteristic Characteristic to act on.
-     * @param enabled        If <code>true</code>, enable notification - <code>false</code> otherwise.
+     * @param enabled        if <code>true</code> enable notification - <code>false</code> disable notification.
      */
     public void setCharacteristicNotification(@NonNull final BluetoothGattCharacteristic characteristic, final boolean enabled) {
         mBleStackProtector.addCharacteristicNotification(characteristic, enabled);
