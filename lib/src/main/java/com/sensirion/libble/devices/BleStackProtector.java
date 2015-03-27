@@ -39,6 +39,9 @@ class BleStackProtector extends BluetoothGattCallback {
     private ServiceAction mCurrentAction;
     private long mLastAccessQueueTimestamp = -1;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onConnectionStateChange(@NonNull final BluetoothGatt gatt, final int status, final int newState) {
         Log.i(TAG, "onConnectionStateChange()");
@@ -47,6 +50,9 @@ class BleStackProtector extends BluetoothGattCallback {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onCharacteristicRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
         super.onCharacteristicRead(gatt, characteristic, status);
@@ -54,6 +60,9 @@ class BleStackProtector extends BluetoothGattCallback {
         execute(gatt);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onCharacteristicWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
         super.onCharacteristicWrite(gatt, characteristic, status);
@@ -61,6 +70,9 @@ class BleStackProtector extends BluetoothGattCallback {
         execute(gatt);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onDescriptorRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattDescriptor descriptor, final int status) {
         super.onDescriptorRead(gatt, descriptor, status);
@@ -68,6 +80,9 @@ class BleStackProtector extends BluetoothGattCallback {
         execute(gatt);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onDescriptorWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattDescriptor descriptor, final int status) {
         super.onDescriptorWrite(gatt, descriptor, status);
@@ -75,6 +90,9 @@ class BleStackProtector extends BluetoothGattCallback {
         execute(gatt);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onReliableWriteCompleted(@NonNull final BluetoothGatt gatt, final int status) {
         super.onReliableWriteCompleted(gatt, status);

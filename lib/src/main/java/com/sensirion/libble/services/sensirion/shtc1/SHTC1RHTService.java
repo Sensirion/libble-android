@@ -41,11 +41,7 @@ public class SHTC1RHTService extends AbstractRHTService {
     }
 
     /**
-     * This method checks if this service is able to handle the characteristic.
-     * In case it's able to manage the characteristic it reads it and advice to this service listeners.
-     *
-     * @param updatedCharacteristic characteristic with new values coming from Peripheral.
-     * @return <code>true</code> in case it managed correctly the new data - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
@@ -59,18 +55,24 @@ public class SHTC1RHTService extends AbstractRHTService {
     }
 
     /**
-     * Enables the characteristic notifications of the service.
+     * {@inheritDoc}
      */
     @Override
     public void registerDeviceCharacteristicNotifications() {
         registerNotification(mHumidityTemperatureCharacteristic);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return mLastDatapoint != null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void synchronizeService() {
         if (getLastDatapoint() == null) {
@@ -79,9 +81,7 @@ public class SHTC1RHTService extends AbstractRHTService {
     }
 
     /**
-     * Obtains the sensor name of the service.
-     *
-     * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known.
+     * {@inheritDoc}
      */
     @Override
     @Nullable

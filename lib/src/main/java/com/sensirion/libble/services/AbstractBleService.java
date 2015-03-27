@@ -323,6 +323,9 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean equals(@Nullable final Object otherService) {
         if (otherService == null) {
@@ -335,6 +338,9 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String toString() {
         return String.format("%s of the device: %s", getClass().getSimpleName(), getDeviceAddress());

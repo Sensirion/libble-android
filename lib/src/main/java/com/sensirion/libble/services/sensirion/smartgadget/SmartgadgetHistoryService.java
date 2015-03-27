@@ -71,10 +71,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Method called when a characteristic is read.
-     *
-     * @param updatedCharacteristic that was read.
-     * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
@@ -96,10 +93,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * This method is called when a characteristic was written in the device.
-     *
-     * @param characteristic that was written in the device with success.
-     * @return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean onCharacteristicWrite(@NonNull final BluetoothGattCharacteristic characteristic) {
@@ -127,25 +121,30 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Registers the notification characteristics in case it's needed.
+     * {@inheritDoc}
      */
     @Override
     public void registerDeviceCharacteristicNotifications() {
         super.registerNotification(mStartLoggerDownloadCharacteristic);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return mLoggerIntervalMs != null && mOldestTimestampToDownloadMs != null && mNewestSampleTimestampMs != null
                 && mOldestTimestampToDownloadMs != 0 && mNewestSampleTimestampMs != 0;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void synchronizeService() {
         if (mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
             forceCharacteristicRequest();
-        }
-        if (mOldestTimestampToDownloadMs == 0 || mNewestSampleTimestampMs == 0) {
+        } else if (mOldestTimestampToDownloadMs == 0 || mNewestSampleTimestampMs == 0) {
             readTimestamps();
         }
     }
@@ -243,9 +242,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Starts the data download from the device.
-     *
-     * @return <code>true</code> if the data download started correctly. <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean startDataDownload() {
@@ -260,10 +257,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Starts to download data from a given timestamp
-     *
-     * @param oldestTimestampToDownload the oldest timestamp that the device will download.
-     * @return <code>true</code> if the data download started correctly. <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean startDataDownload(final long oldestTimestampToDownload) {
@@ -273,10 +267,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Change the download interval of a device.
-     *
-     * @param loggerIntervalInMilliseconds that the device will use for logging.
-     * @return <code>true</code> if the download interval was set - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean setDownloadInterval(final int loggerIntervalInMilliseconds) {
@@ -287,12 +278,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Gets the interval between history data points on the device in milliseconds.
-     * <p/>
-     * In case the value is unknown it will ask for it in a background thread.
-     * If the user calls this method again after some time it can return a different value.
-     *
-     * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known.
+     * {@inheritDoc}
      */
     @Override
     @Nullable
@@ -309,9 +295,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Deletes all the data from the device.
-     *
-     * @return <code>true</code> if the data was deleted - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean resetDeviceData() {
@@ -324,9 +308,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Checks if device is logging historical values.
-     *
-     * @return <code>true</code> if logging is enabled - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean isGadgetLoggingEnabled() {
@@ -334,9 +316,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Checks is the user can modify the logging state.
-     *
-     * @return <code>true</code> if the user can enable or disable logging - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean isLoggingStateEditable() {
@@ -344,10 +324,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * User can set the logging state in case it's editable.
-     *
-     * @param enabled <code>true</code> if the user wants to enable logging - <code>false</code> otherwise.
-     * @return <code>true</code> if the state was changed - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean setLoggingState(final boolean enabled) {
@@ -356,12 +333,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Checks the number of logged elements that the user can download.
-     * <p/>
-     * In case the value is unknown it will ask for it in a background thread.
-     * If the user calls this method again after some time it can return a different value.
-     *
-     * @return <code>true</code> if the device has data - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     @Nullable
@@ -407,12 +379,12 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     private void readTimestamps() {
-        new Thread(new Runnable() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
                 syncTimestamps();
             }
-        }).start();
+        });
     }
 
     private void syncTimestamps() {
@@ -426,9 +398,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Checks if a logging download is in progress.
-     *
-     * @return <code>true</code> if a download is in progress - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean isDownloadInProgress() {

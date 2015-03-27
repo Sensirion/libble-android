@@ -169,6 +169,9 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
         return mTimestamp;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @SuppressWarnings("StringBufferReplaceableByString")
     public String toString() {
@@ -180,6 +183,9 @@ public class RHTDataPoint implements Comparable<RHTDataPoint> {
         return sb.toString();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int compareTo(@NonNull final RHTDataPoint anotherDatapoint) {
         if (anotherDatapoint.getTimestamp() - mTimestamp > 0) {

@@ -26,23 +26,35 @@ public abstract class BleActivity extends Activity {
 
     private BleManager mBleManager = BleManager.getInstance();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onCreate(@Nullable final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mBleManager.init(getApplicationContext());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onResume() {
         super.onResume();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onPause() {
         super.onPause();
         mBleManager.stopScanning();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onStop() {
         Log.d(TAG, "onStop()");

@@ -39,6 +39,9 @@ public class BleManager {
     private BlePeripheralService mBlePeripheralService;
 
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onServiceConnected(final ComponentName name, final IBinder service) {
             Log.i(TAG, "onServiceConnected() -> connected to BlePeripheralService");
@@ -64,6 +67,9 @@ public class BleManager {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onServiceDisconnected(final ComponentName name) {
             Log.w(TAG, "onServiceDisconnected() -> disconnected from BlePeripheralService");

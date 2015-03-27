@@ -27,7 +27,7 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
     }
 
     /**
-     * Notifies the service listeners of the new humidity value.
+     * {@inheritDoc}
      */
     @Override
     void notifyListenersNewLiveValue() {
@@ -44,7 +44,7 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
     }
 
     /**
-     * Notifies the service listeners the reading of the new historical value.
+     * {@inheritDoc}
      */
     @Override
     void notifyListenersNewHistoricalValue(final float value, final long timestamp) {
@@ -61,9 +61,7 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
     }
 
     /**
-     * Parses the extracted value unit to {@link com.sensirion.libble.utils.HumidityUnit}
-     *
-     * @param valueUnit {@link java.lang.String} with the value unit specified in the device.
+     * {@inheritDoc}
      */
     @Override
     void setValueUnit(@NonNull final String valueUnit) {
@@ -74,11 +72,17 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return mLastValue != null && mValueUnit != null && mSensorName != null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void synchronizeService() {
         if (mLastValue == null) {

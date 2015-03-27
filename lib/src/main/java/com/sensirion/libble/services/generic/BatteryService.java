@@ -11,6 +11,7 @@ import com.sensirion.libble.listeners.services.BatteryListener;
 import com.sensirion.libble.services.AbstractBleService;
 
 import java.util.Iterator;
+import java.util.concurrent.Executors;
 
 public class BatteryService extends AbstractBleService<BatteryListener> {
 
@@ -45,10 +46,7 @@ public class BatteryService extends AbstractBleService<BatteryListener> {
     }
 
     /**
-     * Method called when a characteristic is read.
-     *
-     * @param updatedCharacteristic that was updated.
-     * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
@@ -73,20 +71,31 @@ public class BatteryService extends AbstractBleService<BatteryListener> {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return mBatteryLevel != null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void synchronizeService() {
         if (mBatteryLevel == null) {
-            getBatteryLevel();
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    mPeripheral.forceReadCharacteristic(mBatteryLevelCharacteristic);
+                }
+            });
         }
     }
 
     /**
-     * Registers the notification characteristics in case it's needed.
+     * {@inheritDoc}
      */
     @Override
     public void registerDeviceCharacteristicNotifications() {

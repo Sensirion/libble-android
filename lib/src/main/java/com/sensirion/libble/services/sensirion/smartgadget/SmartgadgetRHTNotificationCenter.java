@@ -58,12 +58,7 @@ class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityL
     }
 
     /**
-     * Advises the listeners that a new relativeHumidity value was obtained.
-     *
-     * @param device     {@link com.sensirion.libble.devices.BleDevice} that sends the humidity data.
-     * @param humidity   {@link java.lang.Float} with the relativeHumidity value.
-     * @param sensorName {@link java.lang.String} with the name of the sensor that sends the humidity data.
-     * @param unit       {@link com.sensirion.libble.utils.HumidityUnit} with the received humidity unit.
+     * {@inheritDoc}
      */
     @Override
     public void onNewHumidity(@NonNull final BleDevice device, final float humidity, @NonNull final String sensorName, @NonNull final HumidityUnit unit) {
@@ -85,12 +80,7 @@ class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityL
     }
 
     /**
-     * Advises the listeners that a new temperatureInCelsius value was obtained.
-     *
-     * @param device      {@link com.sensirion.libble.devices.BleDevice} that sends the temperature data.
-     * @param temperature {@link java.lang.Float} with the temperature value.
-     * @param sensorName  {@link java.lang.String} with the name of the sensor that sends the temperature data.
-     * @param unit        {@link com.sensirion.libble.utils.TemperatureUnit} with the received temperature unit.
+     * {@inheritDoc}
      */
     @Override
     public void onNewTemperature(@NonNull final BleDevice device, final float temperature, @NonNull final String sensorName, @NonNull final TemperatureUnit unit) {
@@ -171,12 +161,7 @@ class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityL
     }
 
     /**
-     * Sends the user the latest historical temperatureInCelsius.
-     *
-     * @param device      that send the relativeHumidity historical value.
-     * @param temperature from a moment in the past.
-     * @param timestamp   in milliseconds that determine when the temperatureInCelsius was obtained.
-     * @param sensorName  that send the historical temperatureInCelsius.
+     * {@inheritDoc}
      */
     @Override
     public void onNewHistoricalTemperature(@NonNull final BleDevice device, final float temperature, final long timestamp, @NonNull final String sensorName, @NonNull final TemperatureUnit unit) {
@@ -185,12 +170,7 @@ class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityL
     }
 
     /**
-     * Sends the user the latest historical relativeHumidity.
-     *
-     * @param device           that sends the relativeHumidity historical value.
-     * @param relativeHumidity from a moment in the past.
-     * @param timestamp        in milliseconds that determines when the relativeHumidity was obtained.
-     * @param sensorName       that sends the relativeHumidity.
+     * {@inheritDoc}
      */
     @Override
     public void onNewHistoricalHumidity(@NonNull final BleDevice device, final float relativeHumidity, final long timestamp, @NonNull final String sensorName, @NonNull final HumidityUnit unit) {

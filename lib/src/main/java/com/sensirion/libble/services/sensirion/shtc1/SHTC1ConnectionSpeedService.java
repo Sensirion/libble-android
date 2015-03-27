@@ -98,11 +98,17 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return mNotificationSpeedLevel != null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void synchronizeService() {
         if (mNotificationSpeedLevel == null) {
