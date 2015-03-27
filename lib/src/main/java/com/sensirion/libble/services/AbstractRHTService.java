@@ -101,9 +101,7 @@ public abstract class AbstractRHTService extends AbstractBleService<RHTListener>
     }
 
     /**
-     * Adds a new download listener to the list.
-     *
-     * @param newListener listener that wants to listen for notifications.
+     * {@inheritDoc}
      */
     @Override
     public boolean registerNotificationListener(@NonNull final NotificationListener newListener) {
@@ -127,9 +125,7 @@ public abstract class AbstractRHTService extends AbstractBleService<RHTListener>
     }
 
     /**
-     * Removes a listener from the download notification list.
-     *
-     * @param listenerForRemoval listener that doesn't need the listen for notifications anymore.
+     * {@inheritDoc}
      */
     @Override
     public boolean unregisterNotificationListener(@NonNull final NotificationListener listenerForRemoval) {

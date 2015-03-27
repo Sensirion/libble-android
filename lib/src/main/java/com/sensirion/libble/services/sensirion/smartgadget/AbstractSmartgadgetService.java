@@ -39,7 +39,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
     }
 
     /**
-     * Enables the characteristic notifications of the service.
+     * {@inheritDoc}
      */
     @Override
     public void registerDeviceCharacteristicNotifications() {
@@ -48,10 +48,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
     }
 
     /**
-     * Method called when a descriptor is read.
-     *
-     * @param descriptor that was read by the device.
-     * @return <code>true</code> if the descriptor was processed - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean onDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor) {
@@ -75,11 +72,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
     }
 
     /**
-     * This method checks if this service is able to handle the characteristic.
-     * In case it's able to manage the characteristic it reads it and advice to this service listeners.
-     *
-     * @param updatedCharacteristic characteristic with new values coming from Peripheral.
-     * @return <code>true</code> in case it managed correctly the new data - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
@@ -164,6 +157,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
      *
      * @return {@link java.lang.String} with the sensor name - <code>null</code> if the sensor name is not known yet.
      */
+    @SuppressWarnings("unused")
     @Nullable
     public String getSensorName() {
         if (mSensorName == null) {

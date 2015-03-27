@@ -26,5 +26,6 @@ public enum KnownDevices {
      *
      * @return {@link java.util.List} with the advertised names of compatible devices.
      */
+    @SuppressWarnings("unused")
     public abstract List<String> getAdvertisedNames();
 }

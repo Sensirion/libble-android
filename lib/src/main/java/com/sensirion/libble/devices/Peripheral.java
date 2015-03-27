@@ -66,6 +66,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private BluetoothGatt mBluetoothGatt;
 
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onConnectionStateChange(@NonNull final BluetoothGatt gatt, final int status, final int newState) {
             super.onConnectionStateChange(gatt, status, newState);
@@ -95,6 +98,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onCharacteristicRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
@@ -110,6 +116,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onCharacteristicChanged(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
@@ -119,6 +128,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             mBleStackProtector.execute(mBluetoothGatt);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onCharacteristicWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
             super.onCharacteristicChanged(gatt, characteristic);
@@ -135,6 +147,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onServicesDiscovered(@NonNull final BluetoothGatt gatt, final int status) {
             super.onServicesDiscovered(gatt, status);
@@ -157,6 +172,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onDescriptorRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattDescriptor descriptor, final int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -172,6 +190,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void onDescriptorWrite(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattDescriptor descriptor, final int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -203,9 +224,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Establish a connection between the application and the peripheral.
-     *
-     * @param context of the application that wants to connect with the device. Cannot be <code>null</code>
+     * {@inheritDoc}
      */
     @Override
     public void connect(@NonNull final Context context) {
@@ -214,9 +233,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Tries to establish a connection with a device that has been connected previously.
-     *
-     * @return <code>true</code> if the connection was recovered - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean reconnect() {
@@ -228,7 +245,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Closes a connection to a device.
+     * {@inheritDoc}
      */
     @Override
     public void disconnect() {
@@ -240,9 +257,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Obtains the physical address of the device.
-     *
-     * @return {@link java.lang.String} with the MAC-Address of the device.
+     * {@inheritDoc}
      */
     @Override
     @NonNull
@@ -251,9 +266,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Checks the signal strength of the device towards the external BleDevice.
-     *
-     * @return {@link java.lang.Integer} with the signal strength.
+     * {@inheritDoc}
      */
     @Override
     public int getRSSI() {
@@ -270,9 +283,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Obtains the public name of the BleDevice.
-     *
-     * @return {@link java.lang.String} with the advertised name.
+     * {@inheritDoc}
      */
     @Override
     public String getAdvertisedName() {
@@ -280,9 +291,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Checks if a device is connected or not.
-     *
-     * @return <code>true</code> if the device is connected - <code>false</code> if the device is disconnected.
+     * {@inheritDoc}
      */
     @Override
     public boolean isConnected() {
@@ -290,12 +299,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Obtain a peripheral service in case the peripheral haves it.
-     * NOTE: Returns the first service found of the given type.
-     *
-     * @param type service class that the user wants to obtain.
-     * @param <T>  Class of the service.
-     * @return {@link com.sensirion.libble.services.AbstractBleService} that corresponds to the given class.
+     * {@inheritDoc}
      */
     @Override
     public <T extends AbstractBleService> T getDeviceService(@NonNull final Class<T> type) {
@@ -308,11 +312,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Asks for a service with a particular name.
-     * NOTE: Returns the first service found of the given type.
-     *
-     * @param serviceName name of the service.
-     * @return {@link com.sensirion.libble.services.AbstractBleService} that corresponds to the given name
+     * {@inheritDoc}
      */
     @Override
     public AbstractBleService getDeviceService(@NonNull final String serviceName) {
@@ -325,9 +325,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Obtains a list with the discovered services.
-     *
-     * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
+     * {@inheritDoc}
      */
     @Override
     @NonNull
@@ -341,9 +339,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Obtains a list with the name of the discovered services.
-     *
-     * @return Iterable with a list of {@link java.lang.String} with the names of the discovered services.
+     * {@inheritDoc}
      */
     @Override
     @NonNull
@@ -360,10 +356,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Retrieves the device history service in case it has one.
-     * NOTE: In case the device has more that one history service it will only return the first one.
-     *
-     * @return {@link com.sensirion.libble.services.AbstractHistoryService} of the device - <code>null</code> if it doesn't haves one.
+     * {@inheritDoc}
      */
     @Override
     public AbstractHistoryService getHistoryService() {
@@ -412,11 +405,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * Convenience method for forcing a characteristic read, in case we want to be sure to read the characteristic.
      * It blocks the calling thread until it receives a response or a timeout is produced.
      *
-     * @param characteristic       that is going to be readed. Cannot be <code>null</code>
+     * @param characteristic that is going to be readed. Cannot be <code>null</code>
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
-    @SuppressWarnings("unused")
-    public boolean forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic){
+    public boolean forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
         return forceReadCharacteristic(characteristic, DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS, DEFAULT_NUMBER_FORCE_REQUEST);
     }
 
@@ -462,7 +454,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * Convenience method for forcing a characteristic to write, in case we want to be sure to write the characteristic.
      * It blocks the calling thread until it receives a response or a timeout is produced.
      *
-     * @param characteristic  that is going to be wrote. Cannot be <code>null</code>
+     * @param characteristic that is going to be wrote. Cannot be <code>null</code>
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
@@ -510,7 +502,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * Convenience method for forcing the read of a descriptor.
      * It blocks the calling thread until it receives a response or a timeout is produced.
      *
-     * @param descriptor       that is going to be written. Cannot be <code>null</code>
+     * @param descriptor that is going to be written. Cannot be <code>null</code>
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
@@ -635,9 +627,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Ask all the services to enable or disable all their notifications.
-     *
-     * @param enabled <code>true</code> if notifications wants to be enabled - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public void setAllNotificationsEnabled(final boolean enabled) {
@@ -647,12 +637,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Register listener on all BleServices of all the devices. The device doesn't need to be connected.
-     * Each service with notifications checks if the listener is able to read its data with interfaces.
-     *
-     * @param listener Activity from outside the library that
-     *                 wants to listen for notifications.
-     * @return <code>true</code> if a valid service was found, <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean registerDeviceListener(@NonNull final NotificationListener listener) {
@@ -668,12 +653,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Unregister a listener from all the BleServices.
-     * Each service with notifications removes it from
-     * from it's list, in case the listener was listening it.
-     *
-     * @param listener from outside the library that doesn't
-     *                 want to listen for notifications anymore.
+     * {@inheritDoc}
      */
     @Override
     public void unregisterDeviceListener(@NonNull final NotificationListener listener) {
@@ -684,9 +664,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Counts the number of services.
-     *
-     * @return number of discovered services.
+     * {@inheritDoc}
      */
     @Override
     public int getNumberServices() {
@@ -694,12 +672,15 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * This method cleans the characteristic stack of the device.
+     * {@inheritDoc}
      */
     public void cleanCharacteristicCache() {
         mBleStackProtector.cleanCharacteristicCache();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @SuppressWarnings("SimplifiableIfStatement")
     public boolean equals(final Object otherPeripheral) {
@@ -710,9 +691,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Checks if the peripheral has all its services synchronized.
-     *
-     * @return <code>true</code> if the services are synchronized - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean areAllServicesReady() {
@@ -725,12 +704,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * Compares two discovered peripherals with the RSSI. Used for sorting.
-     * In case the peripherals are connected it respects the order of insertion. (Return 0)
-     * In case the peripherals are disconnected it works using the order of insertion.
-     *
-     * @param anotherPeripheral peripheral that has to be sorted.
-     * @return positive number if this peripheral has bigger RSSI, negative otherwise. returns <code>0</code> if the device is connected.
+     * {@inheritDoc}
      */
     @Override
     public int compareTo(@Nullable final Peripheral anotherPeripheral) {

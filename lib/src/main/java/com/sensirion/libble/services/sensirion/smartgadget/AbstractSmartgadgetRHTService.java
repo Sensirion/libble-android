@@ -15,11 +15,7 @@ abstract class AbstractSmartgadgetRHTService<ListenerType extends NotificationLi
     }
 
     /**
-     * This method should be called only from peripheral.
-     * This method adds a listener to the list in case it's a TypeOfListener.
-     *
-     * @param listener the new candidate object for being a listener of this class.
-     * @return <code>true</code> in case it's a valid listener, <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean registerNotificationListener(@NonNull final NotificationListener listener) {
@@ -33,10 +29,7 @@ abstract class AbstractSmartgadgetRHTService<ListenerType extends NotificationLi
     }
 
     /**
-     * This method should be called only from peripheral.
-     * This method unregister a listener from the list in case it's registered.
-     *
-     * @param listener the listener that doesn't want to hear from a device anymore.
+     * {@inheritDoc}
      */
     @Override
     public boolean unregisterNotificationListener(@NonNull final NotificationListener listener) {

@@ -115,6 +115,9 @@ public class SHTC1HistoryService extends AbstractHistoryService {
         mPeripheral.readCharacteristic(mUserDataCharacteristic);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic characteristic) {
         super.onCharacteristicUpdate(characteristic);
@@ -156,12 +159,18 @@ public class SHTC1HistoryService extends AbstractHistoryService {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return mLoggingIsEnabled != null && mInterval != null && mCurrentPointer != null &&
                 mStartPointer != null && mEndPointer != null && mUserData != null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public synchronized void synchronizeService() {
         if (checkGadgetLoggingState() == null) {
@@ -208,12 +217,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * This method checks if logging is enabled or disabled.
-     * <p/>
-     * In case the value is unknown it will ask for it in a background thread.
-     * If the user calls this method again after some time it can return a different value.
-     *
-     * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled.
+     * {@inheritDoc}
      */
     @Override
     public boolean isGadgetLoggingEnabled() {
@@ -226,9 +230,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Checks is the user can modify the logging state.
-     *
-     * @return <code>true</code> if the user can enable or disable logging - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean isLoggingStateEditable() {
@@ -259,12 +261,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * This method returns the logging interval in milliseconds to the client device.
-     * <p/>
-     * In case the value is unknown it will ask for it in a background thread.
-     * If the user calls this method again after some time it can return a different value.
-     *
-     * @return {@link java.lang.Integer} with the logging interval in milliseconds - <code>null</code> if not available yet.
+     * {@inheritDoc}
      */
     @Override
     @Nullable
@@ -369,10 +366,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Enables or disables logging. Epoch and interval should be called first.
-     *
-     * @param enable <code>true</code> for enabling logging - <code>false</code> for disabling it.
-     * @return <code>true</code> if the action was completed correctly, <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean setLoggingState(final boolean enable) {
@@ -388,10 +382,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Sets the interval of the logging, can be done when logging it's ongoing.
-     *
-     * @param intervalInMilliseconds that the device will adopt for logging.
-     * @return <code>true</code> if the interval was set - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean setDownloadInterval(final int intervalInMilliseconds) {
@@ -502,7 +493,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      * Prepare end pointer for logging obtaining the maximum number of values.
      *
      * @return <code>true</code> if the end pointer was set - <code>false</code> otherwise.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method will block the calling thread.
      */
     public boolean resetEndPointer() {
         return setEndPointer(null);
@@ -513,7 +504,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @param endPointer number of that have to be set in the endPointer of the device - <code>null</code> for setting the current value.
      * @return <code>true</code> if the end pointer was set - <code>false</code> otherwise.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method will block the calling thread.
      */
     public boolean setEndPointer(@Nullable final Integer endPointer) {
         super.mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
@@ -540,7 +531,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @param userData integer, normally the epochTime time of the device.
      * @return <code>true</code> if the user data was set - <code>false</code> otherwise.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method will block the calling thread.
      */
     public boolean setUserData(final int userData) {
         mUserDataCharacteristic.setValue(userData, FORMAT_UINT32, 0);
@@ -602,7 +593,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Downloads all the data from the device.
+     * {@inheritDoc}
      */
     @Override
     public synchronized boolean startDataDownload() {
@@ -637,10 +628,11 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Downloads all the data from the device.
+     * {@inheritDoc}
      */
     @Override
     public synchronized boolean startDataDownload(final long oldestTimestampToDownload) {
+        //Partial data download is not supported on this device yet.
         return startDataDownload();
     }
 
@@ -749,9 +741,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Checks the number of logged elements that the user can download.
-     *
-     * @return {@link java.lang.Integer} with the total number of elements to log.
+     * {@inheritDoc}
      */
     @Override
     @Nullable
@@ -775,9 +765,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Adds a new download listener to the list.
-     *
-     * @param newListener listener that wants to listen for notifications.
+     * {@inheritDoc}
      */
     @Override
     public boolean registerNotificationListener(@NonNull final NotificationListener newListener) {
@@ -805,9 +793,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Removes a listener from the download notification list.
-     *
-     * @param listenerForRemoval listener that doesn't need the listen for notifications anymore.
+     * {@inheritDoc}
      */
     @Override
     public boolean unregisterNotificationListener(@NonNull final NotificationListener listenerForRemoval) {
@@ -885,7 +871,7 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Deletes the data from the device.
+     * {@inheritDoc}
      */
     @Override
     public boolean resetDeviceData() {
@@ -906,15 +892,16 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     /**
-     * Checks if the user is downloading data from the service.
-     *
-     * @return <code>true</code> if the user is downloading data from the device - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean isDownloadInProgress() {
         return mDownloadInProgress;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void registerDeviceCharacteristicNotifications() {
         // This service does not receive direct notifications from the device.

@@ -30,7 +30,7 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     }
 
     /**
-     * Notifies the service listeners of a new live temperature value.
+     * {@inheritDoc}
      */
     @Override
     void notifyListenersNewLiveValue() {
@@ -47,7 +47,7 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     }
 
     /**
-     * Notifies the service listeners of the reading of a new historical value.
+     * {@inheritDoc}
      */
     @Override
     void notifyListenersNewHistoricalValue(final float value, final long timestamp) {
@@ -64,9 +64,7 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     }
 
     /**
-     * Parses the extracted value unit to {@link com.sensirion.libble.utils.TemperatureUnit}.
-     *
-     * @param valueUnit {@link java.lang.String} with the value unit specified in the device.
+     * {@inheritDoc}
      */
     @Override
     void setValueUnit(@NonNull final String valueUnit) {
@@ -81,6 +79,9 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void synchronizeService() {
         if (mLastValue == null) {
@@ -88,6 +89,9 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return mLastValue != null && mValueUnit != null && mSensorName != null;

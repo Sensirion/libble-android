@@ -78,6 +78,9 @@ public class DeviceInformationService extends AbstractBleService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isServiceReady() {
         return ((mManufacturerNameCharacteristic != null) == (mManufacturerName != null)) &&
@@ -88,6 +91,9 @@ public class DeviceInformationService extends AbstractBleService {
                 ((mSoftwareRevisionCharacteristic != null) == (mSoftwareRevision != null));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void synchronizeService() {
         if (mManufacturerNameCharacteristic != null) {
@@ -123,10 +129,7 @@ public class DeviceInformationService extends AbstractBleService {
     }
 
     /**
-     * Method called when a characteristic is read.
-     *
-     * @param characteristic that was updated.
-     * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
     @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic characteristic) {
@@ -165,7 +168,7 @@ public class DeviceInformationService extends AbstractBleService {
      */
     @Nullable
     public String getManufacturerName() {
-        if (mManufacturerNameCharacteristic == null){
+        if (mManufacturerNameCharacteristic == null) {
             Log.w(TAG, "getManufacturerName -> The device does not implement the manufacturer name characteristic.");
             return null;
         }
@@ -183,7 +186,7 @@ public class DeviceInformationService extends AbstractBleService {
      */
     @Nullable
     public String getModelNumber() {
-        if (mModelNumberCharacteristic == null){
+        if (mModelNumberCharacteristic == null) {
             Log.w(TAG, "getModelNumber -> The device does not implement the model number characteristic.");
             return null;
         }
@@ -201,7 +204,7 @@ public class DeviceInformationService extends AbstractBleService {
      */
     @Nullable
     public String getSerialNumber() {
-        if (mSerialNumberCharacteristic == null){
+        if (mSerialNumberCharacteristic == null) {
             Log.w(TAG, "getSerialNumber -> The device does not implement the serial number characteristic.");
             return null;
         }
@@ -219,7 +222,7 @@ public class DeviceInformationService extends AbstractBleService {
      */
     @Nullable
     public String getHardwareRevision() {
-        if (mHardwareRevisionCharacteristic == null){
+        if (mHardwareRevisionCharacteristic == null) {
             Log.w(TAG, "getHardwareRevision -> The device does not implement the hardware revision characteristic.");
             return null;
         }
@@ -237,7 +240,7 @@ public class DeviceInformationService extends AbstractBleService {
      */
     @Nullable
     public String getFirmwareRevision() {
-        if (mFirmwareRevisionCharacteristic == null){
+        if (mFirmwareRevisionCharacteristic == null) {
             Log.w(TAG, "getFirmwareRevision -> The device does not implement the firmware characteristic.");
             return null;
         }
@@ -255,7 +258,7 @@ public class DeviceInformationService extends AbstractBleService {
      */
     @Nullable
     public String getSoftwareRevision() {
-        if (mSoftwareRevisionCharacteristic == null){
+        if (mSoftwareRevisionCharacteristic == null) {
             Log.w(TAG, "getSoftwareRevision -> The device does not implement the software revision characteristic.");
             return null;
         }
