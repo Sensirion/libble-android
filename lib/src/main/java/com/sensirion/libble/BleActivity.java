@@ -67,9 +67,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Ask if the local device is scanning for new devices.
-     *
-     * @return <code>true</code> if it's scanning - <code>false</code> otherwise.
+     * @see com.sensirion.libble.BleManager#isScanning()
      */
     @SuppressWarnings("unused")
     public boolean isScanning() {
@@ -77,9 +75,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Starts to scan for all bluetooth devices in range.
-     *
-     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     * @see com.sensirion.libble.BleManager#startScanning()
      */
     @SuppressWarnings("unused")
     public boolean startScanning() {
@@ -87,10 +83,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Starts to scan for all bluetooth devices in range.
-     *
-     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
-     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     * @see com.sensirion.libble.BleManager#startScanning(long)
      */
     @SuppressWarnings("unused")
     public synchronized boolean startScanning(final long scanDurationMs) {
@@ -98,11 +91,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Start scanning devices in range for provided UUIDs.
-     *
-     * @param deviceUUIDs deviceUUIDs that we want want to use,
-     *                    <code>null</code> if all devices have to be retrieved.
-     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     * @see com.sensirion.libble.BleManager#startScanning(java.util.UUID[])
      */
     @SuppressWarnings("unused")
     public boolean startScanning(@Nullable final UUID[] deviceUUIDs) {
@@ -110,20 +99,14 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Start scanning devices in range for provided UUIDs.
-     *
-     * @param deviceUUIDs    deviceUUIDs that we want want to use,
-     *                       <code>null</code> if all devices have to be retrieved.
-     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
-     *                       <code>null</code> if the default scan duration will be used.
-     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     * @see com.sensirion.libble.BleManager#startScanning(java.util.UUID[], Long)
      */
     public boolean startScanning(@Nullable final UUID[] deviceUUIDs, @Nullable final Long scanDurationMs) {
         return mBleManager.startScanning(deviceUUIDs, scanDurationMs);
     }
 
     /**
-     * Stops the scan of new devices.
+     * @see com.sensirion.libble.BleManager#stopScanning()
      */
     @SuppressWarnings("unused")
     public void stopScanning() {
@@ -131,9 +114,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Get all discovered {@link com.sensirion.libble.devices.BleDevice}.
-     *
-     * @return Iterable
+     * @see com.sensirion.libble.BleManager#getDiscoveredBleDevices()
      */
     @SuppressWarnings("unused")
     public Iterable<? extends BleDevice> getDiscoveredBleDevices() {
@@ -141,10 +122,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Get all discovered {@link com.sensirion.libble.devices.BleDevice} with valid names for the application.
-     *
-     * @param deviceNames List of devices names.
-     * @return Iterable
+     * @see com.sensirion.libble.BleManager#getDiscoveredBleDevices(java.util.List)
      */
     @SuppressWarnings("unused")
     public Iterable<? extends BleDevice> getDiscoveredBleDevices(@NonNull final List<String> deviceNames) {
@@ -152,9 +130,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Get all connected {@link com.sensirion.libble.devices.BleDevice}.
-     *
-     * @return Iterable
+     * @see com.sensirion.libble.BleManager#getConnectedBleDevices()
      */
     @SuppressWarnings("unused")
     public Iterable<? extends BleDevice> getConnectedBleDevices() {
@@ -162,11 +138,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Returns the {@link com.sensirion.libble.devices.BleDevice} belonging to the given address
-     *
-     * @param deviceAddress MAC-Address of the desired {@link com.sensirion.libble.devices.BleDevice}
-     * @return Connected device as {@link com.sensirion.libble.devices.BleDevice}
-     * or NULL if the device is not connected
+     * @see com.sensirion.libble.BleManager#getConnectedDevice(String)
      */
     @SuppressWarnings("unused")
     public BleDevice getConnectedDevice(@NonNull final String deviceAddress) {
@@ -174,9 +146,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Tries to establish a connection to a selected device (by address)
-     *
-     * @param deviceAddress MAC-Address of the device that should be connected.
+     * @see com.sensirion.libble.BleManager#connectDevice(String)
      */
     @SuppressWarnings("unused")
     public boolean connectDevice(@NonNull final String deviceAddress) {
@@ -184,9 +154,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Tries to disconnect a selected device (by address)
-     *
-     * @param deviceAddress MAC-Address of the device that should be disconnected
+     * @see com.sensirion.libble.BleManager#disconnectDevice(String)
      */
     @SuppressWarnings("unused")
     public void disconnectDevice(@NonNull final String deviceAddress) {
@@ -194,9 +162,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Returns the number of connected devices.
-     *
-     * @return <code>int</code> with the number of devices.
+     * @see com.sensirion.libble.BleManager#getConnectedBleDeviceCount()
      */
     @SuppressWarnings("unused")
     public int getConnectedBleDeviceCount() {
@@ -204,10 +170,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Checks if a device is connected.
-     *
-     * @param deviceAddress of the device.
-     * @return <code>true</code> if connected - <code>false</code> otherwise.
+     * @see com.sensirion.libble.BleManager#isDeviceConnected(String)
      */
     @SuppressWarnings("unused")
     public boolean isDeviceConnected(@NonNull final String deviceAddress) {
@@ -215,11 +178,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Registers a listener in a connected devices.
-     *
-     * @param listener pretending to listen for notifications of a devices.
-     * @param address  address of the devices we want to listen to,
-     *                 <code>null</code> if we want to register a listener to all connected devices.
+     * @see com.sensirion.libble.BleManager#registerDeviceListener(com.sensirion.libble.listeners.NotificationListener, String)
      */
     @SuppressWarnings("unused")
     public void registerDeviceListener(@NonNull final NotificationListener listener, @Nullable final String address) {
@@ -227,10 +186,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Unregister a listener from a connected devices.
-     *
-     * @param listener      that wants to unregister from the notifications of a device.
-     * @param deviceAddress of the device you don't want to get notifications from anymore.
+     * @see com.sensirion.libble.BleManager#unregisterDeviceListener(com.sensirion.libble.listeners.NotificationListener, String)
      */
     @SuppressWarnings("unused")
     public void unregisterDeviceListener(@NonNull final String deviceAddress, @NonNull final NotificationListener listener) {
@@ -238,7 +194,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Checks if bluetooth connection is enabled on the device.
+     * @see com.sensirion.libble.BleManager#isBluetoothEnabled()
      */
     @SuppressWarnings("unused")
     public boolean isBluetoothEnabled() {
@@ -246,9 +202,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Request the user to enable bluetooth in case it's disabled.
-     *
-     * @param context {@link android.content.Context} of the requesting activity.
+     * @see com.sensirion.libble.BleManager#requestEnableBluetooth(android.content.Context)
      */
     @SuppressWarnings("unused")
     public void requestEnableBluetooth(@NonNull final Context context) {
@@ -256,9 +210,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Enables or disables notifications in all the devices.
-     *
-     * @param enabled <code>true</code> for enabling notifications - <code>false</code> otherwise.
+     * @see com.sensirion.libble.BleManager#setAllNotificationsEnabled(boolean)
      */
     @SuppressWarnings("unused")
     public void setAllNotificationsEnabled(final boolean enabled) {
@@ -266,10 +218,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Counts the number of services.
-     *
-     * @param deviceAddress of the device.
-     * @return number of discovered services.
+     * @see com.sensirion.libble.BleManager#getNumberOfDiscoveredServices(String)
      */
     @SuppressWarnings("unused")
     public int getNumberOfDiscoveredServices(final String deviceAddress) {
@@ -277,10 +226,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Obtains the names of each discovered service.
-     *
-     * @param address of the device.
-     * @return {@link java.util.LinkedList} with the services names.
+     * @see com.sensirion.libble.BleManager#getDiscoveredServicesNames(String)
      */
     @SuppressWarnings("unused")
     public Iterable<String> getDiscoveredServicesNames(@NonNull final String address) {
@@ -288,11 +234,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Asks for a service with a particular name.
-     *
-     * @param deviceAddress of the device.
-     * @param serviceName   name of the service.
-     * @return {@link com.sensirion.libble.services.AbstractBleService}
+     * @see com.sensirion.libble.BleManager#getServiceWithName(String, String)
      */
     @SuppressWarnings("unused")
     public AbstractBleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
@@ -300,10 +242,7 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Adds a listener to the library notification listener list.
-     * This listener will be registered to every service of all the devices connected or that will be connected.
-     *
-     * @param listener that wants to be added - Cannot be <code>null</code>
+     * @see com.sensirion.libble.BleManager#registerNotificationListener(com.sensirion.libble.listeners.NotificationListener)
      */
     @SuppressWarnings("unused")
     public synchronized void registerNotificationListener(@NonNull final NotificationListener listener) {
@@ -311,18 +250,10 @@ public abstract class BleActivity extends Activity {
     }
 
     /**
-     * Removes a listener from the library listener list.
-     *
-     * @param listener that wants to be removed - Cannot be <code>null</code>
+     * @see com.sensirion.libble.BleManager#unregisterNotificationListener(com.sensirion.libble.listeners.NotificationListener)
      */
     @SuppressWarnings("unused")
     public synchronized void unregisterNotificationListener(@NonNull final NotificationListener listener) {
         mBleManager.unregisterNotificationListener(listener);
     }
-
-    @SuppressWarnings("unused")
-    abstract public void onConnectedPeripheralSelected(String address);
-
-    @SuppressWarnings("unused")
-    abstract public void onDiscoveredPeripheralSelected(String address);
 }
