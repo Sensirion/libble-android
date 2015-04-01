@@ -20,7 +20,8 @@ import java.util.Arrays;
 
 abstract class AbstractSmartgadgetService<ListenerType extends NotificationListener> extends AbstractBleService<ListenerType> {
 
-    private static final byte VALUE_SIZE = 4;
+    static final byte DATAPOINT_SIZE = 4;
+
     private final String VALUE_NOTIFICATIONS_UUID; //4 Byte Float Little Endian - 20 byte [1 little endian integer (Sequence number), 4 Byte Float Little Endian]
     private final BluetoothGattCharacteristic mValueCharacteristic;
 
@@ -29,9 +30,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
 
     protected AbstractSmartgadgetService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String liveValueCharacteristicUUID) {
         super(peripheral, gatt);
-
         VALUE_NOTIFICATIONS_UUID = liveValueCharacteristicUUID;
-
         mValueCharacteristic = super.getCharacteristic(VALUE_NOTIFICATIONS_UUID);
         peripheral.readCharacteristic(mValueCharacteristic);
         gatt.addCharacteristic(mValueCharacteristic);
@@ -101,7 +100,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
 
     private boolean parseHistoryValue(@NonNull final BluetoothGattCharacteristic updatedValue) {
         final byte[] historyValueBuffer = updatedValue.getValue();
-        if (historyValueBuffer.length < VALUE_SIZE * 2 || historyValueBuffer.length % VALUE_SIZE > 0) {
+        if (historyValueBuffer.length < DATAPOINT_SIZE * 2 || historyValueBuffer.length % DATAPOINT_SIZE > 0) {
             Log.e(TAG, "parseHistoryValue -> Received History value does not have a valid length.");
             return false;
         }
@@ -132,7 +131,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
         }
 
         for (int offset = 4; offset < historyValueBuffer.length; offset += 4) {
-            final long timestamp = newestTimestamp - (historyInterval * ((((offset / VALUE_SIZE) - 1) + sequenceNumber)));
+            final long timestamp = newestTimestamp - (historyInterval * ((((offset / DATAPOINT_SIZE) - 1) + sequenceNumber)));
             final float historyValue = LittleEndianExtractor.extractLittleEndianFloatFromCharacteristic(updatedValue, offset);
             Log.i(TAG, String.format("parseHistoryValue -> Obtained a value of %f in device %s (%s seconds ago).", historyValue, getDeviceAddress(), ((System.currentTimeMillis() - timestamp) / 1000)));
             notifyListenersNewHistoricalValue(historyValue, timestamp);

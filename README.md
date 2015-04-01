@@ -57,7 +57,7 @@ new Bluetooth devices.
 
 #### STEP 2.2: Register for device state modification notifications
 
-* Implementent the interface
+* Implement the interface
 com.sensirion.libble.listeners.devices.DeviceStateListener to receive
 notifications when a new device is discovered or when a device is
 connected or disconnected.
@@ -301,9 +301,15 @@ public class StepService extends AbstractBleService<StepListener> {
   */
   @Override
   public void registerDeviceCharacteristicNotifications() {
-     registerNotification(mStepCharacteristicUUID);
+     registerNotification(mStepCharacteristic);
   }
 
+ /**
+  * Method called when a characteristic is read.
+  *
+  * @param updatedCharacteristic that was updated.
+  * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
+  */
   @Override
   public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
      if (mStepCharacteristic.equals(updatedCharacteristic)) {
@@ -324,6 +330,24 @@ public class StepService extends AbstractBleService<StepListener> {
            iterator.remove();
         }
      }
+  }
+
+ /**
+  * Checks if a service is ready to use.
+  *
+  * @return <code>true</code> if the service is synchronized - <code>false</code> otherwise.
+  */
+  @Override
+  public boolean isServiceReady() {
+     return true; //This service is always ready.
+  }
+
+ /**
+  * Tries to synchronize a service in case some of its data is missing.
+  */
+  @Override
+  public abstract void synchronizeService() {
+      registerDeviceCharacteristicNotifications(); // If notifications are registered, it won't do anything.
   }
 }
 ```

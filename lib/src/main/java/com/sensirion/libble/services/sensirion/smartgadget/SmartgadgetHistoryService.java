@@ -26,8 +26,8 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
 
     //INTERVALS
     private static final short ONE_SECOND_MS = 1000;
-    private static final int ONE_MINUTE_MS = 60 * ONE_SECOND_MS;
-    private static final int DOWNLOAD_TIMEOUT = ONE_MINUTE_MS;
+    private static final short TEN_SECONDS_MS = 10 * ONE_SECOND_MS;
+    private static final short DOWNLOAD_TIMEOUT_MS = TEN_SECONDS_MS;
 
     //FORCE READ/WRITE ATTRIBUTES
     private static final short MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 101;
@@ -51,9 +51,9 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     private Long mUserOldestTimestampToDownloadMs = null;
 
     //SERVICE STATE VALUES
-    private volatile Long mTryingToDownload = null;
-    private volatile int mLastSequenceNumberDownloaded = 0;
-    private volatile Integer mUserInterval = null;
+    private Long mLastDownloadUpdate = null;
+    private int mLastSequenceNumberDownloaded = 0;
+    private Integer mUserInterval = null;
 
     public SmartgadgetHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
@@ -67,7 +67,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     private static long calcSecondsSince(final long timestamp) {
-        return (System.currentTimeMillis() - timestamp) / 1000;
+        return (System.currentTimeMillis() - timestamp) / ONE_SECOND_MS;
     }
 
     /**
@@ -85,7 +85,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
             return true;
         } else if (mStartLoggerDownloadCharacteristic.equals(updatedCharacteristic)) {
             if (mStartLoggerDownloadCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0) == 0) {
-                mTryingToDownload = null;
+                mLastDownloadUpdate = null;
                 onDownloadComplete();
             }
         }
@@ -197,11 +197,11 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     private boolean canStartDownload() {
-        if (mTryingToDownload == null) {
+        if (mLastDownloadUpdate == null) {
             Log.w(TAG, "canStartDownload -> User is not trying to download.");
-            return false;
+            return true;
         }
-        return mTryingToDownload + ONE_MINUTE_MS > System.currentTimeMillis();
+        return mLastDownloadUpdate + DOWNLOAD_TIMEOUT_MS < System.currentTimeMillis();
     }
 
     private boolean isReadyToDownload() {
@@ -250,7 +250,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
             Log.e(TAG, "startDataDownload -> The user can't download the data from the device because another download is in progress.");
             return false;
         }
-        mTryingToDownload = System.currentTimeMillis();
+        mLastDownloadUpdate = System.currentTimeMillis();
         mLastSequenceNumberDownloaded = 0;
         enableHistoryDataNotifications();
         return true;
@@ -328,7 +328,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
      */
     @Override
     public boolean setLoggingState(final boolean enabled) {
-        Log.e(TAG, String.format("setLoggingState -> In the device %s logging can never ve enabled or disabled.", getDeviceAddress()));
+        Log.e(TAG, String.format("setLoggingState -> In the device %s logging can never be enabled or disabled.", getDeviceAddress()));
         return false;
     }
 
@@ -339,7 +339,9 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     @Nullable
     public Integer getNumberLoggedElements() {
         if (mNewestSampleTimestampMs != null && mOldestTimestampToDownloadMs != null && mLoggerIntervalMs != null) {
-            return (int) (mNewestSampleTimestampMs - mOldestTimestampToDownloadMs) / mLoggerIntervalMs;
+            final int numberLoggedElements = (int) (mNewestSampleTimestampMs - mOldestTimestampToDownloadMs) / mLoggerIntervalMs;
+            Log.i(TAG, String.format("getNumberLoggedElements -> Device %s has %d logged elements", getDeviceAddress(), numberLoggedElements));
+            return numberLoggedElements;
         }
         lazyCharacteristicRequest();
         return null;
@@ -388,6 +390,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     private void syncTimestamps() {
+        Log.d(TAG, String.format("syncTimestamps() -> Syncing timestamps of device: %s", getDeviceAddress()));
         final byte[] timestampLittleEndianBuffer = LittleEndianExtractor.extractLittleEndianByteArrayFromLong(System.currentTimeMillis());
         mSyncTimeCharacteristic.setValue(timestampLittleEndianBuffer);
         mPeripheral.forceWriteCharacteristic(mSyncTimeCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
@@ -402,11 +405,14 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
      */
     @Override
     public boolean isDownloadInProgress() {
-        if (mTryingToDownload == null || mLastSequenceNumberDownloaded == 0) {
+        if (mLastDownloadUpdate == null || mLastSequenceNumberDownloaded == 0) {
             return false;
         }
-        Log.d(TAG, "isDownloadInProgress -> User is downloading data from the device.");
-        return mTryingToDownload + DOWNLOAD_TIMEOUT > System.currentTimeMillis();
+        if (mLastDownloadUpdate + DOWNLOAD_TIMEOUT_MS > System.currentTimeMillis()) {
+            Log.d(TAG, "isDownloadInProgress -> User is downloading data from the device.");
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -418,6 +424,13 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
         if (sequenceNumber > mLastSequenceNumberDownloaded) {
             mLastSequenceNumberDownloaded = sequenceNumber;
             notifyDownloadProgress(sequenceNumber);
+            final Integer numberDownloadElements = getNumberLoggedElements();
+            if (numberDownloadElements != null && sequenceNumber >= getNumberLoggedElements() - AbstractSmartgadgetService.DATAPOINT_SIZE){
+                onDownloadComplete();
+                mLastDownloadUpdate = null;
+            } else {
+                mLastDownloadUpdate = System.currentTimeMillis();
+            }
         }
     }
 
