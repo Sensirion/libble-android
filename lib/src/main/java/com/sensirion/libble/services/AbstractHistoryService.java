@@ -1,6 +1,8 @@
 package com.sensirion.libble.services;
 
 import android.bluetooth.BluetoothGattService;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -19,8 +21,34 @@ import java.util.Iterator;
  */
 public abstract class AbstractHistoryService extends AbstractBleService<HistoryListener> {
 
+    private static final short ONE_SECOND_MS = 1000;
+    private static final short THREE_SECONDS_MS = 3 * ONE_SECOND_MS;
+    private static final short DOWNLOAD_PROGRESS_TIMEOUT = THREE_SECONDS_MS;
+
+    private static final float MIN_DOWNLOAD_SUCCESS_PROGRESS = 0.95f; // 95%
+    @NonNull
+    private final Handler mDownloadProgressTimeoutHandler;
+    @Nullable
+    private Integer mNumberElementsToDownload;
+    @Nullable
+    private Integer mLastDownloadProgress;
+    @NonNull
+    private Runnable mOnDownloadTimeoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mNumberElementsToDownload == null || mLastDownloadProgress == null) {
+                Log.e(TAG, "DownloadTimeoutTimer.run() -> Can not obtain the download state.");
+            } else if (mLastDownloadProgress > mNumberElementsToDownload * MIN_DOWNLOAD_SUCCESS_PROGRESS) {
+                onDownloadComplete();
+            }
+            onDownloadFailure();
+        }
+    };
+
     public AbstractHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
+        Looper.prepare();
+        mDownloadProgressTimeoutHandler = new Handler();
     }
 
     /**
@@ -29,6 +57,8 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @param downloadProgress with the number of downloaded elements.
      */
     protected void notifyDownloadProgress(final int downloadProgress) {
+        mLastDownloadProgress = downloadProgress;
+        resetDownloadTimer();
         final Iterator<HistoryListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
@@ -47,6 +77,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @param numberElementsToDownload number of elements to download.
      */
     protected void notifyTotalNumberElements(final int numberElementsToDownload) {
+        mNumberElementsToDownload = numberElementsToDownload;
         final Iterator<HistoryListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
@@ -62,6 +93,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * This will notify all listeners of the download failure by calling their onLogDownloadFailure method.
      */
     protected void onDownloadFailure() {
+        mDownloadProgressTimeoutHandler.removeCallbacks(mOnDownloadTimeoutRunnable);
         final Iterator<HistoryListener> iterator = mListeners.iterator();
         Log.i(TAG, String.format("onLogDownloadFailure -> Notifying to the %d listeners. ", mListeners.size()));
         while (iterator.hasNext()) {
@@ -78,6 +110,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * Notifies to the user that the application has finish downloading the logged data.
      */
     protected void onDownloadComplete() {
+        mDownloadProgressTimeoutHandler.removeCallbacks(mOnDownloadTimeoutRunnable);
         final Iterator<HistoryListener> iterator = mListeners.iterator();
         Log.i(TAG, String.format("onDownloadComplete -> Notifying to the %d listeners. ", mListeners.size()));
         while (iterator.hasNext()) {
@@ -88,6 +121,11 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
                 iterator.remove();
             }
         }
+    }
+
+    private synchronized void resetDownloadTimer() {
+        mDownloadProgressTimeoutHandler.removeCallbacks(mOnDownloadTimeoutRunnable);
+        mDownloadProgressTimeoutHandler.postDelayed(mOnDownloadTimeoutRunnable, DOWNLOAD_PROGRESS_TIMEOUT);
     }
 
     /**

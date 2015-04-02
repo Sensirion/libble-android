@@ -12,6 +12,8 @@ import com.sensirion.libble.utils.LittleEndianExtractor;
 
 import java.util.concurrent.Executors;
 
+import static com.sensirion.libble.services.sensirion.smartgadget.AbstractSmartgadgetService.DATAPOINT_SIZE;
+
 public class SmartgadgetHistoryService extends AbstractHistoryService {
 
     //SERVICE UUIDs
@@ -27,7 +29,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     //INTERVALS
     private static final short ONE_SECOND_MS = 1000;
     private static final short TEN_SECONDS_MS = 10 * ONE_SECOND_MS;
-    private static final short DOWNLOAD_TIMEOUT_MS = TEN_SECONDS_MS;
+    private static final short DOWNLOAD_START_TIMEOUT_MS = TEN_SECONDS_MS;
 
     //FORCE READ/WRITE ATTRIBUTES
     private static final short MAX_WAITING_TIME_BETWEEN_REQUEST_MS = 101; //Two connection intervals.
@@ -52,9 +54,12 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
 
     //SERVICE STATE VALUES
     private boolean mAreDeviceTimestampsSynchronized = false;
+    @Nullable
     private Long mLastDownloadUpdate = null;
     private int mLastSequenceNumberDownloaded = 0;
+    @Nullable
     private Integer mUserInterval = null;
+
 
     public SmartgadgetHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
@@ -136,7 +141,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
      */
     @Override
     public boolean isServiceReady() {
-        return mLoggerIntervalMs  != null && mOldestTimestampToDownloadMs != null && mNewestSampleTimestampMs != null
+        return mLoggerIntervalMs != null && mOldestTimestampToDownloadMs != null && mNewestSampleTimestampMs != null
                 && mOldestTimestampToDownloadMs != 0 && mNewestSampleTimestampMs != 0;
     }
 
@@ -145,6 +150,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
      */
     @Override
     public void synchronizeService() {
+        Log.d(TAG, "synchronizeService -> Synchronizing service...");
         if (mAreDeviceTimestampsSynchronized) {
             if (mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
                 forceCharacteristicRequest();
@@ -208,7 +214,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
             Log.w(TAG, "canStartDownload -> User is not trying to download.");
             return false;
         }
-        return mLastDownloadUpdate + DOWNLOAD_TIMEOUT_MS < System.currentTimeMillis();
+        return mLastDownloadUpdate + DOWNLOAD_START_TIMEOUT_MS < System.currentTimeMillis();
     }
 
     private boolean isReadyToDownload() {
@@ -371,18 +377,18 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                if (mNewestSampleTimestampMs == null) {
-                    mPeripheral.forceReadCharacteristic(mNewestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
-                }
-                mPeripheral.cleanCharacteristicCache();
-                if (mOldestTimestampToDownloadMs == null) {
-                    mPeripheral.forceReadCharacteristic(mOldestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
-                }
                 mPeripheral.cleanCharacteristicCache();
                 if (mLoggerIntervalMs == null) {
-                    mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+                    Log.d(TAG, "forceCharacteristicRequest -> Log interval is not known yet.");
+                    mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic);
+                } else if (mNewestSampleTimestampMs == null) {
+                    Log.d(TAG, "forceCharacteristicRequest -> Newest sample timestamp is not known yet.");
+                    mPeripheral.forceReadCharacteristic(mNewestSampleTimestampMsCharacteristic);
+                } else if (mOldestTimestampToDownloadMs == null) {
+                    Log.d(TAG, "forceCharacteristicRequest -> Oldest sample timestamp is not known yet.");
+                    mPeripheral.forceReadCharacteristic(mOldestSampleTimestampMsCharacteristic);
                 }
-                mPeripheral.cleanCharacteristicCache();
+
             }
         });
     }
@@ -415,7 +421,7 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
         if (mLastDownloadUpdate == null || mLastSequenceNumberDownloaded == 0) {
             return false;
         }
-        if (mLastDownloadUpdate + DOWNLOAD_TIMEOUT_MS > System.currentTimeMillis()) {
+        if (mLastDownloadUpdate + DOWNLOAD_START_TIMEOUT_MS > System.currentTimeMillis()) {
             Log.d(TAG, "isDownloadInProgress -> User is downloading data from the device.");
             return true;
         }
@@ -431,9 +437,10 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
         Log.d(TAG, String.format("setLastSequenceNumberDownloaded -> Received sequence number %d in device %s.", sequenceNumber, getDeviceAddress()));
         if (sequenceNumber > mLastSequenceNumberDownloaded) {
             mLastSequenceNumberDownloaded = sequenceNumber;
-            notifyDownloadProgress(sequenceNumber);
+            final int downloadedElements = sequenceNumber + DATAPOINT_SIZE;
+            notifyDownloadProgress(downloadedElements);
             final Integer numberDownloadElements = getNumberLoggedElements();
-            if (numberDownloadElements != null && sequenceNumber >= getNumberLoggedElements() - AbstractSmartgadgetService.DATAPOINT_SIZE){
+            if (numberDownloadElements != null && downloadedElements >= getNumberLoggedElements()) {
                 onDownloadComplete();
                 mLastDownloadUpdate = null;
             } else {
