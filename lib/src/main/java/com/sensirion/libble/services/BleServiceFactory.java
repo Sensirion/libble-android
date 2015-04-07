@@ -27,7 +27,7 @@ public class BleServiceFactory {
 
     private static BleServiceFactory mInstance = new BleServiceFactory();
 
-    private final Map<String, Class<? extends AbstractBleService>> mServiceLookUp = Collections.synchronizedMap(new HashMap<String, Class<? extends AbstractBleService>>());
+    private final Map<String, Class<? extends BleService>> mServiceLookUp = Collections.synchronizedMap(new HashMap<String, Class<? extends BleService>>());
 
     private BleServiceFactory() {
         registerGenericServices();
@@ -94,7 +94,7 @@ public class BleServiceFactory {
      * @param uuid       of the service.
      * @param newService class that is going to be instantiate.
      */
-    public void registerServiceImplementation(@NonNull final String uuid, @NonNull final Class<? extends AbstractBleService> newService) {
+    public void registerServiceImplementation(@NonNull final String uuid, @NonNull final Class<? extends BleService> newService) {
         if (mServiceLookUp.containsKey(uuid)) {
             Log.w(TAG, String.format("registerServiceImplementation -> The service with UUID %s was replaced by another service version.", uuid));
             mServiceLookUp.remove(uuid);

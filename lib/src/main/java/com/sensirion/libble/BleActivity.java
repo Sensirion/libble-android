@@ -9,7 +9,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.BleDevice;
 import com.sensirion.libble.listeners.NotificationListener;
-import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.BleService;
 
 import java.util.List;
 import java.util.UUID;
@@ -237,7 +237,7 @@ public abstract class BleActivity extends Activity {
      * @see com.sensirion.libble.BleManager#getServiceWithName(String, String)
      */
     @SuppressWarnings("unused")
-    public AbstractBleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
+    public BleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
         return mBleManager.getServiceWithName(deviceAddress, serviceName);
     }
 
