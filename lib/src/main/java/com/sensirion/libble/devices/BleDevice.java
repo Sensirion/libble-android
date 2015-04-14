@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.AbstractBleService;
 import com.sensirion.libble.services.AbstractHistoryService;
+import com.sensirion.libble.services.BleService;
 
 /**
  * Interface for any device that supports Bluetooth Low Energy (BLE)
@@ -79,23 +80,23 @@ public interface BleDevice {
     <T extends AbstractBleService> T getDeviceService(@NonNull Class<T> type);
 
     /**
-     * Obtains a {@link com.sensirion.libble.services.AbstractBleService} with a particular name.
+     * Obtains a {@link com.sensirion.libble.services.BleService} with a particular name.
      * NOTE: Returns the first service found with the given name.
      *
      * @param serviceName name of the service.
-     * @return {@link com.sensirion.libble.services.AbstractBleService} that corresponds to the given name
+     * @return {@link com.sensirion.libble.services.BleService} that corresponds to the given name
      */
     @Nullable
-    AbstractBleService getDeviceService(@NonNull String serviceName);
+    BleService getDeviceService(@NonNull String serviceName);
 
     /**
-     * Obtains a list of the discovered {@link com.sensirion.libble.services.AbstractBleService}.
+     * Obtains a list of the discovered {@link com.sensirion.libble.services.BleService}.
      *
-     * @return Iterable with a list of the discovered services.
+     * @return Iterable with a list of the discovered {@link com.sensirion.libble.services.BleService}.
      */
     @SuppressWarnings("unused")
     @NonNull
-    Iterable<AbstractBleService> getDiscoveredServices();
+    Iterable<BleService> getDiscoveredServices();
 
     /**
      * Obtains a list with the name of the discovered services.

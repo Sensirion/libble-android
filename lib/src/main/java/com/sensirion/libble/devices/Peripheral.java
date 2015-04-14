@@ -14,6 +14,7 @@ import android.util.Log;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.AbstractBleService;
 import com.sensirion.libble.services.AbstractHistoryService;
+import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.BleServiceFactory;
 
 import java.util.Collections;
@@ -56,7 +57,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     //Services List
     @NonNull
-    private final Set<AbstractBleService> mServices = Collections.synchronizedSet(new HashSet<AbstractBleService>());
+    private final Set<BleService> mServices = Collections.synchronizedSet(new HashSet<BleService>());
     private volatile boolean mForceOperationRunning = false;
     private boolean mIsConnected = false;
     private int mRSSI;
@@ -105,7 +106,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         public void onCharacteristicRead(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic, final int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                for (final AbstractBleService service : mServices) {
+                for (final BleService service : mServices) {
                     service.onCharacteristicUpdate(characteristic);
                 }
                 if (mForceOperationRunning) {
@@ -122,7 +123,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         @Override
         public void onCharacteristicChanged(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            for (final AbstractBleService service : mServices) {
+            for (final BleService service : mServices) {
                 service.onCharacteristicUpdate(characteristic);
             }
             mBleStackProtector.execute(mBluetoothGatt);
@@ -136,7 +137,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             super.onCharacteristicChanged(gatt, characteristic);
             Log.d(TAG, String.format("onCharacteristicWrite -> Received Characteristic %s with status %d", characteristic.getUuid(), status));
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                for (final AbstractBleService service : mServices) {
+                for (final BleService service : mServices) {
                     service.onCharacteristicWrite(characteristic);
                 }
                 if (mForceOperationRunning) {
@@ -157,7 +158,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                 final List<BluetoothGattService> discoveredServices = gatt.getServices();
                 Log.w(TAG, String.format(String.format("onServicesDiscovered -> Discovered %s services in the device %s.", discoveredServices.size(), getAddress())));
                 for (final BluetoothGattService service : discoveredServices) {
-                    final AbstractBleService knownService = BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service);
+                    final BleService knownService = BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service);
                     if (knownService != null) {
                         mServices.add(knownService);
                         Log.d(TAG, String.format("onServiceDiscovered -> Added service %s to the service list.", knownService));
@@ -182,7 +183,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                     mLastActionUsedQueue.add(descriptor);
                 }
                 Log.i(TAG, String.format("onDescriptorRead -> Descriptor %s was read successfully.", descriptor.getUuid()));
-                for (final AbstractBleService service : mServices) {
+                for (final BleService service : mServices) {
                     service.onDescriptorRead(descriptor);
                 }
             } else {
@@ -200,7 +201,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                 if (mForceOperationRunning) {
                     mLastActionUsedQueue.add(descriptor);
                 }
-                for (final AbstractBleService service : mServices) {
+                for (final BleService service : mServices) {
                     service.onDescriptorWrite(descriptor);
                 }
             } else {
@@ -303,7 +304,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     @Override
     public <T extends AbstractBleService> T getDeviceService(@NonNull final Class<T> type) {
-        for (final AbstractBleService service : mServices) {
+        for (final BleService service : mServices) {
             if (service.getClass().equals(type)) {
                 return (T) service;
             }
@@ -315,8 +316,8 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * {@inheritDoc}
      */
     @Override
-    public AbstractBleService getDeviceService(@NonNull final String serviceName) {
-        for (final AbstractBleService service : mServices) {
+    public BleService getDeviceService(@NonNull final String serviceName) {
+        for (final BleService service : mServices) {
             if (service.isExplicitService(serviceName)) {
                 return service;
             }
@@ -329,12 +330,11 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     @Override
     @NonNull
-    public Iterable<AbstractBleService> getDiscoveredServices() {
-        final List<AbstractBleService> discoveredBleServices = new LinkedList<>();
-        for (final AbstractBleService service : mServices) {
+    public Iterable<BleService> getDiscoveredServices() {
+        final List<BleService> discoveredBleServices = new LinkedList<>();
+        for (final BleService service : mServices) {
             discoveredBleServices.add(service);
         }
-
         return discoveredBleServices;
     }
 
@@ -349,7 +349,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             return new LinkedList<>();
         }
         final Set<String> discoveredServices = new HashSet<>();
-        for (final AbstractBleService service : mServices) {
+        for (final BleService service : mServices) {
             discoveredServices.add(String.format("%s %s", service.getClass().getSimpleName(), service.getUUIDString()));
         }
         return discoveredServices;
@@ -360,7 +360,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     @Override
     public AbstractHistoryService getHistoryService() {
-        for (final AbstractBleService service : mServices) {
+        for (final BleService service : mServices) {
             if (service instanceof AbstractHistoryService) {
                 return (AbstractHistoryService) service;
             }
@@ -631,7 +631,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     @Override
     public void setAllNotificationsEnabled(final boolean enabled) {
-        for (final AbstractBleService service : mServices) {
+        for (final BleService service : mServices) {
             service.setNotificationsEnabled(enabled);
         }
     }
@@ -643,7 +643,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     public boolean registerDeviceListener(@NonNull final NotificationListener listener) {
         mNotificationListeners.add(listener);
         boolean validServiceFound = false;
-        for (final AbstractBleService service : mServices) {
+        for (final BleService service : mServices) {
             if (service.registerNotificationListener(listener)) {
                 validServiceFound = true;
                 service.setNotificationsEnabled(true);
@@ -657,7 +657,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     @Override
     public void unregisterDeviceListener(@NonNull final NotificationListener listener) {
-        for (final AbstractBleService service : mServices) {
+        for (final BleService service : mServices) {
             service.unregisterNotificationListener(listener);
         }
         mNotificationListeners.remove(listener);
@@ -695,7 +695,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      */
     @Override
     public boolean areAllServicesReady() {
-        for (final AbstractBleService service : mServices) {
+        for (final BleService service : mServices) {
             if (!service.isServiceReady()) {
                 return false;
             }

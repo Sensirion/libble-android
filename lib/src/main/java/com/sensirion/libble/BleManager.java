@@ -15,7 +15,7 @@ import com.sensirion.libble.devices.BlePeripheralService;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.listeners.devices.DeviceStateListener;
 import com.sensirion.libble.listeners.devices.ScanListener;
-import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.BleService;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -307,7 +307,7 @@ public class BleManager {
      * @param serviceName   name of the service.
      * @return {@link com.sensirion.libble.services.AbstractBleService}
      */
-    public AbstractBleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
+    public BleService getServiceWithName(@NonNull final String deviceAddress, @NonNull final String serviceName) {
         final BleDevice device = getConnectedDevice(deviceAddress);
         if (device == null) {
             Log.e(TAG, String.format("getServiceWithName -> Device with address %s not found.", deviceAddress));

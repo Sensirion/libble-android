@@ -20,12 +20,10 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 
 /**
- * Represents a {@link android.bluetooth.BluetoothGattService} as defined in org.bluetooth.service.*
- * or a proprietary implementation.
- * <p/>
- * Manages automatically the services listeners represented with the generic '<code>ListenerType extends NotificationListener</code>'
+ * @see com.sensirion.libble.services.BleService
+ * Manages automatically the services listeners represented with the generic <code>ListenerType extends NotificationListener</code>
  */
-public abstract class AbstractBleService<ListenerType extends NotificationListener> {
+public abstract class AbstractBleService<ListenerType extends NotificationListener> implements BleService {
 
     //Characteristic descriptor UUIDs
     protected static final UUID USER_CHARACTERISTIC_DESCRIPTOR_UUID = UUID.fromString("00002901-0000-1000-8000-00805f9b34fb");
@@ -112,41 +110,33 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     }
 
     /**
-     * Method called when a characteristic is read.
-     *
-     * @param updatedCharacteristic that was updated.
-     * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
+    @Override
     public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
         return mBluetoothGattService.getCharacteristics().contains(updatedCharacteristic);
     }
 
     /**
-     * This method is called when a characteristic was written in the device.
-     *
-     * @param characteristic that was written in the device with success.
-     * @return <code>true</code> if the service managed the given characteristic - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
+    @Override
     public boolean onCharacteristicWrite(@NonNull final BluetoothGattCharacteristic characteristic) {
         return mBluetoothGattService.getCharacteristics().contains(characteristic);
     }
 
     /**
-     * Method called when a descriptor is read.
-     *
-     * @param descriptor that was read by the device.
-     * @return <code>true</code> if the descriptor was processed - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
+    @Override
     public boolean onDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor) {
         return false; // This method needs to be overridden in order to do something with the descriptor.
     }
 
     /**
-     * Method called when a descriptor is written.
-     *
-     * @param descriptor that was written by the device.
-     * @return <code>true</code> if the descriptor was processed - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
+    @Override
     public boolean onDescriptorWrite(@NonNull final BluetoothGattDescriptor descriptor) {
         if (mNotifyCharacteristics.contains(descriptor.getCharacteristic())) {
             mRegisteredNotifyCharacteristics.add(descriptor.getCharacteristic());
@@ -156,21 +146,18 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     }
 
     /**
-     * Gets the UUID of the service.
-     *
-     * @return {@link java.lang.String} of the UUID.
+     * {@inheritDoc}
      */
     @NonNull
+    @Override
     public String getUUIDString() {
         return mBluetoothGattService.getUuid().toString();
     }
 
     /**
-     * Check if the service implementation could match a given type, based on its class name.
-     *
-     * @param serviceDescription simple name of the class from the service.
-     * @return <code>true</code> if the service implementation is from the given type - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
+
     public boolean isExplicitService(@NonNull final String serviceDescription) {
         return this.getClass().getSimpleName().equals(serviceDescription);
     }
@@ -239,10 +226,9 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     }
 
     /**
-     * Enables or disables the characteristic notification of a service.
-     *
-     * @param enabled <code>true</code> if notifications have to be enabled - <code>false</code> otherwise.
+     * {@inheritDoc}
      */
+    @Override
     public void setNotificationsEnabled(final boolean enabled) {
         mIsRequestingNotifications = enabled;
         if (enabled) {
@@ -274,12 +260,9 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     }
 
     /**
-     * This method should only be called by the {@link com.sensirion.libble.devices.Peripheral} registered with this instance.
-     * This method adds a listener to the list in case it's from the type specified in the ListenerType generics.
-     *
-     * @param listener the new candidate object for being a listener of this class.
-     * @return <code>true</code> in case it's a valid listener, <code>false</code> otherwise.
+     * {@inheritDoc}
      */
+    @Override
     public boolean registerNotificationListener(@NonNull final NotificationListener listener) {
         if (mNotificationClassType == null || mListeners == null) {
             if (mIsRequestingNotifications) {
@@ -304,11 +287,9 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     }
 
     /**
-     * This method should only be called by the {@link com.sensirion.libble.devices.Peripheral} registered with this instance.
-     * This method unregister a listener from the list in case of having it.
-     *
-     * @param listener the listener that doesn't want to hear from a device anymore.
+     * {@inheritDoc}
      */
+    @Override
     @SuppressWarnings("SuspiciousMethodCalls") //It's checked with isAssignableFrom
     public boolean unregisterNotificationListener(@NonNull final NotificationListener listener) {
         if (mListeners == null || mNotificationClassType == null) {
@@ -345,16 +326,4 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     public String toString() {
         return String.format("%s of the device: %s", getClass().getSimpleName(), getDeviceAddress());
     }
-
-    /**
-     * Checks if a service is ready to use.
-     *
-     * @return <code>true</code> if the service is synchronized - <code>false</code> otherwise.
-     */
-    public abstract boolean isServiceReady();
-
-    /**
-     * Tries to synchronize a service in case some of its data is missing.
-     */
-    public abstract void synchronizeService();
 }
