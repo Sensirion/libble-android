@@ -14,19 +14,19 @@ services.
 
 ## Installation
 
-* Place the library file in the libs library folder and compile the dependencies.
-
 #### Android Studio
 
+* Add mavenCentral or jcenter repositories
 * Add the following snippet to the build.gradle file:
 
 ```gradle
 dependencies {
-   compile fileTree(include: '*.jar', dir: 'libs')
    compile project ('com.sensirion:libble')
 }
 ```
 #### Eclipse
+
+* Place the library file in the libs library folder and compile the dependencies.
 
 ```
 Properties > Java Build Path > Tab: Libraries > Add JARs...
@@ -75,30 +75,31 @@ import com.sensirion.libble.listeners.devices.BleScanListener;
 import com.sensirion.libble.devices.AbstractBleDevice;
 import com.sensirion.libble.BleManager;
 
-public class DeviceStateFragment extends Fragment implements BleDeviceStateListener, BleScanListener {
+public class DeviceStateFragment extends Fragment
+                                 implements BleDeviceStateListener, BleScanListener {
 
   @Override
   public void onResume(){
      super.onResume();
      BleManager.getInstance().registerListener(this);
-    //Do something else.
+     //Do something else.
   }
 
   @Override
   public void onPause(){
      super.onPause();
      BleManager.getInstance().unregisterListener(this);
-    //Do something else.
+     //Do something else.
   }
 
  /**
   * This method tells to the user when scan is turned on or off.
   *
-  * @param isScanEnabled <code>true</code> if scan is turned on - <code>false</code> if scan is turned off.
+  * @param isScanEnabled sets the scan state on/off (true/false)
   */
   @Override
   public void onScanStateChanged(final boolean isScanEnabled){
-     //Do something.
+      //Do something.
   }
 
   /**
@@ -110,7 +111,7 @@ public class DeviceStateFragment extends Fragment implements BleDeviceStateListe
    */
   @Override
   public void onDeviceConnected(@NonNull final AbstractBleDevice device){
-     //Do something.
+      //Do something.
   }
 
   /**
@@ -120,7 +121,7 @@ public class DeviceStateFragment extends Fragment implements BleDeviceStateListe
    */
   @Override
   public void onDeviceDisconnected(@NonNull final AbstractBleDevice device){
-     //Do something.
+      //Do something.
   }
 
   /**
@@ -130,7 +131,7 @@ public class DeviceStateFragment extends Fragment implements BleDeviceStateListe
    */
   @Override
   public void onDeviceDiscovered(@NonNull final AbstractBleDevice device){
-     //Do something.
+      //Do something.
   }
 
   /**
@@ -138,7 +139,7 @@ public class DeviceStateFragment extends Fragment implements BleDeviceStateListe
    */
   @Override
   public void onDeviceAllServicesDiscovered(@NonNull final AbstractBleDevice device){
-     //Do something.
+      //Do something.
   }
 }
 ```
@@ -154,7 +155,7 @@ BleManager.getInstance().startScanning()
 
 ###### OPTION 2: Scan for devices with specific UUIDs
 ```java
-private static void scanForBleDevicesUsingUUIDs (@NonNull final UUID [] validDeviceUUIDs){
+private void scanForBleDevicesUsingUUIDs (@NonNull final UUID [] validDeviceUUIDs) {
   BleManager.getInstance().startScanning(validDeviceUUIDs)
 }
 ```
@@ -163,14 +164,19 @@ private static void scanForBleDevicesUsingUUIDs (@NonNull final UUID [] validDev
 
 ###### OPTION 1: Retrieve all discovered devices
 ```java
-public Iterable <? extends AbstractBleDevice> getDiscoveredBleDevices(){
+@NonNull
+public Iterable <? extends AbstractBleDevice> getDiscoveredBleDevices() {
     return BleManager.getInstance().getDiscoveredBleDevices();
 }
 ```
 
 ###### OPTION 2: Retrieve discovered devices with specific advertise names
 ```java
-public Iterable <? extends AbstractBleDevice> getDiscoveredBleDevices(@NonNull List <String> acceptedAdvertiseNames){
+@NonNull
+public Iterable<? extends AbstractBleDevice> getDiscoveredBleDevices(){
+   final List acceptedAdvertiseNames = new LinkedList();
+   acceptedAdvertiseNames.add("SHTC1 SmartGadget");
+   acceptedAdvertiseNames.add("Smart Humigadget");
    return BleManager.getInstance().getDiscoveredBleDevices(acceptedAdvertiseNames);
 }
 ```
@@ -209,23 +215,28 @@ public class HumidityListenerFragment extends Fragment implements HumidityListen
  @Override
  public onResume(){
     super.onResume();
-    BleManager.getInstance().registerListener(this); //Registers this humidity listener in all the peripherals.
+    //Registers this humidity listener in all the peripherals.
+    BleManager.getInstance().registerListener(this);
  }
 
  @Override
  public onPause(){
    super.onPause();
-   BleManager.getInstance().unregisterListener(this); //Registers this humidity listener in all the peripherals.
+   //Registers this humidity listener in all the peripherals.
+   BleManager.getInstance().unregisterListener(this);
  }
 
  /**
   * Advices the listeners that a new humidity value was obtained.
   *
-  * @param device     {@link com.sensirion.libble.devices.AbstractBleDevice} that send the humidity data.
-  * @param humidity   {@link java.lang.Float} with the humidity value.
-  * @param sensorName {@link java.lang.String} with the name of the sensor that send the humidity data.
+  * @param device     {@link AbstractBleDevice} that send the humidity data.
+  * @param humidity   {@link float} with the humidity value.
+  * @param sensorName {@link String} with the sensor name.
   */
-  public void onNewHumidity(@NonNull AbstractBleDevice device, float humidity, @NonNull String sensorName, @NonNull String unit){
+  public void onNewHumidity(@NonNull final AbstractBleDevice device,
+                            final float humidity,
+                            @NonNull final String sensorName,
+                            @NonNull final String unit){
     //Do something
  }
 
@@ -237,7 +248,11 @@ public class HumidityListenerFragment extends Fragment implements HumidityListen
   * @param timestamp        in milliseconds that determine when the humidity was obtained.
   * @param sensorName       that send the humidity.
   */
-  public void onNewHistoricalHumidity(@NonNull AbstractBleDevice device, float relativeHumidity, long timestamp, @NonNull String sensorName, @NonNull String unit){
+  public void onNewHistoricalHumidity(@NonNull final AbstractBleDevice device,
+                                      final float relativeHumidity,
+                                      final long timestamp,
+                                      @NonNull final String sensorName,
+                                      @NonNull final String unit){
      //Do something
   }
 }
@@ -272,27 +287,35 @@ to extend com.sensirion.libble.services.AbstractBleService. It is possible
 to generify the AbstractBleService to manage the listener registration
 automatically.
 
+###### Service registration:
+
+```java
+/**
+ * The following command needs to be called before the device connection.
+ * If a device with this service is connected, the factory will create
+ * instances of this service class automatically.
+ */
+ BleServiceFactory.registerServiceImplementation(SERVICE_UUID, StepService.class);
+```
 ###### Service example:
 
 ```java
-public class StepService extends AbstractBleService<StepListener> {
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
+import com.sensirion.libble.devices.Peripheral;
+import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT32;
 
- /**
-  * Registers a service in the BleServiceFactory as soon as the application starts. If a device
-  * with this service is connected, the factory will make an instance of this class automatically.
-  */
- static {
-    BleServiceFactory.registerServiceImplementation(SERVICE_UUID, StepService.class);
- }
+public class StepService extends AbstractBleService<StepListener> {
 
  //SERVICE UUIDs
  public static final String SERVICE_UUID = "0000352f-0000-1000-8000-00805f9b34fb";
- private static final String STEP_CHARACTERISTIC_UUID = "00002539-0000-1000-8000-00805f9b34fb";
+ private static final String CHARACTERISTIC_UUID = "00002539-0000-1000-8000-00805f9b34fb";
  private final BluetoothGattCharacteristic mStepCharacteristic;
 
- public StepService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
+ public StepService(@NonNull final Peripheral parent,
+                    @NonNull final BluetoothGattService bluetoothGattService) {
     super(parent, bluetoothGattService);
-    mStepCharacteristic = getCharacteristic(STEP_CHARACTERISTIC_UUID);
+    mStepCharacteristic = getCharacteristic(CHARACTERISTIC_UUID);
     parent.readCharacteristic(mStepCharacteristic);
  }
 
@@ -307,13 +330,13 @@ public class StepService extends AbstractBleService<StepListener> {
  /**
   * Method called when a characteristic is read.
   *
-  * @param updatedCharacteristic that was updated.
-  * @return <code>true</code> if the characteristic was read correctly - <code>false</code> otherwise.
+  * @param characteristic that was updated.
+  * @return <code>true</code> if the characteristic was read correctly.
   */
   @Override
-  public boolean onCharacteristicUpdate(@NonNull final BluetoothGattCharacteristic updatedCharacteristic) {
+  public boolean onCharacteristicUpdate(@NonNull BluetoothGattCharacteristic characteristic) {
      if (mStepCharacteristic.equals(updatedCharacteristic)) {
-        final int numberSteps = mStepCharacteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT32, 0);
+        final int numberSteps = characteristic.getIntValue(FORMAT_UINT32, 0);
         notifyListeners(numberSteps);
         return true;
      }
@@ -326,7 +349,7 @@ public class StepService extends AbstractBleService<StepListener> {
         try {
            iterator.next().onNewStep(mPeripheral, numberSteps);
         } catch (final Exception e) {
-           Log.e(TAG, "notifyListeners -> An error was thrown when notifying the listeners -> ", e);
+           Log.e(TAG, "notifyListeners -> Exception thrown -> ", e);
            iterator.remove();
         }
      }
@@ -335,7 +358,7 @@ public class StepService extends AbstractBleService<StepListener> {
  /**
   * Checks if a service is ready to use.
   *
-  * @return <code>true</code> if the service is synchronized - <code>false</code> otherwise.
+  * @return <code>true</code> if the service is synchronized.
   */
   @Override
   public boolean isServiceReady() {
@@ -347,7 +370,8 @@ public class StepService extends AbstractBleService<StepListener> {
   */
   @Override
   public abstract void synchronizeService() {
-      registerDeviceCharacteristicNotifications(); // If notifications are registered, it won't do anything.
+      // If notifications are registered, it won't do anything.
+      registerDeviceCharacteristicNotifications();
   }
 }
 ```
