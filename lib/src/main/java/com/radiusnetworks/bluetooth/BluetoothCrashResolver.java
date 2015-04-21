@@ -1,15 +1,15 @@
 package com.radiusnetworks.bluetooth;
 
 /**
- *  Licensed under the Apache License, Version 2.0 (the "License")
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *  http://www.apache.org/licenses/LICENSE-2.0
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import android.annotation.TargetApi;
@@ -91,6 +91,15 @@ public class BluetoothCrashResolver {
     private boolean discoveryStartConfirmed = false;
     private long lastBluetoothOffTime = 0l;
     private long lastBluetoothTurningOnTime = 0l;
+    private long lastBluetoothCrashDetectionTime = 0l;
+    private int detectedCrashCount = 0;
+    private int recoveryAttemptCount = 0;
+    private boolean lastRecoverySucceeded = false;
+    private long lastStateSaveTime = 0l;
+    private Context context = null;
+    private UpdateNotifier updateNotifier;
+    private Set<String> distinctBluetoothAddresses = new HashSet<String>();
+    private DiscoveryCanceller discoveryCanceller = new DiscoveryCanceller();
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -142,15 +151,6 @@ public class BluetoothCrashResolver {
             }
         }
     };
-    private long lastBluetoothCrashDetectionTime = 0l;
-    private int detectedCrashCount = 0;
-    private int recoveryAttemptCount = 0;
-    private boolean lastRecoverySucceeded = false;
-    private long lastStateSaveTime = 0l;
-    private Context context = null;
-    private UpdateNotifier updateNotifier;
-    private Set<String> distinctBluetoothAddresses = new HashSet<String>();
-    private DiscoveryCanceller discoveryCanceller = new DiscoveryCanceller();
 
     /**
      * Constructor should be called only once per long-running process that does Bluetooth LE
