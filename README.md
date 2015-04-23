@@ -110,7 +110,7 @@ public class DeviceStateFragment extends Fragment
    * @param device that was connected.
    */
   @Override
-  public void onDeviceConnected(@NonNull final AbstractBleDevice device){
+  public void onDeviceConnected(@NonNull final BleDevice device){
       //Do something.
   }
 
@@ -120,7 +120,7 @@ public class DeviceStateFragment extends Fragment
    * @param device that was disconnected.
    */
   @Override
-  public void onDeviceDisconnected(@NonNull final AbstractBleDevice device){
+  public void onDeviceDisconnected(@NonNull final BleDevice device){
       //Do something.
   }
 
@@ -130,7 +130,7 @@ public class DeviceStateFragment extends Fragment
    * @param device that was discovered.
    */
   @Override
-  public void onDeviceDiscovered(@NonNull final AbstractBleDevice device){
+  public void onDeviceDiscovered(@NonNull final BleDevice device){
       //Do something.
   }
 
@@ -138,7 +138,7 @@ public class DeviceStateFragment extends Fragment
    * This method is called when all the device services are discovered.
    */
   @Override
-  public void onDeviceAllServicesDiscovered(@NonNull final AbstractBleDevice device){
+  public void onDeviceAllServicesDiscovered(@NonNull final BleDevice device){
       //Do something.
   }
 }
@@ -146,7 +146,7 @@ public class DeviceStateFragment extends Fragment
 
 ### STEP 3: Connect to a BLE device (*AbstractBleDevice*)
 
-##### STEP 3.1: Scan for *AbstractBleDevices*
+##### STEP 3.1: Scan for *BleDevices*
 
 ###### OPTION 1: Scan for all devices
 ```java
@@ -154,10 +154,14 @@ BleManager.getInstance().startScanning()
 ```
 
 ###### OPTION 2: Scan for devices with specific UUIDs
+
 ```java
-private void scanForBleDevicesUsingUUIDs (@NonNull final UUID [] validDeviceUUIDs) {
-  BleManager.getInstance().startScanning(validDeviceUUIDs)
-}
+// Scans for a default period of time. (10 seconds)
+BleManager.getInstance().startScanning(deviceUUIDs)
+```
+or
+```java
+BleManager.getInstance().startScanning(scanDurationMilliseconds, deviceUUIDs)
 ```
 
 ##### STEP 3.2: Retrieve discovered devices
@@ -165,7 +169,7 @@ private void scanForBleDevicesUsingUUIDs (@NonNull final UUID [] validDeviceUUID
 ###### OPTION 1: Retrieve all discovered devices
 ```java
 @NonNull
-public Iterable <? extends AbstractBleDevice> getDiscoveredBleDevices() {
+public Iterable <? extends BleDevice> getDiscoveredBleDevices() {
     return BleManager.getInstance().getDiscoveredBleDevices();
 }
 ```
@@ -173,7 +177,7 @@ public Iterable <? extends AbstractBleDevice> getDiscoveredBleDevices() {
 ###### OPTION 2: Retrieve discovered devices with specific advertise names
 ```java
 @NonNull
-public Iterable<? extends AbstractBleDevice> getDiscoveredBleDevices(){
+public Iterable<? extends BleDevice> getDiscoveredBleDevices(){
    final List acceptedAdvertiseNames = new LinkedList();
    acceptedAdvertiseNames.add("SHTC1 SmartGadget");
    acceptedAdvertiseNames.add("Smart Humigadget");
@@ -185,7 +189,7 @@ public Iterable<? extends AbstractBleDevice> getDiscoveredBleDevices(){
 
 ###### OPTION 1: Connect using the *AbstractBleDevice* object
 ```java
-public static void connectDevice (@NonNull AbstractBleDevice device){
+public static void connectDevice (@NonNull BleDevice device){
    device.connect();
 }
 ```
@@ -206,6 +210,7 @@ registerDeviceListener(deviceAddress, NotificationListener) methods.
 ```java
 import com.sensirion.libble.BleManager;
 import com.sensirion.libble.listeners.services.HumidityListener;
+import com.sensirion.libble.utils.HumidityUnit;
 
 /**
  * Example fragment that listens for humidity notifications.
@@ -229,30 +234,32 @@ public class HumidityListenerFragment extends Fragment implements HumidityListen
  /**
   * Advices the listeners that a new humidity value was obtained.
   *
-  * @param device     {@link AbstractBleDevice} that send the humidity data.
+  * @param device     {@link BleDevice} that send the humidity data.
   * @param humidity   {@link float} with the humidity value.
   * @param sensorName {@link String} with the sensor name.
+  * @param unit       {@link HumidityUnit} with the humidity unit.
   */
   public void onNewHumidity(@NonNull final AbstractBleDevice device,
                             final float humidity,
                             @NonNull final String sensorName,
-                            @NonNull final String unit){
+                            @NonNull final HumidityUnit unit){
     //Do something
  }
 
   /**
   * Sends to the user the latest historical humidity.
   *
-  * @param device           that send the humidity historical value.
-  * @param relativeHumidity from a moment in the past.
-  * @param timestamp        in milliseconds that determine when the humidity was obtained.
-  * @param sensorName       that send the humidity.
+  * @param device             {@link BleDevice} that send the humidity data.
+  * @param relativeHumidity   {@link float} from a moment in the past.
+  * @param timestampMillisUTC {@link long} when the humidity was obtained.
+  * @param sensorName         {@link String} with the sensorName.
+  * @param unit               {@link HumidityUnit} with the humidity unit.
   */
   public void onNewHistoricalHumidity(@NonNull final AbstractBleDevice device,
                                       final float relativeHumidity,
                                       final long timestamp,
                                       @NonNull final String sensorName,
-                                      @NonNull final String unit){
+                                      @NonNull final HumidityUnit unit){
      //Do something
   }
 }
@@ -268,17 +275,22 @@ BleManager.getInstance().release(context);
 ```
 ## Add new services to the library:
 
-* Create for every new service a new interface in order
-to be able to listen for notifications of the new service.
-The new interface must extend
-com.sensirion.libble.listeners.NotificationListener.
-
 ###### Notification interface example:
+
+If we want to receive notifications from a service, we may want
+to receive customized notifications. In order to listen for them
+we can create a new
+com.sensirion.libble.listeners.NotificationListener interface.
+
+For example, if we want to create a service that listens for the
+number of steps notifications from an external Bluetooth gadget,
+we can implement the following interface:
+
 ```java
 import com.sensirion.libble.services.NotificationListener;
 
 public interface StepListener extends NotificationListener {
-  void onNewStep(@NonNull AbstractBleDevice device, int numberSteps);
+  void onNewStep(@NonNull BleDevice device, int numberSteps);
 }
 ```
 After the interface is created, a new service can be built whose
@@ -287,16 +299,6 @@ to extend com.sensirion.libble.services.AbstractBleService. It is possible
 to generify the AbstractBleService to manage the listener registration
 automatically.
 
-###### Service registration:
-
-```java
-/**
- * The following command needs to be called before the device connection.
- * If a device with this service is connected, the factory will create
- * instances of this service class automatically.
- */
- BleServiceFactory.registerServiceImplementation(SERVICE_UUID, StepService.class);
-```
 ###### Service example:
 
 ```java
@@ -305,17 +307,21 @@ import android.bluetooth.BluetoothGattService;
 import com.sensirion.libble.devices.Peripheral;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT32;
 
-public class StepService extends AbstractBleService<StepListener> {
+/**
+ * This is an example on how to implement a service that listens for step
+ * notifications from an external Bluetooth device.
+ */
+public class StepListener extends AbstractBleService<StepListener> {
 
  //SERVICE UUIDs
  public static final String SERVICE_UUID = "0000352f-0000-1000-8000-00805f9b34fb";
- private static final String CHARACTERISTIC_UUID = "00002539-0000-1000-8000-00805f9b34fb";
+ private static final String FOUR_BYTE_CHARACTERISTIC_UUID = "2539";
  private final BluetoothGattCharacteristic mStepCharacteristic;
 
  public StepService(@NonNull final Peripheral parent,
                     @NonNull final BluetoothGattService bluetoothGattService) {
     super(parent, bluetoothGattService);
-    mStepCharacteristic = getCharacteristic(CHARACTERISTIC_UUID);
+    mStepCharacteristic = getCharacteristic(FOUR_BYTE_CHARACTERISTIC_UUID);
     parent.readCharacteristic(mStepCharacteristic);
  }
 
@@ -330,17 +336,17 @@ public class StepService extends AbstractBleService<StepListener> {
  /**
   * Method called when a characteristic is read.
   *
-  * @param characteristic that was updated.
+  * @param char updated {@link BluetoothGattCharacteristic}
   * @return <code>true</code> if the characteristic was read correctly.
   */
   @Override
-  public boolean onCharacteristicUpdate(@NonNull BluetoothGattCharacteristic characteristic) {
-     if (mStepCharacteristic.equals(updatedCharacteristic)) {
-        final int numberSteps = characteristic.getIntValue(FORMAT_UINT32, 0);
+  public boolean onCharacteristicUpdate(@NonNull BluetoothGattCharacteristic char) {
+     if (mStepCharacteristic.equals(char)) {
+        final int numberSteps = char.getIntValue(FORMAT_UINT32, 0);
         notifyListeners(numberSteps);
         return true;
      }
-     return super.onCharacteristicUpdate(updatedCharacteristic);
+     return super.onCharacteristicUpdate(char);
   }
 
   private void notifyListeners(final int numberSteps) {
@@ -356,7 +362,7 @@ public class StepService extends AbstractBleService<StepListener> {
   }
 
  /**
-  * Checks if a service is ready to use.
+  * Checks if the service is ready to use.
   *
   * @return <code>true</code> if the service is synchronized.
   */
@@ -366,7 +372,8 @@ public class StepService extends AbstractBleService<StepListener> {
   }
 
  /**
-  * Tries to synchronize a service in case some of its data is missing.
+  * This method tries to obtain all the data the service needs and
+  * it registers for all the missing notitifications.
   */
   @Override
   public abstract void synchronizeService() {
@@ -374,4 +381,15 @@ public class StepService extends AbstractBleService<StepListener> {
       registerDeviceCharacteristicNotifications();
   }
 }
+```
+
+###### Service registration:
+
+```java
+/**
+ * The following command needs to be called before the device connection.
+ * If a device with this service is connected, the factory will create
+ * instances of this service class automatically.
+ */
+ BleServiceFactory.registerServiceImplementation(SERVICE_UUID, ExampleService.class);
 ```
