@@ -379,7 +379,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * Request a read on a given {@code BluetoothGattCharacteristic}. The read
      * result is reported asynchronously through the
      * {@code BluetoothGattCallback#onCharacteristicUpdate(android.bluetooth.BluetoothGatt,
-     *android.bluetooth.BluetoothGattCharacteristic, int)} callback.
+     * android.bluetooth.BluetoothGattCharacteristic, int)} callback.
      *
      * @param characteristic The characteristic to read from.
      */
