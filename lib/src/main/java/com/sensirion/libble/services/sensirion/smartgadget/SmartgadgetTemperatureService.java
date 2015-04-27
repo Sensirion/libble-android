@@ -23,9 +23,11 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     //CHARACTERISTICS UUID.
     private static final String TEMPERATURE_NOTIFICATIONS_UUID = "00002235-b38d-4985-720e-0f993a68ee41";
 
+    @Nullable
     private TemperatureUnit mValueUnit = null;
 
-    public SmartgadgetTemperatureService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService bluetoothGattService) {
+    public SmartgadgetTemperatureService(@NonNull final Peripheral peripheral,
+                                         @NonNull final BluetoothGattService bluetoothGattService) throws InstantiationException {
         super(peripheral, bluetoothGattService, TEMPERATURE_NOTIFICATIONS_UUID);
     }
 

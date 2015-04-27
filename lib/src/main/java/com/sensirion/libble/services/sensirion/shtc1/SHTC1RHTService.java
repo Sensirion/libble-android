@@ -15,14 +15,25 @@ import java.nio.ByteOrder;
 
 public class SHTC1RHTService extends AbstractRHTService {
 
+    @NonNull
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
+    @NonNull
+    private static final String TAG = SHTC1RHTService.class.getSimpleName();
+    @NonNull
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";
+    @NonNull
     private final BluetoothGattCharacteristic mHumidityTemperatureCharacteristic;
+    @Nullable
     private RHTDataPoint mLastDatapoint;
 
-    public SHTC1RHTService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService bluetoothGattService) {
+    public SHTC1RHTService(@NonNull final Peripheral peripheral,
+                           @NonNull final BluetoothGattService bluetoothGattService) throws InstantiationException {
         super(peripheral, bluetoothGattService);
-        mHumidityTemperatureCharacteristic = getCharacteristic(RHT_CHARACTERISTIC_UUID);
+        final BluetoothGattCharacteristic characteristic = getCharacteristic(RHT_CHARACTERISTIC_UUID);
+        if (characteristic == null) {
+            throw new InstantiationException(String.format("%s: %s -> Can not found the humidity characteristic.", TAG, TAG));
+        }
+        mHumidityTemperatureCharacteristic = characteristic;
         peripheral.readCharacteristic(mHumidityTemperatureCharacteristic);
         bluetoothGattService.addCharacteristic(mHumidityTemperatureCharacteristic);
     }
@@ -86,14 +97,16 @@ public class SHTC1RHTService extends AbstractRHTService {
     @Override
     @Nullable
     public String getSensorName() {
-        switch (mPeripheral.getAdvertisedName()) {
-            case "SHTC1 smart gadget":
+        final String advertiseName = mPeripheral.getAdvertisedName();
+        if (advertiseName != null) {
+            if (advertiseName.equals("SHTC1 smart gadget")) {
                 return "SHTC1";
-            case "SHT31 Smart Gadget":
+            }
+            if (advertiseName.equals("SHT31 Smart Gadget")) {
                 return "SHT31";
-            default:
-                return null;
+            }
         }
+        return null;
     }
 
     /**

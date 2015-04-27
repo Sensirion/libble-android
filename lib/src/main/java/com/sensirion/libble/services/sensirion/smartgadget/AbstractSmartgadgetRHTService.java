@@ -9,7 +9,7 @@ import com.sensirion.libble.listeners.services.RHTListener;
 
 abstract class AbstractSmartgadgetRHTService<ListenerType extends NotificationListener> extends AbstractSmartgadgetService<ListenerType> {
 
-    protected AbstractSmartgadgetRHTService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String valueCharacteristicUUID) {
+    protected AbstractSmartgadgetRHTService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String valueCharacteristicUUID) throws InstantiationException {
         super(peripheral, gatt, valueCharacteristicUUID);
         registerNotificationListener(SmartgadgetRHTNotificationCenter.getInstance());
     }

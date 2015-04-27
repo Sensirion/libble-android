@@ -9,8 +9,12 @@ import android.util.Log;
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.utils.LittleEndianExtractor;
+import com.sensirion.libble.utils.MockFutureTask;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 import static com.sensirion.libble.services.sensirion.smartgadget.AbstractSmartgadgetService.DATAPOINT_SIZE;
 
@@ -60,14 +64,16 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     @Nullable
     private Integer mUserInterval = null;
 
-
-    public SmartgadgetHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
+    public SmartgadgetHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) throws InstantiationException {
         super(parent, bluetoothGattService);
         mSyncTimeCharacteristic = super.getCharacteristic(SYNC_TIME_UUID);
         mOldestSampleTimestampMsCharacteristic = super.getCharacteristic(READ_BACK_TO_TIME_MS_UUID);
         mNewestSampleTimestampMsCharacteristic = super.getCharacteristic(NEWEST_SAMPLE_TIME_MS_UUID);
         mStartLoggerDownloadCharacteristic = super.getCharacteristic(START_LOGGER_DOWNLOAD_UUID);
         mLoggerIntervalMsCharacteristic = super.getCharacteristic(LOGGER_INTERVAL_MS_UUID);
+        if (mLoggerIntervalMsCharacteristic == null) {
+            throw new InstantiationException(String.format("%s: %s -> Can not found the logger interval characteristic.", TAG, TAG));
+        }
         parent.readCharacteristic(mLoggerIntervalMsCharacteristic);
         syncTimestamps();
     }
@@ -246,7 +252,13 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     }
 
     private void notifyNumberElementsToDownload() {
-        final Integer numberLoggedElements = getNumberLoggedElements();
+        final Integer numberLoggedElements;
+        try {
+            numberLoggedElements = getNumberLoggedElements().get();
+        } catch (final InterruptedException | ExecutionException e) {
+            Log.e(TAG, "notifyNumberElementsToDownload -> The following exception was thrown while obtaining the number of elements -> ", e);
+            return;
+        }
         if (numberLoggedElements == null) {
             Log.e(TAG, String.format("notifyNumberElementsToDownload -> Device %s tried to notify a null total number of elements.", getDeviceAddress()));
         } else {
@@ -258,32 +270,35 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
      * {@inheritDoc}
      */
     @Override
-    public boolean startDataDownload() {
+    @NonNull
+    public FutureTask<Boolean> startDataDownload() {
         if (isDownloadInProgress()) {
             Log.e(TAG, "startDataDownload -> The user can't download the data from the device because another download is in progress.");
-            return false;
+            return new MockFutureTask<>(false);
         }
         mLastDownloadUpdate = System.currentTimeMillis();
         mLastSequenceNumberDownloaded = 0;
         enableHistoryDataNotifications();
-        return true;
+        return new MockFutureTask<>(true);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean startDataDownload(final long oldestTimestampToDownload) {
+    @NonNull
+    public FutureTask<Boolean> startDataDownload(final long oldestTimestampToDownload) {
         mUserOldestTimestampToDownloadMs = oldestTimestampToDownload;
         startDataDownload();
-        return true;
+        return new MockFutureTask<>(true);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean setDownloadInterval(final int loggerIntervalInMilliseconds) {
+    @NonNull
+    public FutureTask<Boolean> setDownloadInterval(final int loggerIntervalInMilliseconds) {
         Log.d(TAG, String.format("setDownloadInterval -> Setting the download interval to %d.", loggerIntervalInMilliseconds));
         mLoggerIntervalMsCharacteristic.setValue(LittleEndianExtractor.extractLittleEndianByteArrayFromInteger(loggerIntervalInMilliseconds));
         mUserInterval = loggerIntervalInMilliseconds;
@@ -294,30 +309,37 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
      * {@inheritDoc}
      */
     @Override
-    @Nullable
-    public Integer getLoggingIntervalMs() {
-        if (mLoggerIntervalMs == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
+    @NonNull
+    public FutureTask<Integer> getLoggingIntervalMs() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mLoggerIntervalMs == null) {
+                    mPeripheral.forceReadCharacteristic(mLoggerIntervalMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST).get();
                 }
-            });
-        }
-        return mLoggerIntervalMs;
+                return mLoggerIntervalMs;
+            }
+        });
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean resetDeviceData() {
-        final Integer downloadIntervalMs = getLoggingIntervalMs();
-        if (downloadIntervalMs == null) {
-            Log.e(TAG, "resetDeviceData -> Device needs to be synchronized in order to reset it.");
-            return false;
-        }
-        return setDownloadInterval(downloadIntervalMs);
+    @NonNull
+    public FutureTask<Boolean> resetDeviceData() {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                final Integer downloadIntervalMs = getLoggingIntervalMs().get();
+                if (downloadIntervalMs == null) {
+                    Log.e(TAG, "resetDeviceData -> Device needs to be synchronized in order to reset it.");
+                    return false;
+                }
+                return setDownloadInterval(downloadIntervalMs).get();
+            }
+        });
+
     }
 
     /**
@@ -340,24 +362,30 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
      * {@inheritDoc}
      */
     @Override
-    public boolean setLoggingState(final boolean enabled) {
+    @NonNull
+    public FutureTask<Boolean> setLoggingState(final boolean enabled) {
         Log.e(TAG, String.format("setLoggingState -> In the device %s logging can never be enabled or disabled.", getDeviceAddress()));
-        return false;
+        return new MockFutureTask<>(false);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @Nullable
-    public Integer getNumberLoggedElements() {
-        if (mNewestSampleTimestampMs == null || mOldestTimestampToDownloadMs == null || mLoggerIntervalMs == null) {
-            lazyCharacteristicRequest();
-            return null;
-        }
-        final int numberLoggedElements = (int) (mNewestSampleTimestampMs - mOldestTimestampToDownloadMs) / mLoggerIntervalMs;
-        Log.i(TAG, String.format("getNumberLoggedElements -> Device %s has %d logged elements", getDeviceAddress(), numberLoggedElements));
-        return numberLoggedElements;
+    @NonNull
+    public FutureTask<Integer> getNumberLoggedElements() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mNewestSampleTimestampMs == null || mOldestTimestampToDownloadMs == null || mLoggerIntervalMs == null) {
+                    forceCharacteristicRequest();
+                    return null;
+                }
+                final int numberLoggedElements = (int) (mNewestSampleTimestampMs - mOldestTimestampToDownloadMs) / mLoggerIntervalMs;
+                Log.i(TAG, String.format("getNumberLoggedElements -> Device %s has %d logged elements", getDeviceAddress(), numberLoggedElements));
+                return numberLoggedElements;
+            }
+        });
     }
 
     private void lazyCharacteristicRequest() {
@@ -439,8 +467,14 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
             mLastSequenceNumberDownloaded = sequenceNumber;
             final int downloadedElements = sequenceNumber + DATAPOINT_SIZE;
             notifyDownloadProgress(downloadedElements);
-            final Integer numberDownloadElements = getNumberLoggedElements();
-            if (numberDownloadElements != null && downloadedElements >= getNumberLoggedElements()) {
+            final Integer numberDownloadElements;
+            try {
+                numberDownloadElements = getNumberLoggedElements().get();
+            } catch (final ExecutionException | InterruptedException e) {
+                Log.e(TAG, "setLastSequenceNumberDownloaded -> The following exception was thrown -> ", e);
+                return;
+            }
+            if (numberDownloadElements != null && downloadedElements >= numberDownloadElements) {
                 onDownloadComplete();
                 mLastDownloadUpdate = null;
             } else {

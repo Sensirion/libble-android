@@ -22,7 +22,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT32;
@@ -32,7 +35,6 @@ public class SHTC1HistoryService extends AbstractHistoryService {
 
     public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
 
-    private static final int TIMEOUT_DOWNLOAD_DATA_MS = 7500;
     private static final int MAX_CONSECUTIVE_TRIES = 10;
 
     private static final String START_STOP_UUID = "0000fa21-0000-1000-8000-00805f9b34fb";
@@ -63,7 +65,6 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     private final BluetoothGattCharacteristic mUserDataCharacteristic;
 
     private int mExtractedDataPointsCounter = 0;
-    private long lastTimeLogged;
 
     @Nullable
     private Integer mStartPointDownload = null;
@@ -173,24 +174,33 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      */
     @Override
     public synchronized void synchronizeService() {
-        if (checkGadgetLoggingState() == null) {
-            Log.w(TAG, "synchronizeService -> Logging state is not available yet");
-        }
-        if (getDownloadIntervalSeconds() == null) {
-            Log.w(TAG, "synchronizeService -> Download interval is not available yet.");
-        }
-        if (getCurrentPoint() == null) {
-            Log.w(TAG, "synchronizeService -> Current pointer is not available yet.");
-        }
-        if (getStartPointer() == null) {
-            Log.w(TAG, "synchronizeService -> Start pointer is not available yet.");
-        }
-        if (getEndPointer() == null) {
-            Log.w(TAG, "synchronizeService -> End pointer is not available yet.");
-        }
-        if (getUserData() == null) {
-            Log.w(TAG, "synchronizeService -> User data is not available yet.");
-        }
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (checkGadgetLoggingState().get() == null) {
+                        Log.w(TAG, "synchronizeService -> Logging state is not available yet");
+                    }
+                    if (getDownloadIntervalSeconds().get() == null) {
+                        Log.w(TAG, "synchronizeService -> Download interval is not available yet.");
+                    }
+                    if (getCurrentPoint().get() == null) {
+                        Log.w(TAG, "synchronizeService -> Current pointer is not available yet.");
+                    }
+                    if (getStartPointer().get() == null) {
+                        Log.w(TAG, "synchronizeService -> Start pointer is not available yet.");
+                    }
+                    if (getEndPointer().get() == null) {
+                        Log.w(TAG, "synchronizeService -> End pointer is not available yet.");
+                    }
+                    if (getUserData().get() == null) {
+                        Log.w(TAG, "synchronizeService -> User data is not available yet.");
+                    }
+                } catch (final ExecutionException | InterruptedException e) {
+                    Log.e(TAG, "synchronizeService -> The following exception was thrown -> ", e);
+                }
+            }
+        });
     }
 
     /**
@@ -201,19 +211,19 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @return <code>true</code> if logging is enabled - <code>false</code> if logging is disabled - <code>null</code> if the state is unknown.
      */
-    @Nullable
-    private Boolean checkGadgetLoggingState() {
-        if (mLoggingIsEnabled == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+    @NonNull
+    private FutureTask<Boolean> checkGadgetLoggingState() {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                if (mLoggingIsEnabled == null) {
+                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mStartStopCharacteristic);
+                } else {
+                    SHTC1HistoryService.super.mPeripheral.readCharacteristic(mStartPointerCharacteristic);
                 }
-            });
-        } else {
-            super.mPeripheral.readCharacteristic(mStartPointerCharacteristic);
-        }
-        return mLoggingIsEnabled;
+                return mLoggingIsEnabled;
+            }
+        });
     }
 
     /**
@@ -245,32 +255,37 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @return [@link java.lang.Integer} with the interval - return <code>null</code> if the interval is not available yet.
      */
-    @Nullable
-    public Integer getDownloadIntervalSeconds() {
-        if (mInterval == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
+    @NonNull
+    public FutureTask<Integer> getDownloadIntervalSeconds() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mInterval == null) {
                     SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+                } else {
+                    SHTC1HistoryService.super.mPeripheral.readCharacteristic(mIntervalCharacteristic);
                 }
-            });
-        } else {
-            mPeripheral.readCharacteristic(mIntervalCharacteristic);
-        }
-        return mInterval;
+                return mInterval;
+            }
+        });
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @Nullable
-    public Integer getLoggingIntervalMs() {
-        final Integer intervalInSeconds = getDownloadIntervalSeconds();
-        if (intervalInSeconds == null) {
-            return null;
-        }
-        return intervalInSeconds * 1000;
+    @NonNull
+    public FutureTask<Integer> getLoggingIntervalMs() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                final Integer intervalInSeconds = getDownloadIntervalSeconds().get();
+                if (intervalInSeconds == null) {
+                    return null;
+                }
+                return intervalInSeconds * 1000;
+            }
+        });
     }
 
     /**
@@ -281,19 +296,19 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @return {@link java.lang.Integer} with the start pointer - <code>null</code> if it doesn't have one.
      */
-    @Nullable
-    public Integer getCurrentPoint() {
-        if (mCurrentPointer == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+    @NonNull
+    public FutureTask<Integer> getCurrentPoint() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mCurrentPointer == null) {
+                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic);
+                } else {
+                    SHTC1HistoryService.super.mPeripheral.readCharacteristic(mCurrentPointerCharacteristic);
                 }
-            });
-        } else {
-            super.mPeripheral.readCharacteristic(mCurrentPointerCharacteristic);
-        }
-        return mCurrentPointer;
+                return mCurrentPointer;
+            }
+        });
     }
 
     /**
@@ -302,21 +317,21 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      * In case the value is unknown it will ask for it in a background thread.
      * If the user calls this method again after some time it can return a different value.
      *
-     * @return {@link java.lang.Integer} with the start pointer - <code>null</code> if it's null.
+     * @return {@link java.lang.Integer} with the start pointer - <code>null</code> if its not known yet.
      */
-    @Nullable
-    public Integer getStartPointer() {
-        if (mStartPointer == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mStartPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+    @NonNull
+    public FutureTask<Integer> getStartPointer() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mStartPointer == null) {
+                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mStartPointerCharacteristic);
+                } else {
+                    SHTC1HistoryService.super.mPeripheral.readCharacteristic(mStartPointerCharacteristic);
                 }
-            });
-        } else {
-            super.mPeripheral.readCharacteristic(mStartPointerCharacteristic);
-        }
-        return mStartPointer;
+                return mStartPointer;
+            }
+        });
     }
 
     /**
@@ -327,19 +342,19 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @return {@link java.lang.Integer} with the end pointer - <code>-1</code> if it doesn't have one.
      */
-    @Nullable
-    public Integer getEndPointer() {
-        if (mEndPointer == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mEndPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+    @NonNull
+    public FutureTask<Integer> getEndPointer() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mEndPointer == null) {
+                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mEndPointerCharacteristic);
+                } else {
+                    SHTC1HistoryService.super.mPeripheral.readCharacteristic(mEndPointerCharacteristic);
                 }
-            });
-        } else {
-            super.mPeripheral.readCharacteristic(mEndPointerCharacteristic);
-        }
-        return mEndPointer;
+                return mEndPointer;
+            }
+        });
     }
 
     /**
@@ -350,71 +365,82 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @return {@link java.lang.Integer} with the introduced user data. <code>null</code> if the user data is unknown.
      */
-    @Nullable
-    public Integer getUserData() {
-        if (mUserData == null) {
-            Executors.newSingleThreadExecutor().execute(new Runnable() {
-                @Override
-                public void run() {
-                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mUserDataCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+    @NonNull
+    public FutureTask<Integer> getUserData() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mUserData == null) {
+                    SHTC1HistoryService.super.mPeripheral.forceReadCharacteristic(mUserDataCharacteristic);
+                } else {
+                    SHTC1HistoryService.super.mPeripheral.readCharacteristic(mUserDataCharacteristic);
                 }
-            });
-        } else {
-            super.mPeripheral.readCharacteristic(mUserDataCharacteristic);
-        }
-        return mUserData;
+                return mUserData;
+            }
+        });
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean setLoggingState(final boolean enable) {
-        if (mDownloadInProgress && enable) {
-            Log.e(TAG, "setLoggingState -> We can't enable logging while a download its in progress.");
-            return false;
-        }
-        // Prepares user data characteristic.
-        mStartStopCharacteristic.setValue((byte) ((enable) ? 1 : 0), FORMAT_UINT8, 0);
-        mPeripheral.forceWriteCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        mPeripheral.forceReadCharacteristic(mStartStopCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        return mLoggingIsEnabled != null && enable == mLoggingIsEnabled;
+    @NonNull
+    public FutureTask<Boolean> setLoggingState(final boolean enable) {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                if (mDownloadInProgress && enable) {
+                    Log.e(TAG, "setLoggingState -> We can't enable logging while a download its in progress.");
+                    return false;
+                }
+                // Prepares user data characteristic.
+                mStartStopCharacteristic.setValue((byte) ((enable) ? 1 : 0), FORMAT_UINT8, 0);
+                mPeripheral.forceWriteCharacteristic(mStartStopCharacteristic);
+                mPeripheral.forceReadCharacteristic(mStartStopCharacteristic);
+                return mLoggingIsEnabled != null && enable == mLoggingIsEnabled;
+            }
+        });
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean setDownloadInterval(final int intervalInMilliseconds) {
-        if (mLoggingIsEnabled != null && mLoggingIsEnabled) {
-            Log.e(TAG, "setInterval -> We can't set the interval because logging it's enabled.");
-            return false;
-        }
-        if (mDownloadInProgress) {
-            Log.e(TAG, "setInterval -> We can't set the interval because there's a download in progress");
-            return false;
-        }
-        final int intervalInSeconds = intervalInMilliseconds / 1000;
+    @NonNull
+    public FutureTask<Boolean> setDownloadInterval(final int intervalInMilliseconds) {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                if (mLoggingIsEnabled != null && mLoggingIsEnabled) {
+                    Log.e(TAG, "setInterval -> We can't set the interval because logging it's enabled.");
+                    return false;
+                }
+                if (mDownloadInProgress) {
+                    Log.e(TAG, "setInterval -> We can't set the interval because there's a download in progress");
+                    return false;
+                }
+                final int intervalInSeconds = intervalInMilliseconds / 1000;
 
-        if (mInterval != null && mInterval == intervalInSeconds) {
-            Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", intervalInSeconds, mPeripheral.getAddress()));
-            return true;
-        }
-        // Prepares logging interval characteristic.
-        mIntervalCharacteristic.setValue(intervalInSeconds, FORMAT_UINT16, 0);
-        mPeripheral.forceWriteCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+                if (mInterval != null && mInterval == intervalInSeconds) {
+                    Log.i(TAG, String.format("setInterval -> Interval was already %s on the peripheral %s", intervalInSeconds, mPeripheral.getAddress()));
+                    return true;
+                }
+                // Prepares logging interval characteristic.
+                mIntervalCharacteristic.setValue(intervalInSeconds, FORMAT_UINT16, 0);
+                mPeripheral.forceWriteCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+                mPeripheral.forceReadCharacteristic(mIntervalCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
 
-        return mInterval != null && mInterval == intervalInSeconds;
+                return mInterval != null && mInterval == intervalInSeconds;
+            }
+        });
     }
 
     /**
      * Sets the start pointer to the minimum possible value. It's done just before logging.
      *
      * @return <code>true</code> if the start pointer was set - <code>false</code> otherwise.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
      */
-    public boolean resetStartPointer() {
+    public FutureTask<Boolean> resetStartPointer() {
         return setStartPointer(null);
     }
 
@@ -423,39 +449,49 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      *
      * @param userStartPoint with the start point selected by the user - <code>null</code> if the user wants the minimum possible start point.
      * @return <code>true</code> if the start pointer was set - <code>false</code> otherwise.
-     * NOTE: This method shouldn't be called from the UI thread. The user has to call it from another thread (or creating one)
+     * NOTE: This method will block the calling thread.
      */
-    public boolean setStartPointer(@Nullable final Integer userStartPoint) {
-        mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
-        if (userStartPoint == null) {
-            Log.d(TAG, "setStartPointer() -> userStartPoint == null, user wants all the data!");
-            mStartPointDownload = calculateMinimumStartPoint();
-        } else {
-            if (userStartPoint < 0) {
-                throw new IllegalArgumentException(String.format("%s: setStartPointer() -> userStartPoint has to be null or >= 0", TAG));
+    public FutureTask<Boolean> setStartPointer(@Nullable final Integer userStartPoint) {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                mPeripheral.forceReadCharacteristic(mCurrentPointerCharacteristic);
+                if (userStartPoint == null) {
+                    Log.d(TAG, "setStartPointer() -> userStartPoint == null, user wants all the data!");
+                    mStartPointDownload = calculateMinimumStartPoint();
+                } else {
+                    if (userStartPoint < 0) {
+                        throw new IllegalArgumentException(String.format("%s: setStartPointer() -> userStartPoint has to be null or >= 0", TAG));
+                    }
+                    if (mCurrentPointer == null) {
+                        Log.e(TAG, "setStartPointer -> Service is not synchronized yet.");
+                        return false;
+                    }
+                    if (userStartPoint.equals(mStartPointer) && mCurrentPointer < GADGET_RINGBUFFER_SIZE) {
+                        Log.i(TAG, String.format("setStartPointer() -> Start pointer is already %d on the peripheral: %s", mStartPointer, getDeviceAddress()));
+                        return true;
+                    }
+                    mStartPointDownload = calculateStartPoint(userStartPoint);
+                    if (mStartPointDownload == null) {
+                        Log.e(TAG, "setStartPointer() -> It was impossible to set the start point of the device.");
+                        return false;
+                    }
+                }
+                if (mStartPointDownload.equals(mStartPointer)) {
+                    Log.i(TAG, "setStartPointer() -> Start point was already set in the device.");
+                    return true;
+                }
+                // Prepares logging interval characteristic.
+                Log.i(TAG, String.format("setStartPointer() -> Start point will be set to: %d", mStartPointDownload));
+                mStartPointerCharacteristic.setValue(mStartPointDownload, FORMAT_UINT32, 0);
+                try {
+                    return mPeripheral.forceWriteCharacteristic(mStartPointerCharacteristic).get();
+                } catch (final InterruptedException | ExecutionException e) {
+                    Log.e(TAG, "setStartPointer -> The following exception was thrown while writing the start pointer characteristic -> ", e);
+                    return false;
+                }
             }
-            if (mCurrentPointer == null) {
-                Log.e(TAG, "setStartPointer -> Service is not synchronized yet.");
-                return false;
-            }
-            if (userStartPoint.equals(mStartPointer) && mCurrentPointer < GADGET_RINGBUFFER_SIZE) {
-                Log.i(TAG, String.format("setStartPointer() -> Start pointer is already %d on the peripheral: %s", mStartPointer, mPeripheral.getAddress()));
-                return true;
-            }
-            mStartPointDownload = calculateStartPoint(userStartPoint);
-            if (mStartPointDownload == null) {
-                Log.e(TAG, "setStartPointer() -> It was impossible to set the start point of the device.");
-                return false;
-            }
-        }
-        if (mStartPointDownload.equals(mStartPointer)) {
-            Log.i(TAG, "setStartPointer() -> Start point was already set in the device.");
-            return true;
-        }
-        // Prepares logging interval characteristic.
-        Log.i(TAG, String.format("setStartPointer() -> Start point will be set to: %d", mStartPointDownload));
-        mStartPointerCharacteristic.setValue(mStartPointDownload, FORMAT_UINT32, 0);
-        return mPeripheral.forceWriteCharacteristic(mStartPointerCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, MAX_CONSECUTIVE_TRIES);
+        });
     }
 
     private int calculateMinimumStartPoint() {
@@ -546,47 +582,67 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      * @param enable <code>true</code> for enabling logging - <code>false</code> for disabling it.
      * @return <code>true</code> if the request succeeded - <code>false</code> in case of failure.
      */
-    public synchronized boolean setGadgetLoggingEnabled(final boolean enable) {
-        Log.d(TAG, String.format("setGadgetLoggingEnabled -> Trying to %s logging service on the device %s", (enable ? "enable" : "disable"), getDeviceAddress()));
-        if (enable == isGadgetLoggingEnabled()) {
-            Log.e(TAG, String.format("setGadgetLoggingEnabled -> In the device %s logging is already %s.", getDeviceAddress(), (enable ? "enabled" : "disabled")));
-            return true;
-        }
-        if (enable) {
-            return enableLogging();
-        }
-        return disableLogging();
+    @NonNull
+    public FutureTask<Boolean> setGadgetLoggingEnabled(final boolean enable) {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                synchronized (SHTC1HistoryService.this) {
+                    Log.d(TAG, String.format("setGadgetLoggingEnabled -> Trying to %s logging service on the device %s", (enable ? "enable" : "disable"), getDeviceAddress()));
+                    if (enable == isGadgetLoggingEnabled()) {
+                        Log.e(TAG, String.format("setGadgetLoggingEnabled -> In the device %s logging is already %s.", getDeviceAddress(), (enable ? "enabled" : "disabled")));
+                        return true;
+                    }
+                    if (enable) {
+                        return enableLogging().get();
+                    }
+                    return disableLogging().get();
+                }
+            }
+        });
     }
 
-    private boolean enableLogging() {
-        if (updateLastSyncedTimestampOnDevice()) {
-            Log.d(TAG, "setGadgetLoggingEnabled -> User data was set in the device.");
-        } else {
-            Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible to set interval correctly on the device.");
-            return false;
-        }
-        if (setLoggingState(true)) {
-            Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was enabled", getDeviceAddress()));
-            return true;
-        }
-        Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
-        return false;
+    @NonNull
+    private FutureTask<Boolean> enableLogging() {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                if (updateLastSyncedTimestampOnDevice()) {
+                    Log.d(TAG, "setGadgetLoggingEnabled -> User data was set in the device.");
+                } else {
+                    Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible to set interval correctly on the device.");
+                    return false;
+                }
+                if (setLoggingState(true).get()) {
+                    Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was enabled", getDeviceAddress()));
+                    return true;
+                }
+                Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
+                return false;
+            }
+        });
     }
 
-    private boolean disableLogging() {
-        if (setLoggingState(false)) {
-            Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was disabled", mPeripheral.getAddress()));
-            return true;
-        }
-        Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
-        return false;
+    @NonNull
+    private FutureTask<Boolean> disableLogging() {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                if (setLoggingState(false).get()) {
+                    Log.i(TAG, String.format("setGadgetLoggingEnabled -> In the peripheral %s logging was disabled", getDeviceAddress()));
+                    return true;
+                }
+                Log.e(TAG, "setGadgetLoggingEnabled -> It was impossible enable logging the device.");
+                return false;
+            }
+        });
     }
 
     private boolean updateLastSyncedTimestampOnDevice() {
         final int epochTime = getEpochTime();
 
         if (setUserData(epochTime)) {
-            Log.i(TAG, String.format("updateLastSyncedTimestampOnDevice -> In peripheral %s the user data was set to the epochTime time: %s ", mPeripheral.getAddress(), epochTime));
+            Log.i(TAG, String.format("updateLastSyncedTimestampOnDevice -> In peripheral %s the user data was set to the epochTime time: %s ", getDeviceAddress(), epochTime));
             return true;
         }
         return false;
@@ -596,22 +652,21 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      * {@inheritDoc}
      */
     @Override
-    public synchronized boolean startDataDownload() {
-        if (mRHTListeners.isEmpty()) {
-            Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
-            return false;
-        }
-
-        if (isServiceReady()) {
-            Log.i(TAG, "startDataDownload -> Download will start.");
-        } else {
-            Log.e(TAG, "startDataDownload -> Service is not synchronized yet.");
-            return false;
-        }
-
-        Executors.newSingleThreadExecutor().execute(new Runnable() {
+    @NonNull
+    public synchronized FutureTask<Boolean> startDataDownload() {
+        return new FutureTask<>(new Callable<Boolean>() {
             @Override
-            public void run() {
+            public Boolean call() throws Exception {
+                if (mRHTListeners.isEmpty()) {
+                    Log.e(TAG, "startDataDownload -> There's a need for at least one listener in order to start logging data from the device");
+                    return false;
+                }
+                if (isServiceReady()) {
+                    Log.i(TAG, "startDataDownload -> Download will start.");
+                } else {
+                    Log.e(TAG, "startDataDownload -> Service is not synchronized yet.");
+                    return false;
+                }
                 final boolean wasDeviceLoggingEnabled = isGadgetLoggingEnabled();
                 mDownloadInProgress = true;
                 prepareDeviceToDownload(wasDeviceLoggingEnabled);
@@ -622,17 +677,18 @@ public class SHTC1HistoryService extends AbstractHistoryService {
                     setGadgetLoggingEnabled(true);
                 }
                 onDownloadComplete();
+                return true;
             }
         });
-        return true;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public synchronized boolean startDataDownload(final long oldestTimestampToDownload) {
-        //Partial data download is not supported on this device yet.
+    @NonNull
+    public synchronized FutureTask<Boolean> startDataDownload(final long oldestTimestampToDownload) {
+        Log.w(TAG, "startDataDownload -> Partial data download is not supported on this device yet, downloading all data.");
         return startDataDownload();
     }
 
@@ -646,14 +702,23 @@ public class SHTC1HistoryService extends AbstractHistoryService {
     }
 
     private synchronized void downloadDataFromPeripheral() {
-        mExtractedDataPointsCounter = 0;
-        final Integer totalValuesToDownload = calculateValuesToDownload();
-        final Integer endPointer = getEndPointer();
-        if (totalValuesToDownload == null || endPointer == null) {
-            Log.e(TAG, "downloadDataFromPeripheral -> Service needs to be synchronized ");
+        final Integer totalValuesToDownload;
+        final Integer endPointer;
+        try {
+            totalValuesToDownload = calculateValuesToDownload().get();
+            endPointer = getEndPointer().get();
+        } catch (final ExecutionException | InterruptedException e) {
+            Log.e(TAG, "downloadDataFromPeripheral -> The following exception was thrown -> ", e);
+            onDownloadFailure();
             return;
         }
-        while (getEndPointer() > 0 && mDownloadInProgress) {
+        if (totalValuesToDownload == null || endPointer == null) {
+            Log.e(TAG, "downloadDataFromPeripheral -> Service needs to be synchronized ");
+            onDownloadFailure();
+            return;
+        }
+        mExtractedDataPointsCounter = 0;
+        while (mDownloadInProgress) {
             for (int i = totalValuesToDownload; i > 0; i--) {
                 mPeripheral.readCharacteristic(mLoggedDataCharacteristic);
                 /**
@@ -667,24 +732,32 @@ public class SHTC1HistoryService extends AbstractHistoryService {
                 } catch (InterruptedException ignored) {
                 }
             }
-            if (lastTimeLogged < System.currentTimeMillis() - TIMEOUT_DOWNLOAD_DATA_MS) {
-                onDownloadFailure();
-                return;
+            try {
+                if (getEndPointer().get() == 0) {
+                    Log.d(TAG, "downloadDataFromPeripheral -> Data download finished successfully");
+                    mDownloadInProgress = false;
+                }
+            } catch (final ExecutionException | InterruptedException e) {
+                Log.d(TAG, "downloadDataFromPeripheral -> The following exception was thrown while downloading data from peripheral -> ", e);
             }
         }
     }
 
-    @Nullable
-    private Integer calculateValuesToDownload() {
-        final Integer totalNumberOfValues = getNumberLoggedElements();
-        if (totalNumberOfValues == null) {
-            Log.e(TAG, "calculateValuesToDownload -> Service is not synchronized yet.");
-            return null;
-        }
-        notifyTotalNumberElements(totalNumberOfValues);
-        lastTimeLogged = System.currentTimeMillis();
-        Log.i(TAG, String.format("calculateValuesToDownload -> The user has to download %d values.", totalNumberOfValues));
-        return totalNumberOfValues;
+    @NonNull
+    private FutureTask<Integer> calculateValuesToDownload() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                final Integer totalNumberOfValues = getNumberLoggedElements().get();
+                if (totalNumberOfValues == null) {
+                    Log.e(TAG, "calculateValuesToDownload -> Service is not synchronized yet.");
+                    return null;
+                }
+                notifyTotalNumberElements(totalNumberOfValues);
+                Log.i(TAG, String.format("calculateValuesToDownload -> The user has to download %d values.", totalNumberOfValues));
+                return totalNumberOfValues;
+            }
+        });
     }
 
     /**
@@ -733,7 +806,6 @@ public class SHTC1HistoryService extends AbstractHistoryService {
 
             //Adds the new datapoint to the the list.
             mExtractedDataPointsCounter++;
-            lastTimeLogged = System.currentTimeMillis();
 
             onDatapointRead(extractedDataPoint);
         }
@@ -744,24 +816,29 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      * {@inheritDoc}
      */
     @Override
-    @Nullable
-    public Integer getNumberLoggedElements() {
-        if (mCurrentPointer == null || mCurrentPointer == 0) {
-            Log.e(TAG, "getNumberLoggedElements -> The device is not synchronized yet. (hint -> Call 'synchronizeService()' first)");
-            return null;
-        }
-        resetStartPointer();
-        if (mStartPointer == null) {
-            Log.e(TAG, "getNumberLoggedElements -> Cannot obtain the start pointer of the device.");
-            return null;
-        }
-        int totalValues = mCurrentPointer - mStartPointer;
-        if (totalValues > GADGET_RINGBUFFER_SIZE) {
-            totalValues = GADGET_RINGBUFFER_SIZE;
-        }
-        Log.i(TAG, String.format("getNumberElementsToLog -> The device has %d values to log.", totalValues));
-        notifyTotalNumberElements(totalValues);
-        return totalValues;
+    @NonNull
+    public FutureTask<Integer> getNumberLoggedElements() {
+        return new FutureTask<>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                if (mCurrentPointer == null || mCurrentPointer == 0) {
+                    Log.e(TAG, "getNumberLoggedElements -> The device is not synchronized yet. (hint -> Call 'synchronizeService()' first)");
+                    return null;
+                }
+                resetStartPointer();
+                if (mStartPointer == null) {
+                    Log.e(TAG, "getNumberLoggedElements -> Cannot obtain the start pointer of the device.");
+                    return null;
+                }
+                int totalValues = mCurrentPointer - mStartPointer;
+                if (totalValues > GADGET_RINGBUFFER_SIZE) {
+                    totalValues = GADGET_RINGBUFFER_SIZE;
+                }
+                Log.i(TAG, String.format("getNumberElementsToLog -> The device has %d values to log.", totalValues));
+                notifyTotalNumberElements(totalValues);
+                return totalValues;
+            }
+        });
     }
 
     /**
@@ -874,21 +951,27 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      * {@inheritDoc}
      */
     @Override
-    public boolean resetDeviceData() {
-        final Boolean initialLoggingState = mLoggingIsEnabled;
-        if (initialLoggingState == null) {
-            Log.e(TAG, "resetDeviceData -> Service is not synchronized yet.");
-            return false;
-        }
-        if (mLoggingIsEnabled) {
-            setGadgetLoggingEnabled(false);
-        }
-        setGadgetLoggingEnabled(true);
-        if (initialLoggingState) {
-            Log.i(TAG, String.format("resetDeviceData -> In device %s data was deleted.", getDeviceAddress()));
-            return true;
-        }
-        return setGadgetLoggingEnabled(false);
+    @NonNull
+    public FutureTask<Boolean> resetDeviceData() {
+        return new FutureTask<>(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                final Boolean initialLoggingState = mLoggingIsEnabled;
+                if (initialLoggingState == null) {
+                    Log.e(TAG, "resetDeviceData -> Service is not synchronized yet.");
+                    return false;
+                }
+                if (mLoggingIsEnabled) {
+                    setGadgetLoggingEnabled(false);
+                }
+                setGadgetLoggingEnabled(true);
+                if (initialLoggingState) {
+                    Log.i(TAG, String.format("resetDeviceData -> In device %s data was deleted.", getDeviceAddress()));
+                    return true;
+                }
+                return setGadgetLoggingEnabled(false).get();
+            }
+        });
     }
 
     /**
@@ -923,13 +1006,15 @@ public class SHTC1HistoryService extends AbstractHistoryService {
      */
     @Nullable
     private String getSensorName() {
-        switch (mPeripheral.getAdvertisedName()) {
-            case "SHTC1 smart gadget":
+        final String advertiseName = mPeripheral.getAdvertisedName();
+        if (advertiseName != null) {
+            if (advertiseName.equals("SHTC1 smart gadget")) {
                 return "SHTC1";
-            case "SHT31 Smart Gadget":
+            }
+            if (advertiseName.equals("SHT31 Smart Gadget")) {
                 return "SHT31";
-            default:
-                return null;
+            }
         }
+        return null;
     }
 }
