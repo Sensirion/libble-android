@@ -39,8 +39,8 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 artifacts {
-    archives javadocJar
     archives sourcesJar
+    archives javadocJar
 }
 
 apply from: '../../gradle-helpers/library-utils.gradle'
