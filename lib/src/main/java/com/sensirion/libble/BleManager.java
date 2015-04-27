@@ -119,62 +119,82 @@ public class BleManager {
     }
 
     /**
-     * Starts to scan for all bluetooth devices in range.
-     *
-     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     * @see BlePeripheralService#startLeScan()
      */
+    @SuppressWarnings("SimplifiableIfStatement")
     public boolean startScanning() {
-        return startScanning(null, null);
+        if (isReadyToScan()) {
+            return mBlePeripheralService.startLeScan();
+        }
+        return false;
     }
 
-
     /**
-     * Starts to scan for all bluetooth devices in range.
-     *
-     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
-     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     * @see BlePeripheralService#startLeScan(long)
      */
+    @SuppressWarnings("SimplifiableIfStatement")
     public synchronized boolean startScanning(final long scanDurationMs) {
-        return startScanning(null, scanDurationMs);
+        if (isReadyToScan()) {
+            return mBlePeripheralService.startLeScan(scanDurationMs);
+        }
+        return false;
     }
 
     /**
-     * Start scanning devices in range for provided UUIDs.
-     *
-     * @param deviceUUIDs deviceUUIDs that we want want to use,
-     *                    <code>null</code> if all devices have to be retrieved.
-     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     * @see BlePeripheralService#startLeScan(UUID...)
      */
-    public boolean startScanning(@Nullable final UUID[] deviceUUIDs) {
-        return startScanning(deviceUUIDs, null);
+    @SuppressWarnings("SimplifiableIfStatement")
+    public boolean startScanning(@NonNull final UUID[] deviceUUIDs) {
+        if (isReadyToScan()) {
+            return mBlePeripheralService.startLeScan(deviceUUIDs);
+        }
+        return false;
     }
 
     /**
-     * Start scanning devices in range for provided UUIDs.
-     *
-     * @param deviceUUIDs    deviceUUIDs that we want want to use,
-     *                       <code>null</code> if all devices have to be retrieved.
-     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
-     *                       <code>null</code> if the default scan duration will be used.
-     * @return <code>true</code> if it's scanning, <code>false</code> otherwise.
+     * @see BlePeripheralService#startLeScan(List of UUID))
      */
-    public boolean startScanning(@Nullable final UUID[] deviceUUIDs, @Nullable final Long scanDurationMs) {
+    @SuppressWarnings("SimplifiableIfStatement")
+    public boolean startScanning(@NonNull final List<UUID> deviceUUIDs) {
+        if (isReadyToScan()) {
+            return mBlePeripheralService.startLeScan(deviceUUIDs);
+        }
+        return false;
+    }
+
+    /**
+     * @see BlePeripheralService#startLeScan(long, List of UUID)
+     */
+    @SuppressWarnings("SimplifiableIfStatement")
+    public boolean startScanning(final long scanDurationMs, @NonNull final List<UUID> deviceUUIDs) {
+        if (isReadyToScan()) {
+            return mBlePeripheralService.startLeScan(scanDurationMs, deviceUUIDs);
+        }
+        return false;
+    }
+
+    /**
+     * @see BlePeripheralService#startLeScan(long, UUID...)
+     */
+    @SuppressWarnings("SimplifiableIfStatement")
+    public boolean startScanning(final long scanDurationMs, @Nullable final UUID... deviceUUIDs) {
+        if (isReadyToScan()) {
+            return mBlePeripheralService.startLeScan(scanDurationMs, deviceUUIDs);
+        }
+        return false;
+    }
+
+    private boolean isReadyToScan(){
         if (mBlePeripheralService == null) {
             Log.w(TAG, "startScanning() -> not yet connected to BlePeripheralService; try to re-trigger scanning when connected.");
             mShouldStartScanning = true;
             return false;
         }
         if (mBlePeripheralService.isScanning()) {
-            Log.w(TAG, "startScanning() -> already scanning; ignoring this request.");
+            Log.w(TAG, "startScanning() -> already scanning.");
             return true;
         }
-
-        Log.d(TAG, "startScanning() -> mBlePeripheralService.startLeScan()");
-
-        if (scanDurationMs == null) {
-            return mBlePeripheralService.startLeScan(deviceUUIDs);
-        }
-        return mBlePeripheralService.startLeScan(deviceUUIDs, scanDurationMs);
+        return true;
     }
 
     /**
