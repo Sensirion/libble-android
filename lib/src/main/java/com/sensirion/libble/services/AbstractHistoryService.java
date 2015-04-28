@@ -11,7 +11,6 @@ import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.history.HistoryListener;
 
 import java.util.Iterator;
-import java.util.concurrent.FutureTask;
 
 /**
  * This service can be used to control data download. The user can obtain this service directly from the
@@ -135,8 +134,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @return <code>true</code> if the data download started correctly. <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public abstract FutureTask<Boolean> startDataDownload();
+    public abstract boolean startDataDownload();
 
     /**
      * Starts to download data from a given timestamp.
@@ -145,8 +143,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @return <code>true</code> if the data download started correctly. <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public abstract FutureTask<Boolean> startDataDownload(long oldestTimestampToDownload);
+    public abstract boolean startDataDownload(long oldestTimestampToDownload);
 
     /**
      * Change the download interval of a device.
@@ -155,8 +152,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @return <code>true</code> if the download interval was set - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public abstract FutureTask<Boolean> setDownloadInterval(int loggerIntervalInMilliseconds);
+    public abstract boolean setDownloadInterval(int loggerIntervalInMilliseconds);
 
     /**
      * Gets the interval between history data points on the device in milliseconds.
@@ -164,8 +160,8 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @return {@link java.lang.Integer} with the logger interval in milliseconds - <code>null</code> if it's not known.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public abstract FutureTask<Integer> getLoggingIntervalMs();
+    @Nullable
+    public abstract Integer getLoggingIntervalMs();
 
     /**
      * Deletes all the data from the device.
@@ -173,8 +169,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @return <code>true</code> if the data was deleted - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public abstract FutureTask<Boolean> resetDeviceData();
+    public abstract boolean resetDeviceData();
 
     /**
      * Checks if device is logging historical values.
@@ -199,8 +194,7 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @return <code>true</code> if the state was changed - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public abstract FutureTask<Boolean> setLoggingState(boolean enabled);
+    public abstract boolean setLoggingState(boolean enabled);
 
     /**
      * Checks the number of logged elements that the user can download.
@@ -208,8 +202,8 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
      * @return {@link java.lang.Integer} with the number of logged elements. <code>null</code> if it's unknown.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public abstract FutureTask<Integer> getNumberLoggedElements();
+    @Nullable
+    public abstract Integer getNumberLoggedElements();
 
     /**
      * Checks if a logging download is in progress.

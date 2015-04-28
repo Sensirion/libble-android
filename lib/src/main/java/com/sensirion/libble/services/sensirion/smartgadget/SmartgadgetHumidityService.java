@@ -20,11 +20,9 @@ public class SmartgadgetHumidityService extends AbstractSmartgadgetRHTService<Hu
     private static final String HUMIDITY_NOTIFICATIONS_UUID = "00001235-b38d-4985-720e-0f993a68ee41";
 
     //CLASS ATTRIBUTES.
-    @Nullable
     private HumidityUnit mValueUnit;
 
-    public SmartgadgetHumidityService(@NonNull final Peripheral peripheral,
-                                      @NonNull final BluetoothGattService bluetoothGattService) throws InstantiationException {
+    public SmartgadgetHumidityService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService bluetoothGattService) {
         super(peripheral, bluetoothGattService, HUMIDITY_NOTIFICATIONS_UUID);
     }
 

@@ -23,10 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
 
 /**
  * Represents a remote piece of Hardware that can have 1-N {@link com.sensirion.libble.services.AbstractBleService}
@@ -43,8 +40,6 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     private static final short DEFAULT_NUMBER_FORCE_REQUEST = 5;
     @NonNull
     private final Queue<Object> mLastActionUsedQueue = new LinkedBlockingQueue<>();
-    @NonNull
-    private final Semaphore mForceActionPermit = new Semaphore(1, true);
 
     //Peripheral attributes
     @Nullable
@@ -377,9 +372,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * Close the corresponding BluetoothGatt so that resources are cleaned up properly.
      */
     public void close() {
-        if (mBluetoothGatt != null) {
-            mBluetoothGatt.close();
-        }
+        mBluetoothGatt.close();
     }
 
     /**
@@ -397,38 +390,38 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Method that send once a characteristic to the device, informing the user if the characteristic was retrieved.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic that is going to be readed. Cannot be <code>null</code>
      * @param maxWaitingTime acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public FutureTask<Boolean> readCharacteristicWithConfirmation(@NonNull final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
+    public boolean readCharacteristicWithConfirmation(@NonNull final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
         return forceReadCharacteristic(characteristic, maxWaitingTime, 1);
     }
 
     /**
      * Convenience method for forcing a characteristic read, in case we want to be sure to read the characteristic.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic that is going to be readed. Cannot be <code>null</code>
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
-    @NonNull
-    public FutureTask<Boolean> forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
+    public boolean forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
         return forceReadCharacteristic(characteristic, DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS, DEFAULT_NUMBER_FORCE_REQUEST);
     }
 
     /**
      * Convenience method for forcing a characteristic read, in case we want to be sure to read the characteristic.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic       that is going to be readed. Cannot be <code>null</code>
      * @param timeoutMs            acceptable time without receiving an answer from the peripheral.
      * @param maxNumberConnections maximumNumberOfReads. It has to be a positive number.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
-    @NonNull
-    public FutureTask<Boolean> forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxNumberConnections) {
+    public boolean forceReadCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxNumberConnections) {
         return forceActionReadOrWrite(characteristic, timeoutMs, maxNumberConnections, true);
     }
 
@@ -446,39 +439,39 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Method that send once a characteristic to the device, informing the user if the characteristic was retrieved.
+     * It blocks the UI thread until it receives a response or a timeout is produced.
      *
      * @param characteristic that is going to be updated in the device. Cannot be <code>null</code>
      * @param maxWaitingTime acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public FutureTask<Boolean> writeCharacteristicWithConfirmation(@NonNull final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
+    public boolean writeCharacteristicWithConfirmation(@NonNull final BluetoothGattCharacteristic characteristic, final int maxWaitingTime) {
         return forceWriteCharacteristic(characteristic, maxWaitingTime, 1);
     }
 
     /**
      * Convenience method for forcing a characteristic to write, in case we want to be sure to write the characteristic.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic that is going to be wrote. Cannot be <code>null</code>
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public FutureTask<Boolean> forceWriteCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
+    public boolean forceWriteCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
         return forceWriteCharacteristic(characteristic, DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS, DEFAULT_NUMBER_FORCE_REQUEST);
     }
 
     /**
      * Convenience method for forcing a characteristic to write, in case we want to be sure to write the characteristic.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param characteristic  that is going to be wrote. Cannot be <code>null</code>
      * @param timeoutMs       acceptable time without receiving an answer from the peripheral.
      * @param maxRequestCount maximumNumberOfReads. It has to be a positive number.
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
-    @NonNull
-    public FutureTask<Boolean> forceWriteCharacteristic(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxRequestCount) {
+    public boolean forceWriteCharacteristic(final BluetoothGattCharacteristic characteristic, final int timeoutMs, final int maxRequestCount) {
         return forceActionReadOrWrite(characteristic, timeoutMs, maxRequestCount, false);
     }
 
@@ -494,39 +487,39 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Method that send a read request of a descriptor to device, informing the user if the characteristic was retrieved.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor that is going to be readed. Cannot be <code>null</code>
      * @param timeoutMs  acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was read - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public FutureTask<Boolean> readDescriptorWithConfirmation(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs) {
+    public boolean readDescriptorWithConfirmation(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs) {
         return forceDescriptorRead(descriptor, timeoutMs, 1);
     }
 
     /**
      * Convenience method for forcing the read of a descriptor.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor that is going to be written. Cannot be <code>null</code>
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public FutureTask<Boolean> forceDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor) {
+    public boolean forceDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor) {
         return forceDescriptorRead(descriptor, DEFAULT_TIMEOUT_BETWEEN_REQUEST_MILLISECONDS, DEFAULT_NUMBER_FORCE_REQUEST);
     }
 
     /**
      * Convenience method for forcing the read of a descriptor.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor       that is going to be written. Cannot be <code>null</code>
      * @param timeoutMs        acceptable time without receiving an answer from the peripheral.
      * @param maxNumberRequest It needs to be a positive number.
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
-    @NonNull
-    public FutureTask<Boolean> forceDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs, final int maxNumberRequest) {
+    public boolean forceDescriptorRead(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs, final int maxNumberRequest) {
         return forceActionReadOrWrite(descriptor, timeoutMs, maxNumberRequest, true);
     }
 
@@ -542,75 +535,68 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
 
     /**
      * Method that send a read request of a descriptor to device, informing the user if the characteristic was retrieved.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor that is going to be written. Cannot be <code>null</code>
      * @param timeoutMs  acceptable time without receiving an answer from the peripheral.
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
     @SuppressWarnings("unused")
-    @NonNull
-    public FutureTask<Boolean> writeDescriptorWithConfirmation(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs) {
+    public boolean writeDescriptorWithConfirmation(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs) {
         return forceDescriptorWrite(descriptor, timeoutMs, 1);
     }
 
     /**
      * Convenience method for forcing the write of a descriptor.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param descriptor       that is going to be written. Cannot be <code>null</code>
      * @param timeoutMs        acceptable time without receiving an answer from the peripheral.
      * @param maxNumberRequest It needs to be a positive number.
      * @return <code>true</code> if the characteristic was written - <code>false</code> otherwise.
      */
-    @NonNull
-    public FutureTask<Boolean> forceDescriptorWrite(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs, final int maxNumberRequest) {
+    public boolean forceDescriptorWrite(@NonNull final BluetoothGattDescriptor descriptor, final int timeoutMs, final int maxNumberRequest) {
         return forceActionReadOrWrite(descriptor, timeoutMs, maxNumberRequest, false);
     }
 
     /**
      * Convenience method for forcing a characteristic read or write, in case we want to be sure to read the characteristic.
+     * It blocks the calling thread until it receives a response or a timeout is produced.
      *
      * @param action          that is going to be processed. Needs to be {@link android.bluetooth.BluetoothGattCharacteristic} or a {@link android.bluetooth.BluetoothGattDescriptor}. Cannot be <code>null</code>
      * @param timeoutMs       acceptable time without receiving an answer from the peripheral.
      * @param maxRequestCount maximumNumberOfReads. It has to be a positive number.
      * @return <code>true</code> if the characteristic was processed - <code>false</code> otherwise.
      */
-    @NonNull
-    private synchronized FutureTask<Boolean> forceActionReadOrWrite(@NonNull final Object action, final int timeoutMs, final int maxRequestCount, final boolean isReadAction) {
-        return new FutureTask<>(new Callable<Boolean>() {
-            @Override
-            public Boolean call() throws Exception {
+    private synchronized boolean forceActionReadOrWrite(@NonNull final Object action, final int timeoutMs, final int maxRequestCount, final boolean isReadAction) {
+        try {
+            mForceOperationRunning = true;
+            final long timeNow = System.currentTimeMillis();
+            mBleStackProtector.cleanCharacteristicCache();
+            int requestCounter = 0;
+            while (isConnected()) {
+                if (System.currentTimeMillis() - timeoutMs * requestCounter > timeNow) {
+                    executeAction(action, isReadAction);
+                    requestCounter++;
+                }
+                if (mLastActionUsedQueue.contains(action)) {
+                    return true;
+                }
                 try {
-                    mForceActionPermit.acquire();
-                    mForceOperationRunning = true;
-                    final long timeNow = System.currentTimeMillis();
-                    mBleStackProtector.cleanCharacteristicCache();
-                    int requestCounter = 0;
-                    while (isConnected()) {
-                        if (System.currentTimeMillis() - timeoutMs * requestCounter > timeNow) {
-                            executeAction(action, isReadAction);
-                            requestCounter++;
-                        }
-                        if (mLastActionUsedQueue.contains(action)) {
-                            return true;
-                        }
-                        try {
-                            Thread.sleep(INTERVAL_BETWEEN_CHECKS_MILLISECONDS);
-                        } catch (final InterruptedException ignored) {
-                            Log.w(TAG, String.format("forceActionReadOrWrite -> Action %s produced an interruptedException.", action));
-                        }
-                        if (requestCounter >= maxRequestCount) {
-                            break;
-                        }
-                    }
-                    return false;
-                } finally {
-                    mLastActionUsedQueue.clear();
-                    mForceOperationRunning = false;
-                    mBleStackProtector.cleanCharacteristicCache();
-                    mForceActionPermit.release();
+                    Thread.sleep(INTERVAL_BETWEEN_CHECKS_MILLISECONDS);
+                } catch (final InterruptedException ignored) {
+                    Log.w(TAG, String.format("forceActionReadOrWrite -> Action %s produced an interruptedException.", action));
+                }
+                if (requestCounter >= maxRequestCount) {
+                    break;
                 }
             }
-        });
+            return false;
+        } finally {
+            mLastActionUsedQueue.clear();
+            mForceOperationRunning = false;
+            mBleStackProtector.cleanCharacteristicCache();
+        }
     }
 
     private void executeAction(@NonNull final Object action, final boolean isReadAction) {

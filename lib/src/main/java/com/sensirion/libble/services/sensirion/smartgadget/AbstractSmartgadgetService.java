@@ -17,31 +17,21 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
 
 abstract class AbstractSmartgadgetService<ListenerType extends NotificationListener> extends AbstractBleService<ListenerType> {
 
     static final byte DATAPOINT_SIZE = 4;
 
     private final String VALUE_NOTIFICATIONS_UUID; //4 Byte Float Little Endian - 20 byte [1 little endian integer (Sequence number), 4 Byte Float Little Endian]
-
-    @NonNull
     private final BluetoothGattCharacteristic mValueCharacteristic;
-    @Nullable
+
     protected String mSensorName = null;
-    @Nullable
     protected Float mLastValue = null;
 
-    protected AbstractSmartgadgetService(@NonNull final Peripheral peripheral,
-                                         @NonNull final BluetoothGattService gatt,
-                                         @NonNull final String liveValueCharacteristicUUID) throws InstantiationException {
+    protected AbstractSmartgadgetService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService gatt, @NonNull final String liveValueCharacteristicUUID) {
         super(peripheral, gatt);
         VALUE_NOTIFICATIONS_UUID = liveValueCharacteristicUUID;
-        final BluetoothGattCharacteristic characteristic = super.getCharacteristic(VALUE_NOTIFICATIONS_UUID);
-        if (characteristic == null) {
-            throw new InstantiationException(String.format("%s: %s -> Can not found the value characteristic.", TAG, TAG));
-        }
-        mValueCharacteristic = characteristic;
+        mValueCharacteristic = super.getCharacteristic(VALUE_NOTIFICATIONS_UUID);
         peripheral.readCharacteristic(mValueCharacteristic);
         gatt.addCharacteristic(mValueCharacteristic);
         mPeripheral.readDescriptor(mValueCharacteristic.getDescriptor(USER_CHARACTERISTIC_DESCRIPTOR_UUID));
@@ -128,13 +118,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
         }
 
         final int sequenceNumber = extractSequenceNumber(historyValueBuffer);
-        final Integer historyInterval;
-        try {
-            historyInterval = historyService.getLoggingIntervalMs().get();
-        } catch (final InterruptedException | ExecutionException e) {
-            Log.e(TAG, "parseHistoryValue -> The following exception was thrown -> ", e);
-            return false;
-        }
+        final Integer historyInterval = historyService.getLoggingIntervalMs();
 
         if (historyInterval == null) {
             Log.e(TAG, "parseHistoryValue -> History interval can't be null during data download.");
@@ -154,7 +138,7 @@ abstract class AbstractSmartgadgetService<ListenerType extends NotificationListe
         }
 
         final int numberParsedElements = (historyValueBuffer.length / 4) - 1;
-        historyService.setLastSequenceNumberDownloaded(sequenceNumber + numberParsedElements);
+        ((SmartgadgetHistoryService) mPeripheral.getHistoryService()).setLastSequenceNumberDownloaded(sequenceNumber + numberParsedElements);
 
         return true;
     }

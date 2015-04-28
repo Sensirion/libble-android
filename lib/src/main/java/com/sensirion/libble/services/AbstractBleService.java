@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
+import java.util.concurrent.Executors;
 
 /**
  * @see com.sensirion.libble.services.BleService
@@ -215,7 +216,12 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
         if (mRegisteredNotifyCharacteristics.contains(characteristic)) {
             mPeripheral.readCharacteristic(characteristic);
         } else {
-            mPeripheral.forceDescriptorWrite(descriptor, WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST, MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST);
+            Executors.newSingleThreadExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    mPeripheral.forceDescriptorWrite(descriptor, WAIT_BETWEEN_NOTIFICATION_REGISTER_REQUEST, MAX_NUMBER_NOTIFICATION_REGISTER_REQUEST);
+                }
+            });
         }
     }
 

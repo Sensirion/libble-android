@@ -9,8 +9,6 @@ import android.util.Log;
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractBleService;
 
-import java.util.concurrent.ExecutionException;
-
 public class SHTC1ConnectionSpeedService extends AbstractBleService {
 
     //SERVICE UUIDs
@@ -92,12 +90,10 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
             return true;
         }
         mNotificationSpeedCharacteristic.setValue(notificationSpeedRequested, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-        try {
-            if (mPeripheral.forceWriteCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES).get()) {
+        if (mPeripheral.forceWriteCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
+            if (mPeripheral.forceReadCharacteristic(mNotificationSpeedCharacteristic, TIME_BETWEEN_WRITE_REQUESTS, MAX_WRITE_TRIES)) {
                 return mNotificationSpeedLevel.equals(notificationSpeedRequested);
             }
-        } catch (final InterruptedException | ExecutionException e) {
-            Log.e(TAG, "setConnectionSpeed -> The following exception was thrown -> ", e);
         }
         return false;
     }
@@ -122,14 +118,14 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
     }
 
     //CONNECTION SPEED SETTINGS
-    public enum CONNECTION_SPEED {
+    public static enum CONNECTION_SPEED {
         LOW((byte) 1),
         HIGH((byte) 0),
         DEFAULT(HIGH.value);
 
         private final byte value;
 
-        CONNECTION_SPEED(final byte value) {
+        private CONNECTION_SPEED(final byte value) {
             this.value = value;
         }
     }
