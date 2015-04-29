@@ -123,6 +123,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         @Override
         public void onCharacteristicChanged(@NonNull final BluetoothGatt gatt, @NonNull final BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
+            if (mBluetoothGatt == null) {
+                Log.e(TAG, "onCharacteristicChanged -> Bluetooth gatt is not initialized yet.");
+                return;
+            }
             for (final BleService service : mServices) {
                 service.onCharacteristicUpdate(characteristic);
             }
@@ -156,7 +160,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             super.onServicesDiscovered(gatt, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 final List<BluetoothGattService> discoveredServices = gatt.getServices();
-                Log.w(TAG, String.format(String.format("onServicesDiscovered -> Discovered %s services in the device %s.", discoveredServices.size(), getAddress())));
+                Log.w(TAG, String.format("onServicesDiscovered -> Discovered %d services in the device %s.", discoveredServices.size(), getAddress()));
                 for (final BluetoothGattService service : discoveredServices) {
                     final BleService knownService = BleServiceFactory.getInstance().createServiceFor(Peripheral.this, service);
                     if (knownService != null) {
@@ -169,7 +173,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
                 }
                 mPeripheralService.onPeripheralServiceDiscovery(Peripheral.this);
             } else {
-                Log.w(TAG, String.format("onServicesDiscovered -> Failed with status: " + status));
+                Log.w(TAG, String.format("onServicesDiscovered -> Failed with status: %d", status));
             }
         }
 
@@ -372,7 +376,9 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * Close the corresponding BluetoothGatt so that resources are cleaned up properly.
      */
     public void close() {
-        mBluetoothGatt.close();
+        if (mBluetoothGatt != null) {
+            mBluetoothGatt.close();
+        }
     }
 
     /**
@@ -384,6 +390,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param characteristic The characteristic to read from.
      */
     public void readCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "readCharacteristic -> Bluetooth gatt is not initialized yet.");
+            return;
+        }
         mBleStackProtector.addReadCharacteristic(characteristic);
         mBleStackProtector.execute(mBluetoothGatt);
     }
@@ -433,6 +443,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param characteristic The characteristic to overwrite.
      */
     public void writeCharacteristic(@NonNull final BluetoothGattCharacteristic characteristic) {
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "writeCharacteristic -> Bluetooth gatt is not initialized yet.");
+            return;
+        }
         mBleStackProtector.addWriteCharacteristic(characteristic);
         mBleStackProtector.execute(mBluetoothGatt);
     }
@@ -481,6 +495,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param descriptor the descriptor we want to read.
      */
     public void readDescriptor(@NonNull final BluetoothGattDescriptor descriptor) {
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "readCharacteristic -> Bluetooth gatt is not initialized yet.");
+            return;
+        }
         mBleStackProtector.addReadDescriptor(descriptor);
         mBleStackProtector.execute(mBluetoothGatt);
     }
@@ -529,6 +547,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param descriptor the descriptor we want to write in the device.
      */
     public void writeDescriptor(@NonNull final BluetoothGattDescriptor descriptor) {
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "writeDescriptor -> Bluetooth gatt is not initialized yet.");
+            return;
+        }
         mBleStackProtector.addWriteDescriptor(descriptor);
         mBleStackProtector.execute(mBluetoothGatt);
     }
@@ -622,6 +644,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * @param enabled        if <code>true</code> enable notification - <code>false</code> disable notification.
      */
     public void setCharacteristicNotification(@NonNull final BluetoothGattCharacteristic characteristic, final boolean enabled) {
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "readCharacteristic -> Bluetooth gatt is not initialized yet.");
+            return;
+        }
         mBleStackProtector.addCharacteristicNotification(characteristic, enabled);
         mBleStackProtector.execute(mBluetoothGatt);
     }
