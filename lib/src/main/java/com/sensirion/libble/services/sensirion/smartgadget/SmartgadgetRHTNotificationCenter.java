@@ -164,18 +164,18 @@ class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityL
      * {@inheritDoc}
      */
     @Override
-    public void onNewHistoricalTemperature(@NonNull final BleDevice device, final float temperature, final long timestamp, @NonNull final String sensorName, @NonNull final TemperatureUnit unit) {
+    public void onNewHistoricalTemperature(@NonNull final BleDevice device, final float temperature, final long timestampMillis, @NonNull final String sensorName, @NonNull final TemperatureUnit unit) {
         Log.i(TAG, String.format("onNewHistoricalHumidity -> Received new historical relativeHumidity %f%s from sensor %s in device %s.", temperature, unit, sensorName, device.getAddress()));
-        getDownloadDataManager(device, sensorName).newHistoricalTemperatureValue(timestamp, temperature);
+        getDownloadDataManager(device, sensorName).newHistoricalTemperatureValue(timestampMillis, temperature);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void onNewHistoricalHumidity(@NonNull final BleDevice device, final float relativeHumidity, final long timestamp, @NonNull final String sensorName, @NonNull final HumidityUnit unit) {
+    public void onNewHistoricalHumidity(@NonNull final BleDevice device, final float relativeHumidity, final long timestampMilliseconds, @NonNull final String sensorName, @NonNull final HumidityUnit unit) {
         Log.i(TAG, String.format("onNewHistoricalHumidity -> Received new historical relativeHumidity %f%s from sensor %s in device %s.", relativeHumidity, unit, sensorName, device.getAddress()));
-        getDownloadDataManager(device, sensorName).newHistoricalHumidityValue(timestamp, relativeHumidity);
+        getDownloadDataManager(device, sensorName).newHistoricalHumidityValue(timestampMilliseconds, relativeHumidity);
     }
 
     private HistoricalRHTValues getDownloadDataManager(@NonNull final BleDevice device, @NonNull final String sensorName) {

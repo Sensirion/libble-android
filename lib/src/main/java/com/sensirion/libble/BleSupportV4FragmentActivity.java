@@ -73,15 +73,15 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
-     * @see com.sensirion.libble.BleManager#startScanning()
+     * @see BleManager#startScanning()
      */
     @SuppressWarnings("unused")
     public boolean startScanning() {
-        return startScanning(null, null);
+        return mBleManager.startScanning();
     }
 
     /**
-     * @see com.sensirion.libble.BleManager#startScanning(long)
+     * @see BleManager#startScanning(long)
      */
     @SuppressWarnings("unused")
     public synchronized boolean startScanning(final long scanDurationMs) {
@@ -89,18 +89,35 @@ public abstract class BleSupportV4FragmentActivity extends android.support.v4.ap
     }
 
     /**
-     * @see com.sensirion.libble.BleManager#startScanning(java.util.UUID[])
+     * @see BleManager#startScanning(UUID...)
      */
     @SuppressWarnings("unused")
-    public boolean startScanning(@Nullable final UUID[] deviceUUIDs) {
+    public boolean startScanning(@NonNull final UUID[] deviceUUIDs) {
         return mBleManager.startScanning(deviceUUIDs);
     }
 
     /**
-     * @see com.sensirion.libble.BleManager#startScanning(java.util.UUID[], Long)
+     * @see BleManager#startScanning(List of UUID))
      */
-    public boolean startScanning(@Nullable final UUID[] deviceUUIDs, @Nullable final Long scanDurationMs) {
-        return mBleManager.startScanning(deviceUUIDs, scanDurationMs);
+    @SuppressWarnings("unused")
+    public boolean startScanning(@NonNull final List<UUID> deviceUUIDs) {
+        return mBleManager.startScanning(deviceUUIDs);
+    }
+
+    /**
+     * @see BleManager#startScanning(long, List of UUID)
+     */
+    @SuppressWarnings("unused")
+    public boolean startScanning(final long scanDurationMs, @NonNull final List<UUID> deviceUUIDs) {
+        return mBleManager.startScanning(scanDurationMs, deviceUUIDs);
+    }
+
+    /**
+     * @see BleManager#startScanning(Long, UUID...)
+     */
+    @SuppressWarnings("unused")
+    public boolean startScanning(@Nullable final Long scanDurationMs, @Nullable final UUID... deviceUUIDs) {
+        return mBleManager.startScanning(scanDurationMs, deviceUUIDs);
     }
 
     /**

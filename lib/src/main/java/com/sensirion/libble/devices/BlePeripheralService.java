@@ -50,7 +50,7 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
 
     //Default Scan attributes
     private static final int ONE_SECOND_MS = 1000;
-    private static final long DEFAULT_SCAN_DURATION_MS = 10 * ONE_SECOND_MS; //10 seconds
+    public static final long DEFAULT_SCAN_DURATION_MS = 10 * ONE_SECOND_MS; //10 seconds
 
     //Binder
     private final IBinder mBinder = new LocalBinder();
@@ -206,56 +206,61 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
     }
 
     /**
-     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
-     * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
+     * Starts to scan for all devices during during {@link BlePeripheralService#DEFAULT_SCAN_DURATION_MS} milliseconds.
      *
-     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     * @see BlePeripheralService#startLeScan(long, UUID...)
      */
-    @SuppressWarnings("unused")
     public synchronized boolean startLeScan() {
-        return startLeScan(null, DEFAULT_SCAN_DURATION_MS);
+        return startLeScan(DEFAULT_SCAN_DURATION_MS, (UUID[]) null);
     }
 
     /**
-     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
-     * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
+     * Starts to scan for all devices during a given period of time.
      *
-     * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
-     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     * @see BlePeripheralService#startLeScan(long, UUID...)
      */
-    @SuppressWarnings("unused")
     public synchronized boolean startLeScan(final long scanDurationMs) {
-        return startLeScan(null, scanDurationMs);
+        return startLeScan(scanDurationMs, (UUID []) null);
     }
 
     /**
-     * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
-     * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
-     * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
+     * Starts to scan for the given devices UUIDs during {@link BlePeripheralService#DEFAULT_SCAN_DURATION_MS} milliseconds.
      *
-     * @param UUIDs List of UUID that the scan can use. <code>null</code> in case the user is able to use any device.
-     * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
+     * @see BlePeripheralService#startLeScan(UUID...)
      */
-    public synchronized boolean startLeScan(@Nullable final UUID[] UUIDs) {
-        return startLeScan(UUIDs, DEFAULT_SCAN_DURATION_MS);
+    public synchronized boolean startLeScan (@NonNull final List <UUID> UUIDs) {
+        return startLeScan(DEFAULT_SCAN_DURATION_MS, (UUID[]) UUIDs.toArray());
     }
 
     /**
-     * NOTE: This method is buggy in some devices. Passing non 128 bit UUID will solve the bug.
+     * Starts to scan for the given devices UUIDs during during {@link BlePeripheralService#DEFAULT_SCAN_DURATION_MS} milliseconds.
+     *
+     * @see BlePeripheralService#startLeScan(long, UUID...)
+     */
+    public synchronized boolean startLeScan(@Nullable final UUID... UUIDs) {
+        return startLeScan(DEFAULT_SCAN_DURATION_MS, UUIDs);
+    }
+
+    /**
+     * @see BlePeripheralService#startLeScan(long, UUID...)
+     */
+    public synchronized boolean startLeScan(final long mScanDurationMs, @NonNull final List<UUID> UUIDs) {
+        return startLeScan(mScanDurationMs, (UUID[]) UUIDs.toArray());
+    }
+
+    /**
      * Requests scanning process for BLE devices in range. If the connection to the {@link BlePeripheralService}
      * has not been established yet, startScanning() will be re-triggered as soon as the connection is there.
      *
      * @param scanDurationMs that the device will be scanning. Needs to be a positive number.
-     * @param UUIDs          List of UUID that the scan can use. <code>null</code> in case the user is able to use any device.
+     * @param UUIDs          that will be retrieved in case some of them are found. <code>null</code> if all devices needs to be retrieved.
      * @return <code>true</code> if scan has been started. <code>false</code> otherwise.
      */
-    public synchronized boolean startLeScan(@Nullable final UUID[] UUIDs, final long scanDurationMs) {
+    public synchronized boolean startLeScan(final long scanDurationMs, @Nullable final UUID... UUIDs) {
         if (scanDurationMs <= 0) {
             throw new IllegalArgumentException(String.format("%s: startLeScan -> Scan duration needs to be a positive number.", TAG));
         }
-
         mScanDurationMs = scanDurationMs;
-
         if (mIsScanning) {
             Log.w(TAG, "startLeScan() -> scan already in progress");
             return mIsScanning;
@@ -263,7 +268,6 @@ public class BlePeripheralService extends Service implements BluetoothAdapter.Le
         Log.d(TAG, "startLeScan() -> clear discovered peripherals and add new scan results");
         checkBluetooth();
         mDiscoveredPeripherals.clear();
-
         if ((UUIDs == null) ? mBluetoothAdapter.startLeScan(this) : mBluetoothAdapter.startLeScan(UUIDs, this)) {
             mIsScanning = true;
             onStartLeScan();

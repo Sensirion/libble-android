@@ -1,13 +1,16 @@
 apply plugin: 'com.android.library'
 
+version = "1.0.0"
+def code = 22
+
 android {
     compileSdkVersion 22
     buildToolsVersion "22.0.1"
     defaultConfig {
         minSdkVersion 18
         targetSdkVersion 22
-        versionCode 19
-        versionName "0.11.4"
+        versionName version
+        versionCode code
     }
     buildTypes {
         release {
@@ -18,5 +21,24 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:support-v4:22.0.0'
+    compile 'com.android.support:support-v4:22.1.1'
+}
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+artifacts {
+    archives sourcesJar
+    archives javadocJar
 }
