@@ -81,14 +81,14 @@ public class DeviceStateFragment extends Fragment
   @Override
   public void onResume(){
      super.onResume();
-     BleManager.getInstance().registerListener(this);
+     BleManager.getInstance().registerNotificationListener(this);
      //Do something else.
   }
 
   @Override
   public void onPause(){
      super.onPause();
-     BleManager.getInstance().unregisterListener(this);
+     BleManager.getInstance().unregisterNotificationListener(this);
      //Do something else.
   }
 
