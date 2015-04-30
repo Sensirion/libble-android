@@ -1,5 +1,5 @@
-libble
-======
+libble-android
+==============
 
 Android Bluetooth library to communicate with Bluetooth low energy (BLE).
 
