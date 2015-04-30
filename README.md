@@ -21,7 +21,7 @@ services.
 
 ```gradle
 dependencies {
-   compile project ('com.sensirion:libble')
+    compile 'com.sensirion:libble:1.0.0'
 }
 ```
 #### Eclipse
