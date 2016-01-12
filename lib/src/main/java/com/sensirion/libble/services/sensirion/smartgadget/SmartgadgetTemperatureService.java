@@ -11,6 +11,8 @@ import com.sensirion.libble.utils.TemperatureUnit;
 
 import java.util.Iterator;
 
+import static com.sensirion.libble.utils.TemperatureConverter.convertCelsiusToFahrenheit;
+import static com.sensirion.libble.utils.TemperatureConverter.convertCelsiusToKelvin;
 import static com.sensirion.libble.utils.TemperatureConverter.convertTemperatureToCelsius;
 import static com.sensirion.libble.utils.TemperatureConverter.convertTemperatureToFahrenheit;
 import static com.sensirion.libble.utils.TemperatureConverter.convertTemperatureToKelvin;
@@ -23,6 +25,8 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     //CHARACTERISTICS UUID.
     private static final String TEMPERATURE_NOTIFICATIONS_UUID = "00002235-b38d-4985-720e-0f993a68ee41";
 
+    // Temperature unit that this service will use when notifying all it's listeners
+    @Nullable
     private TemperatureUnit mValueUnit = null;
 
     public SmartgadgetTemperatureService(@NonNull final Peripheral peripheral, @NonNull final BluetoothGattService bluetoothGattService) {
@@ -30,15 +34,38 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     }
 
     /**
+     * Converts a temperature value to an specific format
+     *
+     * @param temperatureInCelsius that will be converted to the format specified on @param temperatureUnit
+     * @param temperatureUnit      that will be output
+     * @return <code>float</code> with the converted temperature
+     */
+    private static float prepareTemperatureValueToFormat(final float temperatureInCelsius,
+                                                         @NonNull final TemperatureUnit temperatureUnit) {
+        switch (temperatureUnit) {
+            case FAHRENHEIT:
+                return convertCelsiusToFahrenheit(temperatureInCelsius);
+            case KELVIN:
+                return convertCelsiusToKelvin(temperatureInCelsius);
+            default:
+                return temperatureInCelsius;
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     void notifyListenersNewLiveValue() {
-        Log.d(TAG, String.format("notifyListenersNewLiveValue -> Notifying temperature value: %f%s from sensor %s.", mLastValue, mValueUnit, mSensorName));
         final Iterator<TemperatureListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().onNewTemperature(mPeripheral, mLastValue, mSensorName, mValueUnit);
+                iterator.next().onNewTemperature(
+                        mPeripheral,
+                        prepareTemperatureValueToFormat(mLastValue, mValueUnit),
+                        mSensorName,
+                        mValueUnit
+                );
             } catch (final Exception e) {
                 Log.e(TAG, "notifyListenersNewLiveValue -> The following exception was produced -> ", e);
                 iterator.remove();
@@ -51,11 +78,25 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
      */
     @Override
     void notifyListenersNewHistoricalValue(final float value, final long timestamp) {
-        Log.d(TAG, String.format("notifyListenersNewLiveValue -> Notifying historical temperature value: %f%s from sensor %s.", mLastValue, mValueUnit, mSensorName));
+        Log.d(TAG,
+                String.format(
+                        "%s -> Notifying historical temperature value: %f%s from sensor %s.",
+                        "notifyListenersNewLiveValue",
+                        mLastValue,
+                        mValueUnit,
+                        mSensorName
+                )
+        );
         final Iterator<TemperatureListener> iterator = mListeners.iterator();
         while (iterator.hasNext()) {
             try {
-                iterator.next().onNewHistoricalTemperature(mPeripheral, value, timestamp, mSensorName, mValueUnit);
+                iterator.next().onNewHistoricalTemperature(
+                        mPeripheral,
+                        prepareTemperatureValueToFormat(value, mValueUnit),
+                        timestamp,
+                        mSensorName,
+                        mValueUnit
+                );
             } catch (final Exception e) {
                 Log.e(TAG, "notifyListenersNewLiveValue -> The following exception was produced -> ", e);
                 iterator.remove();
