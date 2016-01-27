@@ -19,6 +19,28 @@ public enum KnownDevices {
             deviceNames.add("SensorTag");
             return deviceNames;
         }
+    },
+
+    /**
+     * Devices that returns Temperature data.
+     * Notification interface: {@link com.sensirion.libble.listeners.services.TemperatureListener}
+     */
+    TEMPERATURE_GADGETS {
+        @Override
+        public List<String> getAdvertisedNames() {
+            return RHT_GADGETS.getAdvertisedNames();
+        }
+    },
+
+    /**
+     * Devices that returns Humidity data.
+     * Notification interface: {@link com.sensirion.libble.listeners.services.HumidityListener}
+     */
+    HUMIDITY_GADGETS {
+        @Override
+        public List<String> getAdvertisedNames() {
+            return RHT_GADGETS.getAdvertisedNames();
+        }
     };
 
     /**
