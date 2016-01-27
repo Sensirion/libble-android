@@ -61,6 +61,15 @@ public interface BleDevice {
     String getAdvertisedName();
 
     /**
+     * Obtains the type of Bluetooth device from the device.
+     *
+     * @return {@link DeviceBluetoothType} of the device.
+     */
+    @SuppressWarnings("unused")
+    @NonNull
+    DeviceBluetoothType getBluetoothType();
+
+    /**
      * Checks the signal strength of the device towards the external BleDevice.
      *
      * @return {@link java.lang.Integer} with the signal strength.

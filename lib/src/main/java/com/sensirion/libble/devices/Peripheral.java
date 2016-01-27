@@ -298,6 +298,14 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     /**
      * {@inheritDoc}
      */
+    @NonNull
+    public DeviceBluetoothType getBluetoothType() {
+        return DeviceBluetoothType.getDeviceBluetoothType(mBluetoothDevice);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isConnected() {
         return mIsConnected;
