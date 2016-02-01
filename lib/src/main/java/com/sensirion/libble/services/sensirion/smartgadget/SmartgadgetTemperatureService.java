@@ -25,6 +25,10 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
     //CHARACTERISTICS UUID.
     private static final String TEMPERATURE_NOTIFICATIONS_UUID = "00002235-b38d-4985-720e-0f993a68ee41";
 
+    // SPECIFIED TEMPERATURE RANGE BOUNDARIES FOR SMARTGADGETS
+    private static final float MINIMUM_TEMPERATURE_OPERATING_RANGE = -40f;
+    private static final float MAXIMUM_TEMPERATURE_OPERATING_RANGE = 125f;
+
     // Temperature unit that this service will use when notifying all it's listeners
     @Nullable
     private TemperatureUnit mValueUnit = null;
@@ -62,7 +66,7 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
             try {
                 iterator.next().onNewTemperature(
                         mPeripheral,
-                        prepareTemperatureValueToFormat(mLastValue, mValueUnit),
+                        getNotificationTemperature(),
                         mSensorName,
                         mValueUnit
                 );
@@ -78,11 +82,12 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
      */
     @Override
     void notifyListenersNewHistoricalValue(final float value, final long timestamp) {
+        final float notificationTemperature = getNotificationTemperature(value);
         Log.d(TAG,
                 String.format(
                         "%s -> Notifying historical temperature value: %f%s from sensor %s.",
-                        "notifyListenersNewLiveValue",
-                        mLastValue,
+                        "notifyListenersNewHistoricalValue",
+                        notificationTemperature,
                         mValueUnit,
                         mSensorName
                 )
@@ -92,13 +97,13 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
             try {
                 iterator.next().onNewHistoricalTemperature(
                         mPeripheral,
-                        prepareTemperatureValueToFormat(value, mValueUnit),
+                        notificationTemperature,
                         timestamp,
                         mSensorName,
                         mValueUnit
                 );
             } catch (final Exception e) {
-                Log.e(TAG, "notifyListenersNewLiveValue -> The following exception was produced -> ", e);
+                Log.e(TAG, "notifyListenersNewHistoricalValue -> The following exception was produced -> ", e);
                 iterator.remove();
             }
         }
@@ -181,5 +186,60 @@ public class SmartgadgetTemperatureService extends AbstractSmartgadgetRHTService
         }
         Log.e(TAG, "getTemperatureInKelvin -> Service is not synchronized yet. (HINT -> call synchronizeService first).");
         return null;
+    }
+
+    /**
+     * Gets the live notification temperature that will be notified to the user.
+     *
+     * @return <code>float</code> with the notification temperature in the user {@link #mValueUnit}.
+     */
+    private float getNotificationTemperature() {
+        final Float temperatureInCelsius = getTemperatureInCelsius();
+        if (temperatureInCelsius == null) {
+            return Float.NaN;
+        }
+        return getNotificationTemperature(temperatureInCelsius);
+    }
+
+    /**
+     * Gets the historical notification temperature that will be notified to the user.
+     *
+     * @return <code>float</code> with the notification temperature in the user {@link #mValueUnit}.
+     */
+    private float getNotificationTemperature(final float temperatureInCelsius) {
+        if (Float.isNaN(temperatureInCelsius)) {
+            return Float.NaN;
+        } else if (isTemperatureValueFeasible(temperatureInCelsius)) {
+            return prepareTemperatureValueToFormat(temperatureInCelsius, mValueUnit);
+        } else {
+            Log.e(TAG,
+                    String.format(
+                            "%s -> Temperature %f (Celsius) does not fit the %s operating ranges (%f - %f celsius)",
+                            "getNotificationTemperature",
+                            mLastValue,
+                            getSensorName(),
+                            MINIMUM_TEMPERATURE_OPERATING_RANGE,
+                            MAXIMUM_TEMPERATURE_OPERATING_RANGE
+                    )
+            );
+            return Float.NaN;
+        }
+    }
+
+    /**
+     * Checks if the incoming temperature value is feasible considering the device operating ranges
+     *
+     * @param temperatureInCelsius that will be checked
+     * @return <code>true</code> if the temperature value is feasible - <code>false</code> otherwise
+     */
+    private static boolean isTemperatureValueFeasible(final float temperatureInCelsius) {
+        if (Float.isNaN(temperatureInCelsius)) {
+            return false;
+        } else if (temperatureInCelsius < MINIMUM_TEMPERATURE_OPERATING_RANGE) {
+            return false;
+        } else if (temperatureInCelsius > MAXIMUM_TEMPERATURE_OPERATING_RANGE) {
+            return false;
+        }
+        return true;
     }
 }
