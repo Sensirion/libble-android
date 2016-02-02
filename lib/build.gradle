@@ -1,7 +1,10 @@
 apply plugin: 'com.android.library'
+apply plugin: 'maven'
 
 version = "1.0.1-SNAPSHOT"
 def code = 23
+
+group = 'com.sensirion'
 
 android {
     compileSdkVersion 23
@@ -50,6 +53,24 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     classifier = 'javadoc'
     from javadoc.destinationDir
 }
+
+task writePom << {
+    pom {
+        artifactId = 'libble'
+        project {
+            inceptionYear '2014'
+            packaging 'aar'
+            licenses {
+                license {
+                    name 'BSD 3-Clause'
+                    url 'http://opensource.org/licenses/BSD-3-Clause'
+                    distribution 'repo'
+                }
+            }
+        }
+    }.writeTo("${buildDir}/libs/${project.archivesBaseName}-${project.version}.pom")
+}
+
 artifacts {
     archives sourcesJar
     archives javadocJar
