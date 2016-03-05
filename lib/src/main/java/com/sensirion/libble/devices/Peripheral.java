@@ -317,7 +317,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     @Override
     public <T extends AbstractBleService> T getDeviceService(@NonNull final Class<T> type) {
         for (final BleService service : mServices) {
-            if (service.getClass().equals(type)) {
+            if (type.getClass().isAssignableFrom(service.getClass())) {
                 return (T) service;
             }
         }
