@@ -132,16 +132,18 @@ class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityL
      * @param device   that will send the RHT notifications.
      */
     void registerDownloadListener(@NonNull final RHTListener listener, @NonNull final BleDevice device) {
-        List<RHTListener> listenerList = mListeners.get(device);
-        if (listenerList == null) {
-            listenerList = new LinkedList<>();
-            listenerList.add(listener);
-            Log.i(TAG, String.format("registerNotificationListener -> Device %s received a new download listener: %s ", device.getAddress(), listener));
-            mListeners.put(device, listenerList);
-        } else if (listenerList.contains(listener)) {
-            Log.w(TAG, String.format("registerNotificationListener -> Listener %s was already in the list %s. ", device.getAddress(), listener));
-        } else {
-            listenerList.add(listener);
+        synchronized (mListeners) {
+            List<RHTListener> listenerList = mListeners.get(device);
+            if (listenerList == null) {
+                listenerList = new LinkedList<>();
+                listenerList.add(listener);
+                Log.i(TAG, String.format("registerNotificationListener -> Device %s received a new download listener: %s", device.getAddress(), listener));
+                mListeners.put(device, listenerList);
+            } else if (listenerList.contains(listener)) {
+                Log.w(TAG, String.format("registerNotificationListener -> Listener %s was already in the list %s", device.getAddress(), listener));
+            } else {
+                listenerList.add(listener);
+            }
         }
     }
 
@@ -158,6 +160,14 @@ class SmartgadgetRHTNotificationCenter implements TemperatureListener, HumidityL
             return;
         }
         listenerList.remove(listener);
+        if (listenerList.isEmpty()) {
+            // avoid locking if not needed, but check again after locking
+            synchronized (mListeners) {
+                if (listenerList.isEmpty()) {
+                    mListeners.remove(device);
+                }
+            }
+        }
     }
 
     /**
