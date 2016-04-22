@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractHistoryService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 
 import java.util.concurrent.Executors;
@@ -457,5 +458,14 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     @Nullable
     public Long getNewestTimestampMs() {
         return mNewestSampleTimestampMs;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority(){
+        return BleServiceSynchronizationPriority.HIGH_PRIORITY;
     }
 }

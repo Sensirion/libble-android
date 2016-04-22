@@ -741,6 +741,26 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * {@inheritDoc}
      */
     @Override
+    public boolean synchronizeAllDeviceServices() {
+        final List<BleService> servicesToSynchronize = new LinkedList<>(mServices);
+        // Synchronize all the services considering their priorities
+        Collections.sort(servicesToSynchronize, SERVICE_PRIORITY_COMPARATOR);
+        for (final BleService service : servicesToSynchronize) {
+            if (!service.isServiceReady()) {
+                // Service is not synchronized yet.
+                service.synchronizeService();
+                return false;
+            }
+        }
+        // All service are successfully synchronized.
+        return true;
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public int compareTo(@Nullable final Peripheral anotherPeripheral) {
         if (isConnected()) {
             return 0;
