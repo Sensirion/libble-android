@@ -12,6 +12,7 @@ import com.sensirion.libble.listeners.services.HumidityListener;
 import com.sensirion.libble.listeners.services.RHTListener;
 import com.sensirion.libble.listeners.services.TemperatureListener;
 import com.sensirion.libble.services.AbstractHistoryService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 import com.sensirion.libble.utils.HumidityUnit;
 import com.sensirion.libble.utils.RHTDataPoint;
 import com.sensirion.libble.utils.TemperatureUnit;
@@ -931,5 +932,14 @@ public class SHTC1HistoryService extends AbstractHistoryService {
             default:
                 return null;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority(){
+        return BleServiceSynchronizationPriority.NORMAL_PRIORITY;
     }
 }

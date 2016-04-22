@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 
 public class SHTC1ConnectionSpeedService extends AbstractBleService {
 
@@ -128,5 +129,14 @@ public class SHTC1ConnectionSpeedService extends AbstractBleService {
         private CONNECTION_SPEED(final byte value) {
             this.value = value;
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority(){
+        return BleServiceSynchronizationPriority.NORMAL_PRIORITY;
     }
 }

@@ -327,4 +327,13 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
     public String toString() {
         return String.format("%s of the device: %s", getClass().getSimpleName(), getDeviceAddress());
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int compareTo(@NonNull final BleService otherService) {
+        return otherService.getServiceSynchronizationPriority().ordinal()
+                - getServiceSynchronizationPriority().ordinal();
+    }
 }
