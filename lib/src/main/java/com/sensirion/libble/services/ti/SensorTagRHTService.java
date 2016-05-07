@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractRHTService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 import com.sensirion.libble.utils.LittleEndianExtractor;
 import com.sensirion.libble.utils.RHTDataPoint;
 
@@ -100,5 +101,14 @@ public class SensorTagRHTService extends AbstractRHTService {
     @NonNull
     public String getSensorName() {
         return SENSOR_NAME;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority(){
+        return BleServiceSynchronizationPriority.LOW_PRIORITY;
     }
 }

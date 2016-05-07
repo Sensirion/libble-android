@@ -10,7 +10,8 @@ import com.sensirion.libble.listeners.NotificationListener;
  * Represents a {@link android.bluetooth.BluetoothGattService} as defined in org.bluetooth.service.*
  * or a proprietary implementation.
  */
-public interface BleService {
+public interface BleService extends Comparable<BleService> {
+
     /**
      * Method called when a characteristic is read.
      *
@@ -94,4 +95,21 @@ public interface BleService {
      * Tries to synchronize a service in case some of its data is missing.
      */
     void synchronizeService();
+
+    /**
+     * Obtains the service priority towards synchronization.
+     *
+     * @return {@link BleServiceSynchronizationPriority} with the service priority.
+     */
+    @NonNull
+    BleServiceSynchronizationPriority getServiceSynchronizationPriority();
+
+    /**
+     * Compares this object against other {@link BleService} using
+     * their {@link BleServiceSynchronizationPriority}.
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    int compareTo(@NonNull final BleService otherService);
 }

@@ -8,6 +8,12 @@ import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.AbstractBleService;
 import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
+
+import java.util.Comparator;
+import java.util.Iterator;
+
+import static com.sensirion.libble.services.BleServiceSynchronizationPriority.HIGH_PRIORITY;
 
 /**
  * Interface for any device that supports Bluetooth Low Energy (BLE)
@@ -156,6 +162,21 @@ public interface BleDevice {
     @SuppressWarnings("unused")
     AbstractHistoryService getHistoryService();
 
+    /**
+     * Tries to synchronize all the input device services. Needs to be called periodically.
+     * (For example, every 100ms, until the method returns <code>true</code>.
+     *
+     * @return <code>false</code> if the device is properly synchronized.
+     */
+    boolean synchronizeDeviceServices(@NonNull Iterable<BleService> services);
+
+    /**
+     * Tries to synchronize all the device services.
+     *
+     * @see {@link #synchronizeDeviceServices(Iterable))}
+     */
+    @SuppressWarnings("unused")
+    boolean synchronizeAllDeviceServices();
 
     /**
      * Checks if the peripheral has all its services synchronized.
@@ -164,4 +185,18 @@ public interface BleDevice {
      */
     @SuppressWarnings("unused")
     boolean areAllServicesReady();
+
+    /**
+     * Comparator for comparing the different {@link BleService} using their
+     * {@link BleServiceSynchronizationPriority} for comparing them.
+     */
+    @NonNull
+    Comparator<BleService> SERVICE_PRIORITY_COMPARATOR = new Comparator<BleService>() {
+        @Override
+        public int compare(@NonNull final BleService serviceA,
+                           @NonNull final BleService serviceB) {
+            return serviceA.getServiceSynchronizationPriority().ordinal()
+                    - serviceB.getServiceSynchronizationPriority().ordinal();
+        }
+    };
 }

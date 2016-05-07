@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 
 public class DeviceInformationService extends AbstractBleService {
 
@@ -267,5 +268,14 @@ public class DeviceInformationService extends AbstractBleService {
             Log.w(TAG, "getSoftwareRevision -> Software revision is not available yet. Requesting it in a background thread");
         }
         return mSoftwareRevision;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority(){
+        return BleServiceSynchronizationPriority.NORMAL_PRIORITY;
     }
 }

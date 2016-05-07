@@ -9,6 +9,7 @@ import android.util.Log;
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.services.BatteryListener;
 import com.sensirion.libble.services.AbstractBleService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 
 import java.util.Iterator;
 import java.util.concurrent.Executors;
@@ -100,5 +101,14 @@ public class BatteryService extends AbstractBleService<BatteryListener> {
     @Override
     public void registerDeviceCharacteristicNotifications() {
         registerNotification(mBatteryLevelCharacteristic);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority() {
+        return BleServiceSynchronizationPriority.HIGH_PRIORITY;
     }
 }
