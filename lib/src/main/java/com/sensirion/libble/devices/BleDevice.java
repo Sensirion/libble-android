@@ -11,6 +11,7 @@ import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 
 import java.util.Comparator;
+import java.util.Iterator;
 
 import static com.sensirion.libble.services.BleServiceSynchronizationPriority.HIGH_PRIORITY;
 
@@ -162,10 +163,17 @@ public interface BleDevice {
     AbstractHistoryService getHistoryService();
 
     /**
-     * Tries to synchronize all the device services. Needs to be called periodically. (For example,
-     * every 100ms, until the method returns <code>true</code>.
+     * Tries to synchronize all the input device services. Needs to be called periodically.
+     * (For example, every 100ms, until the method returns <code>true</code>.
      *
      * @return <code>false</code> if the device is properly synchronized.
+     */
+    boolean synchronizeDeviceServices(@NonNull Iterable<BleService> services);
+
+    /**
+     * Tries to synchronize all the device services.
+     *
+     * @see {@link #synchronizeDeviceServices(Iterable))}
      */
     @SuppressWarnings("unused")
     boolean synchronizeAllDeviceServices();

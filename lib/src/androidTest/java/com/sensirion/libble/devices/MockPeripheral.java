@@ -101,6 +101,11 @@ class MockPeripheral implements BleDevice {
     }
 
     @Override
+    public boolean synchronizeDeviceServices(@NonNull Iterable<BleService> services) {
+        return false;
+    }
+
+    @Override
     public boolean synchronizeAllDeviceServices() {
         return true;
     }
