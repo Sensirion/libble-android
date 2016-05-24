@@ -81,7 +81,7 @@ public class BleServiceFactory {
         try {
             final Constructor<? extends AbstractBleService> constructor = serviceClass.getDeclaredConstructor(Peripheral.class, BluetoothGattService.class);
             return constructor.newInstance(parent, service);
-        } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+        } catch (Exception e) {
             Log.e(TAG, "createServiceFor -> During the creation of a service the following exception was thrown -> ", e);
             return null;
         }
