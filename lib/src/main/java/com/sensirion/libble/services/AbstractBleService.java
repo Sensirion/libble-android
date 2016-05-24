@@ -14,6 +14,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
@@ -106,7 +107,7 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
      */
     @Nullable
     protected BluetoothGattCharacteristic getCharacteristic(@NonNull final String uuid) {
-        return mBluetoothGattService.getCharacteristic(UUID.fromString(uuid.trim().toLowerCase()));
+        return mBluetoothGattService.getCharacteristic(UUID.fromString(uuid.trim().toLowerCase(Locale.US)));
     }
 
     /**
