@@ -47,7 +47,9 @@ public abstract class AbstractHistoryService extends AbstractBleService<HistoryL
 
     public AbstractHistoryService(@NonNull final Peripheral parent, @NonNull final BluetoothGattService bluetoothGattService) {
         super(parent, bluetoothGattService);
-        Looper.prepare();
+        if (Looper.myLooper() == null) {
+            Looper.prepare();
+        }
         mDownloadProgressTimeoutHandler = new Handler();
     }
 
