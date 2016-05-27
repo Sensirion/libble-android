@@ -17,8 +17,10 @@ import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.BleServiceFactory;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -735,6 +737,36 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
             }
         }
         return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean synchronizeDeviceServices(@NonNull final Iterable<BleService> services) {
+        final Iterator<BleService> serviceIterator = services.iterator();
+        final List<BleService> serviceToSynchronize = new LinkedList<>();
+        while (serviceIterator.hasNext()) {
+            serviceToSynchronize.add(serviceIterator.next());
+        }
+        // Synchronize all the services considering their priorities
+        Collections.sort(serviceToSynchronize, SERVICE_PRIORITY_COMPARATOR);
+        for (final BleService service : serviceToSynchronize) {
+            if (!service.isServiceReady()) {
+                // Service is not synchronized yet.
+                service.synchronizeService();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean synchronizeAllDeviceServices() {
+        return synchronizeDeviceServices(getDiscoveredServices());
     }
 
     /**

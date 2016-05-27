@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.services.AbstractRHTService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 import com.sensirion.libble.utils.RHTDataPoint;
 
 import java.nio.ByteBuffer;
@@ -108,5 +109,14 @@ public class SHTC1RHTService extends AbstractRHTService {
         }
         Log.e(TAG, "getLastDataPoint -> Service is not synchronized yet. (HINT -> Call synchronizeService() first)");
         return null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority(){
+        return BleServiceSynchronizationPriority.LOW_PRIORITY;
     }
 }
