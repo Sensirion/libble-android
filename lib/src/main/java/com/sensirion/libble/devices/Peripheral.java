@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -17,7 +18,6 @@ import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.BleServiceFactory;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -25,7 +25,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Represents a remote piece of Hardware that can have 1-N {@link com.sensirion.libble.services.AbstractBleService}
@@ -67,6 +73,10 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     //Gathering controller.
     @Nullable
     private BluetoothGatt mBluetoothGatt;
+
+    //Service synchronization lock
+    @NonNull
+    private final ReentrantLock mServiceSynchronizationLock = new ReentrantLock();
 
     private final BleStackProtector mBleStackProtector = new BleStackProtector() {
         /**
@@ -740,10 +750,13 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     }
 
     /**
-     * {@inheritDoc}
+     * Tries to synchronize all the input device services. Needs to be called periodically.
+     * (For example, every 100ms, until the method returns <code>true</code>.
+     *
+     * @return <code>false</code> if the device is properly synchronized.
      */
-    @Override
-    public boolean synchronizeDeviceServices(@NonNull final Iterable<BleService> services) {
+    private boolean trySynchronizeDeviceServices(@NonNull final Iterable<BleService> services) {
+        Log.v(TAG, "trySynchronizeDeviceServices -> Synchronizing device services");
         final Iterator<BleService> serviceIterator = services.iterator();
         final List<BleService> serviceToSynchronize = new LinkedList<>();
         while (serviceIterator.hasNext()) {
@@ -765,8 +778,70 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * {@inheritDoc}
      */
     @Override
-    public boolean synchronizeAllDeviceServices() {
-        return synchronizeDeviceServices(getDiscoveredServices());
+    @NonNull
+    public FutureTask<?> synchronizeDeviceServices(@NonNull final Iterable<BleService> services,
+                                                   final int timeBetweenRequestMillis) {
+        return new FutureTask<Boolean>(
+                new Callable<Boolean>() {
+                    @Override
+                    public Boolean call() throws Exception {
+                        mServiceSynchronizationLock.lock();
+                        try {
+                            while (!trySynchronizeDeviceServices(services)) {
+                                try {
+                                    Thread.sleep(timeBetweenRequestMillis);
+                                } catch (final InterruptedException ignored) {
+                                }
+                            }
+                            return true;
+                        } finally {
+                            mServiceSynchronizationLock.unlock();
+                        }
+                    }
+                }) {
+            @Override
+            public boolean cancel(final boolean mayInterruptIfRunning) {
+                mServiceSynchronizationLock.unlock();
+                return super.cancel(mayInterruptIfRunning);
+            }
+        };
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public FutureTask<?> synchronizeDeviceServiceClasses(
+            @NonNull final Iterable<Class<? extends AbstractBleService>> servicesClasses,
+            @IntRange(from = MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS)
+            final int timeBetweenRequestMillis
+    ) {
+        final Iterator<Class<? extends AbstractBleService>> serviceIterator = servicesClasses.iterator();
+        final List<BleService> serviceToSynchronize = new LinkedList<>();
+        while (serviceIterator.hasNext()) {
+            final Class<? extends AbstractBleService> serviceClass = serviceIterator.next();
+            final BleService service = this.getDeviceService(serviceClass);
+            if (service == null) {
+                Log.w(TAG, String.format(
+                        "forceDeviceServiceClassesSynchronization -> Service with name %s is not present.",
+                        serviceClass.getSimpleName()
+                        )
+                );
+            } else {
+                serviceToSynchronize.add(service);
+            }
+        }
+        return synchronizeDeviceServices(serviceToSynchronize, timeBetweenRequestMillis);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public FutureTask<?> synchronizeAllDeviceServices(final int timeBetweenForceRequestMillis) {
+        return synchronizeDeviceServices(getDiscoveredServices(), timeBetweenForceRequestMillis);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.sensirion.libble.devices;
 
 import android.content.Context;
+import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -11,9 +12,7 @@ import com.sensirion.libble.services.BleService;
 import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 
 import java.util.Comparator;
-import java.util.Iterator;
-
-import static com.sensirion.libble.services.BleServiceSynchronizationPriority.HIGH_PRIORITY;
+import java.util.concurrent.FutureTask;
 
 /**
  * Interface for any device that supports Bluetooth Low Energy (BLE)
@@ -162,21 +161,40 @@ public interface BleDevice {
     @SuppressWarnings("unused")
     AbstractHistoryService getHistoryService();
 
-    /**
-     * Tries to synchronize all the input device services. Needs to be called periodically.
-     * (For example, every 100ms, until the method returns <code>true</code>.
-     *
-     * @return <code>false</code> if the device is properly synchronized.
-     */
-    boolean synchronizeDeviceServices(@NonNull Iterable<BleService> services);
+    int MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS = 201; // Every 4 connection intervals.
 
     /**
-     * Tries to synchronize all the device services.
+     * Forces the synchronization of the incoming device services.
      *
-     * @see {@link #synchronizeDeviceServices(Iterable))}
+     * @param services                 which synchronization will be forced.
+     * @param timeBetweenRequestMillis between synchronization requests.
+     * @return a {@link FutureTask} which will be 'done' once the force synchronization is completed.
      */
-    @SuppressWarnings("unused")
-    boolean synchronizeAllDeviceServices();
+    @NonNull
+    FutureTask<?> synchronizeDeviceServices(@NonNull final Iterable<BleService> services,
+                                            @IntRange(from = MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS)
+                                            final int timeBetweenRequestMillis);
+
+    /**
+     * Forces the synchronization of all the device service {@link Class}.
+     * It ignores the {@link Class} that have not been discovered.
+     *
+     * @see #synchronizeDeviceServices(Iterable, int)
+     */
+    @NonNull
+    FutureTask<?> synchronizeDeviceServiceClasses(
+            @NonNull final Iterable<Class<? extends AbstractBleService>> servicesClasses,
+            @IntRange(from = MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS)
+            final int timeBetweenRequestMillis
+    );
+
+    /**
+     * Force the synchronization of all the device services.
+     *
+     * @see #synchronizeDeviceServiceClasses(Iterable, int)
+     */
+    @NonNull
+    FutureTask<?> synchronizeAllDeviceServices(final int timeBetweenForceRequestMillis);
 
     /**
      * Checks if the peripheral has all its services synchronized.
