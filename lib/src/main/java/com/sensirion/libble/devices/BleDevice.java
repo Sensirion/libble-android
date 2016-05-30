@@ -83,15 +83,15 @@ public interface BleDevice {
     int getRSSI();
 
     /**
-     * NOTE: Returns the first {@link com.sensirion.libble.services.AbstractBleService} found for the given type.
-     * Obtain a {@link com.sensirion.libble.services.AbstractBleService} in case the peripheral has one.
+     * NOTE: Returns the first {@link BleService} found for the given type.
+     * Obtain a {@link BleService} in case the peripheral has one.
      *
      * @param type service class that the user wants to obtain.
-     * @param <T>  Class of the service.
-     * @return {@link com.sensirion.libble.services.AbstractBleService} that corresponds to the given class.
+     * @param <T>  Class of the {@link BleService}.
+     * @return {@link BleService} that corresponds to the given class.
      */
     @Nullable
-    <T extends AbstractBleService> T getDeviceService(@NonNull Class<T> type);
+    <T extends BleService> T getDeviceService(@NonNull Class<T> type);
 
     /**
      * Obtains a {@link com.sensirion.libble.services.BleService} with a particular name.
@@ -183,7 +183,7 @@ public interface BleDevice {
      */
     @NonNull
     FutureTask<?> synchronizeDeviceServiceClasses(
-            @NonNull final Iterable<Class<? extends AbstractBleService>> servicesClasses,
+            @NonNull final Iterable<Class<? extends BleService>> servicesClasses,
             @IntRange(from = MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS)
             final int timeBetweenRequestMillis
     );

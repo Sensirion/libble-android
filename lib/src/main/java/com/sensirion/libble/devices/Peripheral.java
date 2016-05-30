@@ -327,7 +327,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
      * {@inheritDoc}
      */
     @Override
-    public <T extends AbstractBleService> T getDeviceService(@NonNull final Class<T> type) {
+    public <T extends BleService> T getDeviceService(@NonNull final Class<T> type) {
         for (final BleService service : mServices) {
             if (type.isAssignableFrom(service.getClass())) {
                 return (T) service;
@@ -813,14 +813,14 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
     @Override
     @NonNull
     public FutureTask<?> synchronizeDeviceServiceClasses(
-            @NonNull final Iterable<Class<? extends AbstractBleService>> servicesClasses,
+            @NonNull final Iterable<Class<? extends BleService>> servicesClasses,
             @IntRange(from = MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS)
             final int timeBetweenRequestMillis
     ) {
-        final Iterator<Class<? extends AbstractBleService>> serviceIterator = servicesClasses.iterator();
+        final Iterator<Class<? extends BleService>> serviceIterator = servicesClasses.iterator();
         final List<BleService> serviceToSynchronize = new LinkedList<>();
         while (serviceIterator.hasNext()) {
-            final Class<? extends AbstractBleService> serviceClass = serviceIterator.next();
+            final Class<? extends BleService> serviceClass = serviceIterator.next();
             final BleService service = this.getDeviceService(serviceClass);
             if (service == null) {
                 Log.w(TAG, String.format(
