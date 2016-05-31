@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import com.sensirion.libble.devices.Peripheral;
 import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.listeners.services.RHTListener;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
 
 abstract class AbstractSmartgadgetRHTService<ListenerType extends NotificationListener> extends AbstractSmartgadgetService<ListenerType> {
 
@@ -37,5 +38,14 @@ abstract class AbstractSmartgadgetRHTService<ListenerType extends NotificationLi
             SmartgadgetRHTNotificationCenter.getInstance().unregisterDownloadListener((RHTListener) listener, mPeripheral);
         }
         return super.unregisterNotificationListener(listener);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public BleServiceSynchronizationPriority getServiceSynchronizationPriority(){
+        return BleServiceSynchronizationPriority.LOW_PRIORITY;
     }
 }

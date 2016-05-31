@@ -1,6 +1,7 @@
 package com.sensirion.libble.devices;
 
 import android.content.Context;
+import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
@@ -8,6 +9,10 @@ import com.sensirion.libble.listeners.NotificationListener;
 import com.sensirion.libble.services.AbstractBleService;
 import com.sensirion.libble.services.AbstractHistoryService;
 import com.sensirion.libble.services.BleService;
+import com.sensirion.libble.services.BleServiceSynchronizationPriority;
+
+import java.util.Comparator;
+import java.util.concurrent.FutureTask;
 
 /**
  * Interface for any device that supports Bluetooth Low Energy (BLE)
@@ -78,15 +83,15 @@ public interface BleDevice {
     int getRSSI();
 
     /**
-     * NOTE: Returns the first {@link com.sensirion.libble.services.AbstractBleService} found for the given type.
-     * Obtain a {@link com.sensirion.libble.services.AbstractBleService} in case the peripheral has one.
+     * NOTE: Returns the first {@link BleService} found for the given type.
+     * Obtain a {@link BleService} in case the peripheral has one.
      *
      * @param type service class that the user wants to obtain.
-     * @param <T>  Class of the service.
-     * @return {@link com.sensirion.libble.services.AbstractBleService} that corresponds to the given class.
+     * @param <T>  Class of the {@link BleService}.
+     * @return {@link BleService} that corresponds to the given class.
      */
     @Nullable
-    <T extends AbstractBleService> T getDeviceService(@NonNull Class<T> type);
+    <T extends BleService> T getDeviceService(@NonNull Class<T> type);
 
     /**
      * Obtains a {@link com.sensirion.libble.services.BleService} with a particular name.
@@ -156,6 +161,40 @@ public interface BleDevice {
     @SuppressWarnings("unused")
     AbstractHistoryService getHistoryService();
 
+    int MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS = 201; // Every 4 connection intervals.
+
+    /**
+     * Forces the synchronization of the incoming device services.
+     *
+     * @param services                 which synchronization will be forced.
+     * @param timeBetweenRequestMillis between synchronization requests.
+     * @return a {@link FutureTask} which will be 'done' once the force synchronization is completed.
+     */
+    @NonNull
+    FutureTask<?> synchronizeDeviceServices(@NonNull final Iterable<BleService> services,
+                                            @IntRange(from = MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS)
+                                            final int timeBetweenRequestMillis);
+
+    /**
+     * Forces the synchronization of all the device service {@link Class}.
+     * It ignores the {@link Class} that have not been discovered.
+     *
+     * @see #synchronizeDeviceServices(Iterable, int)
+     */
+    @NonNull
+    FutureTask<?> synchronizeDeviceServiceClasses(
+            @NonNull final Iterable<Class<? extends BleService>> servicesClasses,
+            @IntRange(from = MINIMUM_TIME_BETWEEN_FORCE_SYNCHRONIZATION_REQUESTS)
+            final int timeBetweenRequestMillis
+    );
+
+    /**
+     * Force the synchronization of all the device services.
+     *
+     * @see #synchronizeDeviceServiceClasses(Iterable, int)
+     */
+    @NonNull
+    FutureTask<?> synchronizeAllDeviceServices(final int timeBetweenForceRequestMillis);
 
     /**
      * Checks if the peripheral has all its services synchronized.
@@ -164,4 +203,18 @@ public interface BleDevice {
      */
     @SuppressWarnings("unused")
     boolean areAllServicesReady();
+
+    /**
+     * Comparator for comparing the different {@link BleService} using their
+     * {@link BleServiceSynchronizationPriority} for comparing them.
+     */
+    @NonNull
+    Comparator<BleService> SERVICE_PRIORITY_COMPARATOR = new Comparator<BleService>() {
+        @Override
+        public int compare(@NonNull final BleService serviceA,
+                           @NonNull final BleService serviceB) {
+            return serviceA.getServiceSynchronizationPriority().ordinal()
+                    - serviceB.getServiceSynchronizationPriority().ordinal();
+        }
+    };
 }
