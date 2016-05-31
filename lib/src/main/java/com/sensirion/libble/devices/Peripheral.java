@@ -767,6 +767,7 @@ public class Peripheral implements BleDevice, Comparable<Peripheral> {
         for (final BleService service : serviceToSynchronize) {
             if (!service.isServiceReady()) {
                 // Service is not synchronized yet.
+                cleanCharacteristicCache();
                 service.synchronizeService();
                 return false;
             }
