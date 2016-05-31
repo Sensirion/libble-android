@@ -94,7 +94,6 @@ public class SHTC1HistoryService extends AbstractHistoryService {
         mUserDataCharacteristic = super.getCharacteristic(USER_DATA_UUID);
         addCharacteristicsTo(bluetoothGattService);
         prepareCharacteristics();
-        synchronizeService();
     }
 
     private void addCharacteristicsTo(@NonNull final BluetoothGattService bluetoothGattService) {
