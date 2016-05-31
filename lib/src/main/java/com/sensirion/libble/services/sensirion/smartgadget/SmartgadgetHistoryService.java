@@ -107,6 +107,8 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
         if (characteristic.equals(mSyncTimeCharacteristic)) {
             Log.d(TAG, String.format("onCharacteristicWrite -> Time was synced successfully in the device %s.", getDeviceAddress()));
             mAreDeviceTimestampsSynchronized = true;
+            mOldestTimestampToDownloadMs = Long.MIN_VALUE;
+            mNewestSampleTimestampMs = Long.MIN_VALUE;
             mPeripheral.forceReadCharacteristic(mOldestSampleTimestampMsCharacteristic, MAX_WAITING_TIME_BETWEEN_REQUEST_MS, NUMBER_FORCE_READING_REQUEST);
             return true;
         } else if (characteristic.equals(mOldestSampleTimestampMsCharacteristic)) {
@@ -143,7 +145,8 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     @Override
     public boolean isServiceReady() {
         return mLoggerIntervalMs != null && mOldestTimestampToDownloadMs != null && mNewestSampleTimestampMs != null
-                && mOldestTimestampToDownloadMs != 0 && mNewestSampleTimestampMs != 0;
+                && mOldestTimestampToDownloadMs != 0 && mNewestSampleTimestampMs != 0 &&
+                mOldestTimestampToDownloadMs != Long.MIN_VALUE && mNewestSampleTimestampMs != Long.MIN_VALUE;
     }
 
     /**
@@ -153,7 +156,12 @@ public class SmartgadgetHistoryService extends AbstractHistoryService {
     public void synchronizeService() {
         Log.d(TAG, "synchronizeService -> Synchronizing service...");
         if (mAreDeviceTimestampsSynchronized) {
-            if (mLoggerIntervalMs == null || mOldestTimestampToDownloadMs == null || mNewestSampleTimestampMs == null) {
+            if (mLoggerIntervalMs == null ||
+                    mOldestTimestampToDownloadMs == null ||
+                    mNewestSampleTimestampMs == null ||
+                    mOldestTimestampToDownloadMs == Long.MIN_VALUE ||
+                    mNewestSampleTimestampMs == Long.MIN_VALUE) {
+                Log.d(TAG, "synchronizeService -> Forcing characteristic synchronization");
                 forceCharacteristicRequest();
             } else if (mOldestTimestampToDownloadMs == 0 || mNewestSampleTimestampMs == 0) {
                 readTimestamps();
