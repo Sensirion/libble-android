@@ -209,6 +209,10 @@ public abstract class AbstractBleService<ListenerType extends NotificationListen
         mPeripheral.setCharacteristicNotification(characteristic, enabled);
 
         final BluetoothGattDescriptor descriptor = characteristic.getDescriptor(NOTIFICATION_DESCRIPTOR_UUID);
+        if (descriptor == null) {
+            Log.e(TAG, "setCharacteristicNotification -> descriptor is null");
+            return;
+        }
         if (enabled) {
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
         } else {
