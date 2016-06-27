@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
-version = "1.0.3-SNAPSHOT"
+version = "1.0.3"
 def code = 25
 
 group = 'com.sensirion'
