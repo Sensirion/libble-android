@@ -4,7 +4,6 @@ import java.util.Locale;
 
 public class Log {
     static final boolean LOG = true;
-    static final Locale LOCALE = Locale.CANADA;
 
     public static void i(String tag, String string) {
         if (LOG) android.util.Log.i(tag, string);
