@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">libble</string>
+    <string name="ble_not_supported">Bluetooth LE not supported on this device.</string>
+    <string name="error_bluetooth_not_supported">Bluetooth not supported on this device.</string>
 </resources>
