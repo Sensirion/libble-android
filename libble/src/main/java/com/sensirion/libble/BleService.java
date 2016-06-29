@@ -11,10 +11,12 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.le.BluetoothLeScanner;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 
@@ -59,10 +61,12 @@ public class BleService extends Service implements ActionFailureCallback {
     private final IBinder mBinder = new LocalBinder();
     private final Map<String, BleDevice> mDevices = Collections.synchronizedMap(new HashMap<String, BleDevice>());
     private final BluetoothGattCallback mGattCallback = new BleCallback();
+    private final Handler mScanHandler = new Handler();
 
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private ActionScheduler mActionScheduler;
+    private Runnable mStopScanningRunnable;
 
     public class LocalBinder extends Binder {
         public BleService getService() {
@@ -115,6 +119,66 @@ public class BleService extends Service implements ActionFailureCallback {
     }
 
     /**
+     * Starts a BLE Scan. Discovered devices are reported via the delivered callback.
+     *
+     * @param callback   An instance of the BleScanCallback, used to receive scan results.
+     * @param durationMs The duration in milliseconds, how long the scan should last. This parameter
+     *                   must be greater or equal to 1000 ms.
+     * @return true if a scan was triggered and false, if it was not possible to trigger a scan or
+     * if there is already an ongoing scan running.
+     */
+    public boolean startScan(@NonNull final BleScanCallback callback, final long durationMs) {
+        if (mBluetoothAdapter == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
+            return false;
+        }
+
+        if (durationMs < 1000) {
+            Log.w(TAG, "The scan duration must be longer than 1 second");
+            return false;
+        }
+
+        if (mStopScanningRunnable != null) {
+            Log.w(TAG, "Already a scan running");
+            return false;
+        }
+
+        final BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+
+        // Stops scanning after a pre-defined scan period.
+        mStopScanningRunnable = new Runnable() {
+            @Override
+            public void run() {
+                stopScan(callback);
+            }
+        };
+        mScanHandler.postDelayed(mStopScanningRunnable, durationMs);
+
+        bluetoothLeScanner.startScan(callback);
+        return true;
+    }
+
+    /**
+     * Stops an ongoing BLE Scan for the given callback.
+     *
+     * @param callback An instance of the BleScanCallback, used to start the scan.
+     */
+    public void stopScan(@NonNull final BleScanCallback callback) {
+        if (mBluetoothAdapter == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
+            return;
+        }
+
+        if (mStopScanningRunnable == null) return;
+
+        mScanHandler.removeCallbacks(mStopScanningRunnable);
+        final BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+        bluetoothLeScanner.stopScan(callback);
+        mStopScanningRunnable = null;
+        callback.onScanStopped();
+    }
+
+    /**
      * Retrieve a list of device addresses of all the connected devices.
      *
      * @return List of all device addresses of the BLE devices currently connected.
@@ -139,6 +203,7 @@ public class BleService extends Service implements ActionFailureCallback {
      * @param uuids         A list of descriptor UUIDs of the desired characteristics.
      * @return A Mapping with the characteristic UUIDs provided as uuids parameter and the corresponding characteristics.
      */
+    @NonNull
     public Map<String, BluetoothGattCharacteristic> getCharacteristics(@NonNull final String deviceAddress,
                                                                        final List<String> uuids) {
         final HashMap<String, BluetoothGattCharacteristic> result = new HashMap<>();
@@ -320,6 +385,7 @@ public class BleService extends Service implements ActionFailureCallback {
      * @return A {@code List} of supported services or an empty list if device not available or
      * discovery of services has not finished yet.
      */
+    @NonNull
     public List<BluetoothGattService> getSupportedGattServices(@NonNull final String deviceAddress) {
         if (mBluetoothAdapter == null) {
             Log.w(TAG, "BluetoothAdapter not initialized.");
