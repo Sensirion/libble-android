@@ -3,7 +3,7 @@ package com.sensirion.libble.log;
 import java.util.Locale;
 
 public class Log {
-    static final boolean LOG = true;
+    public static final boolean LOG = false;
 
     public static void i(String tag, String string) {
         if (LOG) android.util.Log.i(tag, string);
