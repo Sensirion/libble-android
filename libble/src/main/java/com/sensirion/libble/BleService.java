@@ -112,7 +112,7 @@ public class BleService extends Service implements ActionFailureCallback {
         }
 
         if (mActionScheduler == null) {
-            mActionScheduler = new ActionScheduler(mBluetoothManager, this);
+            mActionScheduler = new ActionScheduler(this);
         }
 
         return true;
@@ -144,6 +144,10 @@ public class BleService extends Service implements ActionFailureCallback {
         }
 
         final BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+        if (bluetoothLeScanner == null) {
+            Log.w(TAG, "Failed to scan. Bluetooth appears to be unavailable");
+            return false;
+        }
 
         // Stops scanning after a pre-defined scan period.
         mStopScanningRunnable = new Runnable() {
@@ -469,6 +473,7 @@ public class BleService extends Service implements ActionFailureCallback {
                 // such that resources are cleaned up properly.
                 bleDevice.getBluetoothGatt().close();
                 mDevices.remove(deviceAddress);
+                mActionScheduler.clear(deviceAddress);
 
                 Log.i(TAG, "Disconnected from GATT server.");
 

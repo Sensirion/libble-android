@@ -1,7 +1,5 @@
 package com.sensirion.libble.action;
 
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
 import android.support.annotation.Nullable;
 
 import com.sensirion.libble.log.Log;
@@ -53,8 +51,8 @@ class ActionQueue {
         return mQueue.isEmpty();
     }
 
-    public void processAction(final BluetoothManager bluetoothManager) {
-        final GattAction currentAction = checkPreconditionsAndGetNextAction(bluetoothManager);
+    public void processAction() {
+        final GattAction currentAction = checkPreconditionsAndGetNextAction();
         if (currentAction == null) return;
 
         if (currentAction.failsTillDropOut <= 0) {
@@ -79,13 +77,7 @@ class ActionQueue {
     }
 
     @Nullable
-    private GattAction checkPreconditionsAndGetNextAction(final BluetoothManager bluetoothManager) {
-        if (bluetoothManager == null) {
-            Log.w(TAG, "Can not execute action - BluetoothManager is null. - clearing queue");
-            clear();
-            return null;
-        }
-
+    private GattAction checkPreconditionsAndGetNextAction() {
         if (mQueue.size() == 0) {
             // Action Queue is empty
             resetState();
@@ -96,13 +88,6 @@ class ActionQueue {
         if (currentAction == null || currentAction.mGatt == null) {
             Log.w(TAG, "Can not execute action - Action or Gatt is null.");
             dismissCurrentAction();
-            return null;
-        }
-
-        if (bluetoothManager.getConnectionState(currentAction.mGatt.getDevice(), BluetoothProfile.GATT)
-                == BluetoothProfile.STATE_DISCONNECTED) {
-            Log.d(TAG, "Device not connected - drop action %s in action queue", currentAction.toString());
-            clear();
             return null;
         }
 

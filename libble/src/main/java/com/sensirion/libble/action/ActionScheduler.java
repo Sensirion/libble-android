@@ -1,6 +1,5 @@
 package com.sensirion.libble.action;
 
-import android.bluetooth.BluetoothManager;
 import android.os.Handler;
 
 import com.sensirion.libble.log.Log;
@@ -20,15 +19,12 @@ public class ActionScheduler {
     private final static long ACTION_LOOP_INTERVAL_MS = 50;
     private final static int ITERATIONS_UNTIL_ACTION_TIMEOUT = 100;
 
-    private final BluetoothManager mBluetoothManager;
     private final ActionFailureCallback mActionFailureCallback;
     private final Map<String, ActionQueue> mActions;
     private final Handler mActionHandler;
     private final Runnable mActionLoopRunnable;
 
-    public ActionScheduler(final BluetoothManager bluetoothManager,
-                           final ActionFailureCallback callback) {
-        mBluetoothManager = bluetoothManager;
+    public ActionScheduler(final ActionFailureCallback callback) {
         mActionFailureCallback = callback;
         mActions = new HashMap<>();
         mActionHandler = new Handler();
@@ -67,6 +63,12 @@ public class ActionScheduler {
         }
     }
 
+    public void clear(final String deviceAddress) {
+        synchronized (mActions) {
+            mActions.remove(deviceAddress);
+        }
+    }
+
     public void clearAll() {
         synchronized (mActions) {
             for (ActionQueue queue : mActions.values()) {
@@ -83,7 +85,7 @@ public class ActionScheduler {
             synchronized (mActions) {
                 for (final String key : new HashSet<>(mActions.keySet())) {
                     final ActionQueue queue = mActions.get(key);
-                    queue.processAction(mBluetoothManager);
+                    queue.processAction();
 
                     if (queue.isEmpty()) {
                         mActions.remove(key);
