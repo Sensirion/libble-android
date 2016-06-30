@@ -12,6 +12,8 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -121,13 +123,16 @@ public class BleService extends Service implements ActionFailureCallback {
     /**
      * Starts a BLE Scan. Discovered devices are reported via the delivered callback.
      *
-     * @param callback   An instance of the BleScanCallback, used to receive scan results.
-     * @param durationMs The duration in milliseconds, how long the scan should last. This parameter
-     *                   must be greater or equal to 1000 ms.
+     * @param callback         An instance of the BleScanCallback, used to receive scan results.
+     * @param durationMs       The duration in milliseconds, how long the scan should last. This parameter
+     *                         must be greater or equal to 1000 ms.
+     * @param deviceNameFilter A array of device names to filter for. Only BLE devices with these
+     *                         names are reported to the callback.
      * @return true if a scan was triggered and false, if it was not possible to trigger a scan or
      * if there is already an ongoing scan running.
      */
-    public boolean startScan(@NonNull final BleScanCallback callback, final long durationMs) {
+    public boolean startScan(@NonNull final BleScanCallback callback, final long durationMs,
+                             final String[] deviceNameFilter) {
         if (mBluetoothAdapter == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
             return false;
@@ -148,6 +153,11 @@ public class BleService extends Service implements ActionFailureCallback {
             Log.w(TAG, "Failed to scan. Bluetooth appears to be unavailable");
             return false;
         }
+        final ScanSettings settings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .build();
+
+        final List<ScanFilter> filters = getScanFilters(deviceNameFilter);
 
         // Stops scanning after a pre-defined scan period.
         mStopScanningRunnable = new Runnable() {
@@ -158,7 +168,7 @@ public class BleService extends Service implements ActionFailureCallback {
         };
         mScanHandler.postDelayed(mStopScanningRunnable, durationMs);
 
-        bluetoothLeScanner.startScan(callback);
+        bluetoothLeScanner.startScan(filters, settings, callback);
         return true;
     }
 
@@ -423,6 +433,20 @@ public class BleService extends Service implements ActionFailureCallback {
     }
 
     // Private Helpers
+    @NonNull
+    private List<ScanFilter> getScanFilters(final String[] deviceNameFilter) {
+        final List<ScanFilter> filters = new ArrayList<>();
+        if (deviceNameFilter != null) {
+            for (final String deviceName : deviceNameFilter) {
+                final ScanFilter scanFilter = new ScanFilter.Builder()
+                        .setDeviceName(deviceName)
+                        .build();
+                filters.add(scanFilter);
+            }
+        }
+        return filters;
+    }
+
     private void broadcastUpdate(final String deviceAddress, final String action) {
         sendBroadcast(createBaseIntent(deviceAddress, action));
     }
@@ -444,6 +468,7 @@ public class BleService extends Service implements ActionFailureCallback {
         sendBroadcast(intent);
     }
 
+    @NonNull
     private Intent createBaseIntent(final String deviceAddress, final String action) {
         final Intent intent = new Intent(action);
         intent.putExtra(EXTRA_DEVICE_ADDRESS, deviceAddress);
