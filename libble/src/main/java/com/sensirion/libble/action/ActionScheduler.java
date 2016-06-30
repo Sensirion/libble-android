@@ -1,6 +1,7 @@
 package com.sensirion.libble.action;
 
 import android.os.Handler;
+import android.support.annotation.NonNull;
 
 import com.sensirion.libble.log.Log;
 
@@ -24,10 +25,10 @@ public class ActionScheduler {
     private final Handler mActionHandler;
     private final Runnable mActionLoopRunnable;
 
-    public ActionScheduler(final ActionFailureCallback callback) {
+    public ActionScheduler(final ActionFailureCallback callback, @NonNull final Handler handler) {
         mActionFailureCallback = callback;
         mActions = new HashMap<>();
-        mActionHandler = new Handler();
+        mActionHandler = handler;
         mActionLoopRunnable = new ActionIterator();
     }
 
@@ -41,7 +42,7 @@ public class ActionScheduler {
         Log.d(TAG, "Pausing Action Scheduler");
     }
 
-    public void schedule(final GattAction action) {
+    public void schedule(@NonNull final GattAction action) {
         synchronized (mActions) {
             ActionQueue queue = mActions.get(action.getDeviceAddress());
             if (queue == null) {
@@ -53,7 +54,7 @@ public class ActionScheduler {
         touch();
     }
 
-    public void confirm(final String deviceAddress) {
+    public void confirm(@NonNull final String deviceAddress) {
         synchronized (mActions) {
             ActionQueue queue = mActions.get(deviceAddress);
             if (queue == null) {
@@ -63,7 +64,13 @@ public class ActionScheduler {
         }
     }
 
-    public void clear(final String deviceAddress) {
+    public boolean isEmpty() {
+        synchronized (mActions) {
+            return mActions.isEmpty();
+        }
+    }
+
+    public void clear(@NonNull final String deviceAddress) {
         synchronized (mActions) {
             mActions.remove(deviceAddress);
         }

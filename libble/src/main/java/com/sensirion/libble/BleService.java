@@ -112,7 +112,7 @@ public class BleService extends Service implements ActionFailureCallback {
         }
 
         if (mActionScheduler == null) {
-            mActionScheduler = new ActionScheduler(this);
+            mActionScheduler = new ActionScheduler(this, new Handler());
         }
 
         return true;
