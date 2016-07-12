@@ -11,11 +11,9 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
-public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorCallback {
+public class SHT3xHistoryService extends SmartGadgetHistoryService {
     private static final String TAG = SHT3xHistoryService.class.getSimpleName();
 
     public static final String SERVICE_UUID = "0000f234-b38d-4985-720e-0f993a68ee41";
@@ -26,48 +24,28 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
     private static final String START_LOGGER_DOWNLOAD_CHARACTERISTIC_UUID = "0000f238-b38d-4985-720e-0f993a68ee41";
     private static final String LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID = "0000f239-b38d-4985-720e-0f993a68ee41";
 
-    private static final String UNKNOWN_UNIT = "";
-    private static final String LOGGER_INTERVAL_UNIT = "ms";
     private static final byte DATA_POINT_SIZE = 4;
 
-    private final BleConnector mBleConnector;
-    private final ServiceListener mServiceListener;
-    private final String mDeviceAddress;
-
-    private final Set<String> mSupportedUuids;
-
-    private int mDownloadProgress;
     private DownloadState mDownloadState;
-
     private boolean mSlavesSubscribed; // TODO Handle that Humi and Temperature must be subscribed
-    private int mLoggerIntervalMs;
     private long mNewestSampleTimeMs;
     private long mOldestSampleTimeMs;
-    private int mNrOfElementsDownloaded;
-    private float mNrOfElementsToDownload;
-    private GadgetValue[] mLastValue;
 
-    // TODO: Create abstract SmartGadgetHistoryService with shared functionality of SHTC1 and SHT3x
     public SHT3xHistoryService(@NonNull final ServiceListener serviceListener,
                                @NonNull final BleConnector bleConnector,
                                @NonNull final String deviceAddress) {
-        mBleConnector = bleConnector;
-        mServiceListener = serviceListener;
-        mDeviceAddress = deviceAddress;
-
-        mDownloadProgress = -1;
+        super(serviceListener, bleConnector, deviceAddress, new String[]{
+                SERVICE_UUID,
+                SYNC_TIME_CHARACTERISTIC_UUID,
+                READ_BACK_TO_TIME_MS_CHARACTERISTIC_UUID,
+                NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID,
+                START_LOGGER_DOWNLOAD_CHARACTERISTIC_UUID,
+                LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID,
+                SHT3xHumidityService.NOTIFICATIONS_UUID,
+                SHT3xTemperatureService.NOTIFICATIONS_UUID
+        });
         mDownloadState = DownloadState.IDLE;
-        mLastValue = new GadgetValue[]{new SmartGadgetValue(new Date(), -1, LOGGER_INTERVAL_UNIT)};
-
-        mSupportedUuids = new HashSet<>();
-        mSupportedUuids.add(SERVICE_UUID);
-        mSupportedUuids.add(SYNC_TIME_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(READ_BACK_TO_TIME_MS_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(START_LOGGER_DOWNLOAD_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(SHT3xHumidityService.NOTIFICATIONS_UUID);
-        mSupportedUuids.add(SHT3xTemperatureService.NOTIFICATIONS_UUID);
+        mLoggerStateEnabled = true;
     }
 
     /*
@@ -75,37 +53,8 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
      */
 
     @Override
-    public boolean download() {
-        if (isDownloading()) {
-            return false;
-        }
-
-        return initiateDownloadProtocol();
-    }
-
-    @Override
-    public boolean isDownloading() {
-        return !mDownloadState.equals(DownloadState.IDLE);
-    }
-
-    @Override
-    public int getDownloadProgress() {
-        return mDownloadProgress;
-    }
-
-    @Override
-    public GadgetValue[] getLastValues() {
-        return mLastValue;
-    }
-
-    @Override
     public boolean isGadgetLoggingStateEditable() {
         return false; // Device logging is always enabled.
-    }
-
-    @Override
-    public boolean isGadgetLoggingEnabled() {
-        return true; // Device logging is always enabled.
     }
 
     @Override
@@ -117,15 +66,7 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
 
     @Override
     public boolean setLoggerInterval(final int loggerIntervalMs) {
-        final BluetoothGattCharacteristic characteristic =
-                mBleConnector.getCharacteristics(mDeviceAddress,
-                        Collections.singletonList(LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID))
-                        .get(LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID);
-        if (characteristic == null) return false;
-
-        characteristic.setValue(LittleEndianExtractor.extractLittleEndianByteArrayFromInteger(loggerIntervalMs));
-        mBleConnector.writeCharacteristic(mDeviceAddress, characteristic);
-        return true;
+        return super.writeValueToCharacteristic(LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID, loggerIntervalMs, BluetoothGattCharacteristic.FORMAT_SINT32, 0);
     }
 
     @Override
@@ -143,43 +84,38 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
     /*
         Implementation of {@link BleConnectorCallback}
      */
+    @Override
+    public boolean isDownloading() {
+        return !mDownloadState.equals(DownloadState.IDLE);
+    }
 
     @Override
-    public void onConnectionStateChanged(final boolean connected) {
-        if (connected) {
-            requestValueUpdate();
+    protected void handleDataReceived(String characteristicUuid, byte[] rawData) {
+        if (isDownloadedData(characteristicUuid, rawData)) {
+            Log.d(TAG, "Received downloaded data in raw form");
+            handleDownloadedData(characteristicUuid, rawData);
+            return;
+        }
+
+        switch (characteristicUuid) {
+            case LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID:
+                mLoggerIntervalMs = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                mLastValue[0] = new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT);
+                continueDownloadProtocol();
+                break;
+            case NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID:
+                mNewestSampleTimeMs = LittleEndianExtractor.extractLittleEndianLongFromCharacteristicValue(rawData);
+                continueDownloadProtocol();
+                break;
+            case READ_BACK_TO_TIME_MS_CHARACTERISTIC_UUID:
+                mOldestSampleTimeMs = LittleEndianExtractor.extractLittleEndianLongFromCharacteristicValue(rawData);
+                continueDownloadProtocol();
+                break;
         }
     }
 
     @Override
-    public void onDataReceived(final String characteristicUuid, final byte[] rawData) {
-        if (isUuidSupported(characteristicUuid)) {
-            if (isDownloadedData(characteristicUuid, rawData)) {
-                Log.d(TAG, "Received downloaded data in raw form");
-                handleDownloadedData(characteristicUuid, rawData);
-                return;
-            }
-
-            switch (characteristicUuid) {
-                case LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID:
-                    mLoggerIntervalMs = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
-                    mLastValue[0] = new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT);
-                    continueDownloadProtocol();
-                    break;
-                case NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID:
-                    mNewestSampleTimeMs = LittleEndianExtractor.extractLittleEndianLongFromCharacteristicValue(rawData);
-                    continueDownloadProtocol();
-                    break;
-                case READ_BACK_TO_TIME_MS_CHARACTERISTIC_UUID:
-                    mOldestSampleTimeMs = LittleEndianExtractor.extractLittleEndianLongFromCharacteristicValue(rawData);
-                    continueDownloadProtocol();
-                    break;
-            }
-        }
-    }
-
-    @Override
-    public void onDataWritten(final String characteristicUuid) {
+    protected void handleDataWritten(String characteristicUuid) {
         switch (characteristicUuid) {
             case LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID:
                 readLoggerInterval();
@@ -193,8 +129,8 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
     /*
         Private helper methods
      */
-
-    private boolean initiateDownloadProtocol() {
+    @Override
+    protected boolean initiateDownloadProtocol() {
         final BluetoothGattCharacteristic syncCharacteristic =
                 mBleConnector.getCharacteristics(mDeviceAddress,
                         Collections.singletonList(SYNC_TIME_CHARACTERISTIC_UUID))
@@ -226,9 +162,7 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
             case READ_BACK:
                 mDownloadState = DownloadState.RUNNING;
                 mNrOfElementsDownloaded = 0;
-                // TODO: Its strange to a have nr of elements to download as a float... think about
-                // TODO      floor here and make int
-                mNrOfElementsToDownload = (mNewestSampleTimeMs - mOldestSampleTimeMs) / mLoggerIntervalMs;
+                mNrOfElementsToDownload = (int) Math.floor((mNewestSampleTimeMs - mOldestSampleTimeMs) / mLoggerIntervalMs);
 
                 if (mNrOfElementsToDownload == 0) {
                     onDownloadComplete();
@@ -310,7 +244,7 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
         final int numberParsedElements = (rawData.length / 4) - 1;
         mNrOfElementsDownloaded = sequenceNr + numberParsedElements + 4;
 
-        mDownloadProgress = (int) Math.ceil(100 * (mNrOfElementsDownloaded / mNrOfElementsToDownload));
+        mDownloadProgress = (int) Math.ceil(100 * (mNrOfElementsDownloaded / (float) mNrOfElementsToDownload));
         if (mNrOfElementsDownloaded >= mNrOfElementsToDownload) {
             onDownloadComplete();
         }
@@ -321,10 +255,6 @@ public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorC
         return (characteristicUuid.equals(SHT3xHumidityService.NOTIFICATIONS_UUID) ||
                 characteristicUuid.equals(SHT3xTemperatureService.NOTIFICATIONS_UUID)) &&
                 rawData.length > (2 * DATA_POINT_SIZE);
-    }
-
-    private boolean isUuidSupported(final String characteristicUuid) {
-        return mSupportedUuids.contains(characteristicUuid);
     }
 
     private int extractSequenceNumber(@NonNull final byte[] byteBuffer) {

@@ -1,6 +1,5 @@
 package com.sensirion.libsmartgadget;
 
-import android.bluetooth.BluetoothGattCharacteristic;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
@@ -10,11 +9,8 @@ import com.sensirion.libsmartgadget.utils.LittleEndianExtractor;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT32;
@@ -25,10 +21,12 @@ import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT8;
 
 // TODO important to handle error happening here, specially ACTION_FAILED events which occurred
 // TODO     quite often!
-public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorCallback {
-    public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
+public class SHTC1HistoryService extends SmartGadgetHistoryService {
     private static final String TAG = SHTC1HistoryService.class.getSimpleName();
-    private static final String START_STOP_CHARACTERISTIC_UUID = "0000fa21-0000-1000-8000-00805f9b34fb";
+
+    public static final String SERVICE_UUID = "0000fa20-0000-1000-8000-00805f9b34fb";
+
+    private static final String LOGGING_STATE_CHARACTERISTIC_UUID = "0000fa21-0000-1000-8000-00805f9b34fb";
     private static final String LOGGING_INTERVAL_S_CHARACTERISTIC_UUID = "0000fa22-0000-1000-8000-00805f9b34fb";
     private static final String CURRENT_POINTER_CHARACTERISTIC_UUID = "0000fa23-0000-1000-8000-00805f9b34fb";
     private static final String START_POINTER_CHARACTERISTIC_UUID = "0000fa24-0000-1000-8000-00805f9b34fb";
@@ -36,53 +34,33 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
     private static final String LOGGED_DATA_CHARACTERISTIC_UUID = "0000fa26-0000-1000-8000-00805f9b34fb";
     private static final String USER_DATA_CHARACTERISTIC_UUID = "0000fa27-0000-1000-8000-00805f9b34fb";
 
-    private static final String LOGGER_INTERVAL_UNIT = "ms";
     private static final int GADGET_RING_BUFFER_SIZE = 16384;
     private static final int DATA_POINT_SIZE = 4;
     private static final long SHTC1_SPECIFIC_READ_AFTER_WRITE_DELAY_MS = 1000;
 
-    private final BleConnector mBleConnector;
-    private final ServiceListener mServiceListener;
-    private final String mDeviceAddress;
-
-    private final Set<String> mSupportedUuids;
-
     private DownloadState mDownloadState;
     private Date mDownloadStartTimestamp;
     private boolean mLoggerStateBeforeDownload;
-    private int mNrOfElementsToDownload;
-    private int mNrOfElementsDownloaded;
-    private int mDownloadProgress;
 
-    private boolean mLoggerStateEnabled;
-    private int mLoggerIntervalMs;
     private int mCurrentPointer;
     private int mStartPointer;
     private int mEndPointer;
     private int mLoggingEnabledTimestamp;
 
-    private GadgetValue[] mLastValue;
-
     public SHTC1HistoryService(@NonNull final ServiceListener serviceListener,
                                @NonNull final BleConnector bleConnector,
                                @NonNull final String deviceAddress) {
-        mBleConnector = bleConnector;
-        mServiceListener = serviceListener;
-        mDeviceAddress = deviceAddress;
-
-        mDownloadProgress = -1;
+        super(serviceListener, bleConnector, deviceAddress, new String[]{
+                SERVICE_UUID,
+                LOGGING_STATE_CHARACTERISTIC_UUID,
+                LOGGING_INTERVAL_S_CHARACTERISTIC_UUID,
+                CURRENT_POINTER_CHARACTERISTIC_UUID,
+                START_POINTER_CHARACTERISTIC_UUID,
+                END_POINTER_CHARACTERISTIC_UUID,
+                LOGGED_DATA_CHARACTERISTIC_UUID,
+                USER_DATA_CHARACTERISTIC_UUID
+        });
         mDownloadState = DownloadState.IDLE;
-        mLastValue = new GadgetValue[]{new SmartGadgetValue(new Date(), -1, LOGGER_INTERVAL_UNIT)};
-
-        mSupportedUuids = new HashSet<>();
-        mSupportedUuids.add(SERVICE_UUID);
-        mSupportedUuids.add(START_STOP_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(LOGGING_INTERVAL_S_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(CURRENT_POINTER_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(START_POINTER_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(END_POINTER_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(LOGGED_DATA_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(USER_DATA_CHARACTERISTIC_UUID);
     }
 
     /*
@@ -90,24 +68,8 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
      */
 
     @Override
-    public boolean download() {
-        if (isDownloading()) return false;
-        return initiateDownloadProtocol();
-    }
-
-    @Override
     public boolean isDownloading() {
         return !mDownloadState.equals(DownloadState.IDLE);
-    }
-
-    @Override
-    public int getDownloadProgress() {
-        return mDownloadProgress;
-    }
-
-    @Override
-    public GadgetValue[] getLastValues() {
-        return mLastValue;
     }
 
     @Override
@@ -116,16 +78,11 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
     }
 
     @Override
-    public boolean isGadgetLoggingEnabled() {
-        return mLoggerStateEnabled;
-    }
-
-    @Override
     public void setGadgetLoggingEnabled(final boolean enabled) {
         if (enabled) {
             writeLoggingStartTimestamp();
         }
-        writeValueToCharacteristic(START_STOP_CHARACTERISTIC_UUID, (byte) ((enabled) ? 1 : 0), FORMAT_UINT8, 0);
+        writeValueToCharacteristic(LOGGING_STATE_CHARACTERISTIC_UUID, (byte) ((enabled) ? 1 : 0), FORMAT_UINT8, 0);
     }
 
     @Override
@@ -154,57 +111,48 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
      */
 
     @Override
-    public void onConnectionStateChanged(boolean connected) {
-        if (connected) {
-            requestValueUpdate();
+    protected void handleDataReceived(final String characteristicUuid, final byte[] rawData) {
+        switch (characteristicUuid) {
+            case LOGGING_INTERVAL_S_CHARACTERISTIC_UUID:
+                mLoggerIntervalMs = 1000 * LittleEndianExtractor.extractLittleEndianShortFromCharacteristicValue(rawData);
+                mLastValue[0] = new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT);
+                break;
+            case LOGGING_STATE_CHARACTERISTIC_UUID:
+                mLoggerStateEnabled = ((int) rawData[0] > 0);
+                Log.d(TAG, "Received LOGGING_STATE_CHARACTERISTIC_UUID data: " + mLoggerStateEnabled);
+                continueDownloadProtocol();
+                break;
+            case CURRENT_POINTER_CHARACTERISTIC_UUID:
+                mCurrentPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                Log.d(TAG, "Received CURRENT_POINTER_CHARACTERISTIC_UUID data: " + mCurrentPointer);
+                continueDownloadProtocol();
+                break;
+            case START_POINTER_CHARACTERISTIC_UUID:
+                mStartPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                Log.d(TAG, "Received START_POINTER_CHARACTERISTIC_UUID data: " + mStartPointer);
+                continueDownloadProtocol();
+                break;
+            case END_POINTER_CHARACTERISTIC_UUID:
+                mEndPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                Log.d(TAG, "Received END_POINTER_CHARACTERISTIC_UUID data: " + mEndPointer);
+                continueDownloadProtocol();
+                break;
+            case USER_DATA_CHARACTERISTIC_UUID:
+                mLoggingEnabledTimestamp = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                Log.d(TAG, "Received USER_DATA_CHARACTERISTIC_UUID data: " + mLoggingEnabledTimestamp);
+                break;
+            case LOGGED_DATA_CHARACTERISTIC_UUID:
+                Log.d(TAG, "Received LOGGED_DATA_CHARACTERISTIC_UUID data");
+                handleDownloadedData(rawData);
+                if (mDownloadState.equals(DownloadState.RUNNING)) {
+                    mBleConnector.readCharacteristic(mDeviceAddress, LOGGED_DATA_CHARACTERISTIC_UUID);
+                }
+                break;
         }
     }
 
     @Override
-    public void onDataReceived(String characteristicUuid, byte[] rawData) {
-        if (isUuidSupported(characteristicUuid)) {
-            switch (characteristicUuid) {
-                case LOGGING_INTERVAL_S_CHARACTERISTIC_UUID:
-                    mLoggerIntervalMs = 1000 * LittleEndianExtractor.extractLittleEndianShortFromCharacteristicValue(rawData);
-                    mLastValue[0] = new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT);
-                    break;
-                case START_STOP_CHARACTERISTIC_UUID:
-                    mLoggerStateEnabled = ((int) rawData[0] > 0);
-                    Log.d(TAG, "Received START_STOP_CHARACTERISTIC_UUID data: " + mLoggerStateEnabled);
-                    continueDownloadProtocol();
-                    break;
-                case CURRENT_POINTER_CHARACTERISTIC_UUID:
-                    mCurrentPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
-                    Log.d(TAG, "Received CURRENT_POINTER_CHARACTERISTIC_UUID data: " + mCurrentPointer);
-                    continueDownloadProtocol();
-                    break;
-                case START_POINTER_CHARACTERISTIC_UUID:
-                    mStartPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
-                    Log.d(TAG, "Received START_POINTER_CHARACTERISTIC_UUID data: " + mStartPointer);
-                    continueDownloadProtocol();
-                    break;
-                case END_POINTER_CHARACTERISTIC_UUID:
-                    mEndPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
-                    Log.d(TAG, "Received END_POINTER_CHARACTERISTIC_UUID data: " + mEndPointer);
-                    continueDownloadProtocol();
-                    break;
-                case USER_DATA_CHARACTERISTIC_UUID:
-                    mLoggingEnabledTimestamp = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
-                    Log.d(TAG, "Received USER_DATA_CHARACTERISTIC_UUID data: " + mLoggingEnabledTimestamp);
-                    break;
-                case LOGGED_DATA_CHARACTERISTIC_UUID:
-                    Log.d(TAG, "Received LOGGED_DATA_CHARACTERISTIC_UUID data");
-                    handleDownloadedData(rawData);
-                    if (mDownloadState.equals(DownloadState.RUNNING)) {
-                        mBleConnector.readCharacteristic(mDeviceAddress, LOGGED_DATA_CHARACTERISTIC_UUID);
-                    }
-                    break;
-            }
-        }
-    }
-
-    @Override
-    public void onDataWritten(final String characteristicUuid) {
+    protected void handleDataWritten(final String characteristicUuid) {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -212,7 +160,7 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
                     case LOGGING_INTERVAL_S_CHARACTERISTIC_UUID:
                         readLoggerInterval();
                         break;
-                    case START_STOP_CHARACTERISTIC_UUID:
+                    case LOGGING_STATE_CHARACTERISTIC_UUID:
                         readLoggingState();
                         break;
                     case START_POINTER_CHARACTERISTIC_UUID:
@@ -232,12 +180,13 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
     /*
         Private Methods
      */
-    private boolean initiateDownloadProtocol() {
+    @Override
+    protected boolean initiateDownloadProtocol() {
         mDownloadState = DownloadState.INIT;
         mLoggerStateBeforeDownload = isGadgetLoggingEnabled();
         mDownloadStartTimestamp = new Date();
         setGadgetLoggingEnabled(false);
-        return true; // TODO really?
+        return true;
     }
 
     private void continueDownloadProtocol() {
@@ -330,16 +279,12 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
         setGadgetLoggingEnabled(mLoggerStateBeforeDownload);
     }
 
-    private boolean isUuidSupported(final String characteristicUuid) {
-        return mSupportedUuids.contains(characteristicUuid);
-    }
-
     private void readLoggerInterval() {
         mBleConnector.readCharacteristic(mDeviceAddress, LOGGING_INTERVAL_S_CHARACTERISTIC_UUID);
     }
 
     private void readLoggingState() {
-        mBleConnector.readCharacteristic(mDeviceAddress, START_STOP_CHARACTERISTIC_UUID);
+        mBleConnector.readCharacteristic(mDeviceAddress, LOGGING_STATE_CHARACTERISTIC_UUID);
     }
 
     private void readCurrentPointer() {
@@ -385,19 +330,6 @@ public class SHTC1HistoryService implements GadgetDownloadService, BleConnectorC
             return mCurrentPointer - GADGET_RING_BUFFER_SIZE;
         }
         return 1;
-    }
-
-    private boolean writeValueToCharacteristic(final String characteristicUuid, final int value,
-                                               final int formatType, final int offset) {
-        final BluetoothGattCharacteristic characteristic =
-                mBleConnector.getCharacteristics(mDeviceAddress,
-                        Collections.singletonList(characteristicUuid))
-                        .get(characteristicUuid);
-        if (characteristic == null) return false;
-
-        characteristic.setValue(value, formatType, offset);
-        mBleConnector.writeCharacteristic(mDeviceAddress, characteristic);
-        return true;
     }
 
     enum DownloadState {
