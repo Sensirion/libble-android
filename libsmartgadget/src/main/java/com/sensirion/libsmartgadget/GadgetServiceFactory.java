@@ -20,10 +20,15 @@ public class GadgetServiceFactory {
         mGadgetServiceRepository = new HashMap<>();
 
         // TODO move somewhere else
+        // Generic
         mGadgetServiceRepository.put(BatteryService.SERVICE_UUID, BatteryService.class);
-        mGadgetServiceRepository.put(TemperatureService.SERVICE_UUID, TemperatureService.class);
-        mGadgetServiceRepository.put(HumidityService.SERVICE_UUID, HumidityService.class);
-        mGadgetServiceRepository.put(Sht3xHistoryService.SERVICE_UUID, Sht3xHistoryService.class);
+        // 3x Gadget
+        mGadgetServiceRepository.put(SHT3xTemperatureService.SERVICE_UUID, SHT3xTemperatureService.class);
+        mGadgetServiceRepository.put(SHT3xHumidityService.SERVICE_UUID, SHT3xHumidityService.class);
+        mGadgetServiceRepository.put(SHT3xHistoryService.SERVICE_UUID, SHT3xHistoryService.class);
+        // C1 Gadget
+        mGadgetServiceRepository.put(SHTC1TemperatureAndHumidityService.SERVICE_UUID, SHTC1TemperatureAndHumidityService.class);
+        mGadgetServiceRepository.put(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
     }
 
     @NonNull

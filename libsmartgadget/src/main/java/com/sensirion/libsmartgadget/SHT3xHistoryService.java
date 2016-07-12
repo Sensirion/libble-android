@@ -15,8 +15,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorCallback {
-    private static final String TAG = Sht3xHistoryService.class.getSimpleName();
+public class SHT3xHistoryService implements GadgetDownloadService, BleConnectorCallback {
+    private static final String TAG = SHT3xHistoryService.class.getSimpleName();
 
     public static final String SERVICE_UUID = "0000f234-b38d-4985-720e-0f993a68ee41";
 
@@ -34,10 +34,11 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
     private final ServiceListener mServiceListener;
     private final String mDeviceAddress;
 
+    private final Set<String> mSupportedUuids;
+
     private int mDownloadProgress;
     private DownloadState mDownloadState;
 
-    private Set<String> mSupportedUuids;
     private boolean mSlavesSubscribed; // TODO Handle that Humi and Temperature must be subscribed
     private int mLoggerIntervalMs;
     private long mNewestSampleTimeMs;
@@ -46,7 +47,8 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
     private float mNrOfElementsToDownload;
     private GadgetValue[] mLastValue;
 
-    public Sht3xHistoryService(@NonNull final ServiceListener serviceListener,
+    // TODO: Create abstract SmartGadgetHistoryService with shared functionality of SHTC1 and SHT3x
+    public SHT3xHistoryService(@NonNull final ServiceListener serviceListener,
                                @NonNull final BleConnector bleConnector,
                                @NonNull final String deviceAddress) {
         mBleConnector = bleConnector;
@@ -64,8 +66,8 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
         mSupportedUuids.add(NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID);
         mSupportedUuids.add(START_LOGGER_DOWNLOAD_CHARACTERISTIC_UUID);
         mSupportedUuids.add(LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID);
-        mSupportedUuids.add(HumidityService.NOTIFICATIONS_UUID);
-        mSupportedUuids.add(TemperatureService.NOTIFICATIONS_UUID);
+        mSupportedUuids.add(SHT3xHumidityService.NOTIFICATIONS_UUID);
+        mSupportedUuids.add(SHT3xTemperatureService.NOTIFICATIONS_UUID);
     }
 
     /*
@@ -83,7 +85,7 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
 
     @Override
     public boolean isDownloading() {
-        return mDownloadState.equals(DownloadState.RUNNING);
+        return !mDownloadState.equals(DownloadState.IDLE);
     }
 
     @Override
@@ -96,9 +98,24 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
         return mLastValue;
     }
 
-    /*
-        Service Specific API
-     */
+    @Override
+    public boolean isGadgetLoggingStateEditable() {
+        return false; // Device logging is always enabled.
+    }
+
+    @Override
+    public boolean isGadgetLoggingEnabled() {
+        return true; // Device logging is always enabled.
+    }
+
+    @Override
+    public void setGadgetLoggingEnabled(final boolean enabled) {
+        if (isGadgetLoggingEnabled() != enabled) {
+            throw new IllegalStateException("Logging State is not editable"); // Device logging is always enabled.
+        }
+    }
+
+    @Override
     public boolean setLoggerInterval(final int loggerIntervalMs) {
         final BluetoothGattCharacteristic characteristic =
                 mBleConnector.getCharacteristics(mDeviceAddress,
@@ -111,25 +128,16 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
         return true;
     }
 
+    @Override
+    public int getLoggerInterval() {
+        return mLoggerIntervalMs;
+    }
+
+    @Override
     public void requestValueUpdate() {
         readLoggerInterval();
         readNewestSampleTime();
         readReadBackToTime();
-    }
-
-    // TODO: move to parent class and if not applicable remove entirely
-    public boolean isLoggingStateEditable() {
-        return false; // Device logging is always enabled.
-    }
-
-    // TODO: move to parent class and if not applicable remove entirely
-    public boolean isGadgetLoggingEnabled() {
-        return true; // Device logging is always enabled.
-    }
-
-    // TODO: move to parent class and if not applicable remove entirely
-    public boolean setLoggingState(final boolean enabled) {
-        return false; // Device logging is always enabled.
     }
 
     /*
@@ -138,7 +146,9 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
 
     @Override
     public void onConnectionStateChanged(final boolean connected) {
-        requestValueUpdate();
+        if (connected) {
+            requestValueUpdate();
+        }
     }
 
     @Override
@@ -216,6 +226,8 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
             case READ_BACK:
                 mDownloadState = DownloadState.RUNNING;
                 mNrOfElementsDownloaded = 0;
+                // TODO: Its strange to a have nr of elements to download as a float... think about
+                // TODO      floor here and make int
                 mNrOfElementsToDownload = (mNewestSampleTimeMs - mOldestSampleTimeMs) / mLoggerIntervalMs;
 
                 if (mNrOfElementsToDownload == 0) {
@@ -257,7 +269,7 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
     }
 
     private void handleDownloadedData(final String characteristicUuid, final byte[] rawData) {
-        if (rawData.length < 4 * 2 || rawData.length % 4 > 0) { // TODO REMOVE IF POSSIBLE
+        if (rawData.length < 4 * 2 || rawData.length % 4 > 0) {
             Log.e(TAG, "parseHistoryValue -> Received History value does not have a valid length.");
             return;
         }
@@ -285,10 +297,10 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
     }
 
     private String getUnitFromUuid(final String characteristicUuid, final String defaultUnit) {
-        if (characteristicUuid.equals(HumidityService.NOTIFICATIONS_UUID)) {
-            return HumidityService.UNIT;
-        } else if (characteristicUuid.equals(TemperatureService.NOTIFICATIONS_UUID)) {
-            return TemperatureService.UNIT;
+        if (characteristicUuid.equals(SHT3xHumidityService.NOTIFICATIONS_UUID)) {
+            return SHT3xHumidityService.UNIT;
+        } else if (characteristicUuid.equals(SHT3xTemperatureService.NOTIFICATIONS_UUID)) {
+            return SHT3xTemperatureService.UNIT;
         }
         return defaultUnit;
     }
@@ -306,8 +318,8 @@ public class Sht3xHistoryService implements GadgetDownloadService, BleConnectorC
     }
 
     private boolean isDownloadedData(final String characteristicUuid, final byte[] rawData) {
-        return (characteristicUuid.equals(HumidityService.NOTIFICATIONS_UUID) ||
-                characteristicUuid.equals(TemperatureService.NOTIFICATIONS_UUID)) &&
+        return (characteristicUuid.equals(SHT3xHumidityService.NOTIFICATIONS_UUID) ||
+                characteristicUuid.equals(SHT3xTemperatureService.NOTIFICATIONS_UUID)) &&
                 rawData.length > (2 * DATA_POINT_SIZE);
     }
 

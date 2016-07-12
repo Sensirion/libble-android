@@ -167,4 +167,10 @@ public final class LittleEndianExtractor {
         final int upperByte = characteristic.getIntValue(FORMAT_SINT8, offset + 1); // Note: interpret MSB as signed.
         return (upperByte << 8) + lowerByte;
     }
+
+    public static int extractLittleEndianShortFromCharacteristicValue(@NonNull final byte[] value) {
+        short[] extractedValue = new short[1];
+        ByteBuffer.wrap(value).order(LITTLE_ENDIAN).asShortBuffer().get(extractedValue);
+        return extractedValue[0];
+    }
 }

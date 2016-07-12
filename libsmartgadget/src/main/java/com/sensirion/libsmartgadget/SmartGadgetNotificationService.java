@@ -14,38 +14,38 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public abstract class Sht3xService implements GadgetNotificationService, BleConnectorCallback {
-    private static final String TAG = Sht3xService.class.getSimpleName();
-    private static final String NOTIFICATION_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
+public abstract class SmartGadgetNotificationService implements GadgetNotificationService, BleConnectorCallback {
+    private static final String TAG = SmartGadgetNotificationService.class.getSimpleName();
+    protected static final String NOTIFICATION_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
 
-    private final BleConnector mBleConnector;
-    private final ServiceListener mServiceListener;
-    private final String mDeviceAddress;
+    protected final BleConnector mBleConnector;
+    protected final ServiceListener mServiceListener;
+    protected final String mDeviceAddress;
 
-    private final String mNotificationsUuis;
-    private final String mUnit;
+    protected final String mNotificationsUuid;
+    protected final String mUnit;
 
-    private final Set<String> mSupportedUuids;
-    private GadgetValue[] mLastValues;
-    private boolean mSubscribed;
+    protected final Set<String> mSupportedUuids;
+    protected GadgetValue[] mLastValues;
+    protected boolean mSubscribed;
 
-    public Sht3xService(@NonNull final ServiceListener serviceListener,
-                        @NonNull final BleConnector bleConnector,
-                        @NonNull final String deviceAddress,
-                        @NonNull final String serviceUuid,
-                        @NonNull final String notificationsUuid,
-                        @NonNull final String unit) {
+    public SmartGadgetNotificationService(@NonNull final ServiceListener serviceListener,
+                                          @NonNull final BleConnector bleConnector,
+                                          @NonNull final String deviceAddress,
+                                          @NonNull final String serviceUuid,
+                                          @NonNull final String notificationsUuid,
+                                          @NonNull final String unit) {
         mServiceListener = serviceListener;
         mBleConnector = bleConnector;
         mDeviceAddress = deviceAddress;
-        mNotificationsUuis = notificationsUuid;
+        mNotificationsUuid = notificationsUuid;
         mUnit = unit;
         mLastValues = new GadgetValue[0];
         mSubscribed = false;
 
         mSupportedUuids = new HashSet<>();
         mSupportedUuids.add(serviceUuid);
-        mSupportedUuids.add(mNotificationsUuis);
+        mSupportedUuids.add(mNotificationsUuid);
         mSupportedUuids.add(NOTIFICATION_DESCRIPTOR_UUID);
     }
 
@@ -56,9 +56,9 @@ public abstract class Sht3xService implements GadgetNotificationService, BleConn
         }
 
         final Map<String, BluetoothGattCharacteristic> characteristics =
-                mBleConnector.getCharacteristics(mDeviceAddress, Collections.singletonList(mNotificationsUuis));
+                mBleConnector.getCharacteristics(mDeviceAddress, Collections.singletonList(mNotificationsUuid));
 
-        subscribeNotifications(mDeviceAddress, characteristics.get(mNotificationsUuis), true);
+        subscribeNotifications(mDeviceAddress, characteristics.get(mNotificationsUuid), true);
         mSubscribed = true;
     }
 
@@ -69,9 +69,9 @@ public abstract class Sht3xService implements GadgetNotificationService, BleConn
         }
 
         final Map<String, BluetoothGattCharacteristic> characteristics =
-                mBleConnector.getCharacteristics(mDeviceAddress, Collections.singletonList(mNotificationsUuis));
+                mBleConnector.getCharacteristics(mDeviceAddress, Collections.singletonList(mNotificationsUuid));
 
-        subscribeNotifications(mDeviceAddress, characteristics.get(mNotificationsUuis), false);
+        subscribeNotifications(mDeviceAddress, characteristics.get(mNotificationsUuid), false);
         mSubscribed = false;
     }
 
@@ -124,7 +124,7 @@ public abstract class Sht3xService implements GadgetNotificationService, BleConn
         mBleConnector.setCharacteristicNotification(deviceAddress, characteristic, descriptor, enable);
     }
 
-    private void handleLiveValue(final byte[] rawData) {
+    protected void handleLiveValue(final byte[] rawData) {
         final float value = LittleEndianExtractor.extractLittleEndianFloatFromCharacteristicValue(rawData, 0);
         mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), value, mUnit)};
         mServiceListener.onGadgetValuesReceived(this, mLastValues);

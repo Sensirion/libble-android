@@ -422,8 +422,8 @@ public class BleService extends Service implements ActionFailureCallback {
             final BluetoothGattCharacteristic characteristic = actionRead.getCharacteristic();
             broadcastUpdate(action.getDeviceAddress(), ACTION_DID_FAIL, characteristic);
         } else if (action instanceof ActionWriteCharacteristic) {
-            final ActionWriteCharacteristic actionRead = (ActionWriteCharacteristic) action;
-            final BluetoothGattCharacteristic characteristic = actionRead.getCharacteristic();
+            final ActionWriteCharacteristic actionWrite = (ActionWriteCharacteristic) action;
+            final BluetoothGattCharacteristic characteristic = actionWrite.getCharacteristic();
             broadcastUpdate(action.getDeviceAddress(), ACTION_DID_FAIL, characteristic);
         } else if (action instanceof ActionWriteDescriptor) {
             final ActionWriteDescriptor actionRead = (ActionWriteDescriptor) action;
