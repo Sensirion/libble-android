@@ -62,6 +62,7 @@ public class GadgetServiceFactory {
     private void registerSmartGadgetServices() {
         // Generic
         mGadgetServiceRepository.put(BatteryService.SERVICE_UUID, BatteryService.class);
+        mGadgetServiceRepository.put(DeviceInformationService.SERVICE_UUID, DeviceInformationService.class);
         // 3x Gadget
         mGadgetServiceRepository.put(SHT3xTemperatureService.SERVICE_UUID, SHT3xTemperatureService.class);
         mGadgetServiceRepository.put(SHT3xHumidityService.SERVICE_UUID, SHT3xHumidityService.class);
