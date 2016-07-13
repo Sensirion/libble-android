@@ -253,6 +253,12 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
                 mNrOfElementsDownloaded = 0;
                 mDownloadProgress = 0;
                 mNrOfElementsToDownload = calculateValuesToDownload();
+                if (mNrOfElementsToDownload <= 0) {
+                    Log.d(TAG, "No data to download");
+                    onDownloadComplete();
+                    return;
+                }
+                // Start downloading... this reads the first download packet.
                 mBleConnector.readCharacteristic(mDeviceAddress, LOGGED_DATA_CHARACTERISTIC_UUID);
                 break;
             case RUNNING:
