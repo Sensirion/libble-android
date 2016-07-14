@@ -29,6 +29,9 @@ public abstract class SmartGadgetNotificationService implements GadgetNotificati
     protected GadgetValue[] mLastValues;
     protected boolean mSubscribed;
 
+    /**
+     * {@inheritDoc}
+     */
     public SmartGadgetNotificationService(@NonNull final ServiceListener serviceListener,
                                           @NonNull final BleConnector bleConnector,
                                           @NonNull final String deviceAddress,
@@ -49,12 +52,11 @@ public abstract class SmartGadgetNotificationService implements GadgetNotificati
         mSupportedUuids.add(NOTIFICATION_DESCRIPTOR_UUID);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void subscribe() {
-        if (isSubscribed()) {
-            return;
-        }
-
         final Map<String, BluetoothGattCharacteristic> characteristics =
                 mBleConnector.getCharacteristics(mDeviceAddress, Collections.singletonList(mNotificationsUuid));
 
@@ -62,12 +64,11 @@ public abstract class SmartGadgetNotificationService implements GadgetNotificati
         mSubscribed = true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void unsubscribe() {
-        if (!isSubscribed()) {
-            return;
-        }
-
         final Map<String, BluetoothGattCharacteristic> characteristics =
                 mBleConnector.getCharacteristics(mDeviceAddress, Collections.singletonList(mNotificationsUuid));
 
@@ -75,11 +76,25 @@ public abstract class SmartGadgetNotificationService implements GadgetNotificati
         mSubscribed = false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isSubscribed() {
         return mSubscribed;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void requestValueUpdate() {
+        mBleConnector.readCharacteristic(mDeviceAddress, mNotificationsUuid);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public GadgetValue[] getLastValues() {
         return mLastValues;
@@ -98,22 +113,38 @@ public abstract class SmartGadgetNotificationService implements GadgetNotificati
     }
 
     @Override
-    public void onDataWritten(String characteristicUuid) {
+    public void onDataWritten(final String characteristicUuid) {
         // ignore ... nothing written here
     }
 
     @Override
-    public void onConnectionStateChanged(boolean connected) {
+    public void onConnectionStateChanged(final boolean connected) {
         // ignore ... nothing to do here for the service
+    }
+
+    @Override
+    public void onFail(final String characteristicUuid, final byte[] data, final boolean isWriteFailure) {
+        if (!isUuidSupported(characteristicUuid)) {
+            return;
+        }
+
+        // TODO think about limiting the retires
+        if (characteristicUuid.equals(mNotificationsUuid)) {
+            if (isSubscribed()) {
+                subscribe(); // failed to subscribe... retry
+            } else {
+                unsubscribe(); // failed to unsubscribe... retry
+            }
+        }
     }
 
     /*
         Private Helper Methods
     */
 
-    private void subscribeNotifications(@NonNull final String deviceAddress,
-                                        @NonNull final BluetoothGattCharacteristic characteristic,
-                                        final boolean enable) {
+    private synchronized void subscribeNotifications(@NonNull final String deviceAddress,
+                                                     @NonNull final BluetoothGattCharacteristic characteristic,
+                                                     final boolean enable) {
         BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                 UUID.fromString(NOTIFICATION_DESCRIPTOR_UUID));
         if (descriptor == null) {

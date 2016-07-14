@@ -13,22 +13,13 @@ import java.util.Map;
 public class GadgetServiceFactory {
     private static final String TAG = GadgetServiceFactory.class.getSimpleName();
     private final BleConnector mBleConnector;
-    private Map<String, Class<? extends GadgetService>> mGadgetServiceRepository;
+    private final Map<String, Class<? extends GadgetService>> mGadgetServiceRepository;
 
     public GadgetServiceFactory(final BleConnector bleConnector) {
         mBleConnector = bleConnector;
         mGadgetServiceRepository = new HashMap<>();
 
-        // TODO move somewhere else
-        // Generic
-        mGadgetServiceRepository.put(BatteryService.SERVICE_UUID, BatteryService.class);
-        // 3x Gadget
-        mGadgetServiceRepository.put(SHT3xTemperatureService.SERVICE_UUID, SHT3xTemperatureService.class);
-        mGadgetServiceRepository.put(SHT3xHumidityService.SERVICE_UUID, SHT3xHumidityService.class);
-        mGadgetServiceRepository.put(SHT3xHistoryService.SERVICE_UUID, SHT3xHistoryService.class);
-        // C1 Gadget
-        mGadgetServiceRepository.put(SHTC1TemperatureAndHumidityService.SERVICE_UUID, SHTC1TemperatureAndHumidityService.class);
-        mGadgetServiceRepository.put(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
+        registerSmartGadgetServices();
     }
 
     @NonNull
@@ -66,5 +57,17 @@ public class GadgetServiceFactory {
             Log.e(TAG, String.format("Failed to create service of type %s", gadgetServiceClass.toString()), e);
             return null;
         }
+    }
+
+    private void registerSmartGadgetServices() {
+        // Generic
+        mGadgetServiceRepository.put(BatteryService.SERVICE_UUID, BatteryService.class);
+        // 3x Gadget
+        mGadgetServiceRepository.put(SHT3xTemperatureService.SERVICE_UUID, SHT3xTemperatureService.class);
+        mGadgetServiceRepository.put(SHT3xHumidityService.SERVICE_UUID, SHT3xHumidityService.class);
+        mGadgetServiceRepository.put(SHT3xHistoryService.SERVICE_UUID, SHT3xHistoryService.class);
+        // C1 Gadget
+        mGadgetServiceRepository.put(SHTC1TemperatureAndHumidityService.SERVICE_UUID, SHTC1TemperatureAndHumidityService.class);
+        mGadgetServiceRepository.put(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
     }
 }

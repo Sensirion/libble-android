@@ -187,15 +187,6 @@ public class GadgetManager extends BroadcastReceiver implements BleConnector {
     }
 
     @Override
-    public void readCharacteristic(@NonNull String deviceAddress, BluetoothGattCharacteristic characteristic) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return;
-        }
-        mBleService.readCharacteristic(deviceAddress, characteristic);
-    }
-
-    @Override
     public void writeCharacteristic(@NonNull String deviceAddress, BluetoothGattCharacteristic characteristic) {
         if (!isReady()) {
             Log.w(TAG, "GadgetManager not initialized");
@@ -239,8 +230,8 @@ public class GadgetManager extends BroadcastReceiver implements BleConnector {
                 gadget.onConnectionStateChanged(true);
                 break;
             case BleService.ACTION_GATT_DISCONNECTED:
-                gadget.onConnectionStateChanged(false);
                 mGadgetsOfInterest.remove(deviceAddress);
+                gadget.onConnectionStateChanged(false);
                 break;
             case BleService.ACTION_DATA_AVAILABLE:
                 final byte[] rawData = intent.getByteArrayExtra(BleService.EXTRA_DATA);
@@ -252,7 +243,10 @@ public class GadgetManager extends BroadcastReceiver implements BleConnector {
                 gadget.onDataWritten(characteristicUuid);
                 break;
             case BleService.ACTION_DID_FAIL:
-                Log.i("TEST", "ACTION_DID_FAIL for " + deviceAddress + " and uuid " + characteristicUuid);
+                final boolean wasWriting = intent.getBooleanExtra(BleService.EXTRA_IS_WRITE_FAILURE, false);
+                final byte[] data = intent.getByteArrayExtra(BleService.EXTRA_DATA);
+                Log.i("TEST", "ACTION_DID_FAIL " + ((wasWriting) ? "writing" : "reading") + " for " + deviceAddress + " and uuid " + characteristicUuid);
+                gadget.onFail(characteristicUuid, data, wasWriting);
                 break;
         }
     }
@@ -312,12 +306,12 @@ public class GadgetManager extends BroadcastReceiver implements BleConnector {
         @Override
         public void onScanFailed(int errorCode) {
             Log.e(TAG, "Scanning for BLE devices failed with error code " + errorCode);
-            mGadgetManagerListener.onGadgetSearchFailed();
+            mGadgetManagerListener.onGadgetDiscoveryFailed();
         }
 
         @Override
         public void onScanStopped() {
-            mGadgetManagerListener.onGadgetSearchFinished();
+            mGadgetManagerListener.onGadgetDiscoveryFinished();
         }
 
         void notifyScanResult(final ScanResult result) {

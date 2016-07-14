@@ -61,12 +61,12 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
     }
 
     @Override
-    public void addListener(@NonNull GadgetListener callback) {
+    public void addListener(@NonNull final GadgetListener callback) {
         mListeners.add(callback);
     }
 
     @Override
-    public void removeListener(@NonNull GadgetListener callback) {
+    public void removeListener(@NonNull final GadgetListener callback) {
         mListeners.remove(callback);
     }
 
@@ -79,13 +79,13 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
     }
 
     @Override
-    public boolean supportsServiceOfType(@NonNull Class<?> gadgetServiceClass) {
+    public boolean supportsServiceOfType(@NonNull final Class<?> gadgetServiceClass) {
         return !getServicesOfType(gadgetServiceClass).isEmpty();
     }
 
     @NonNull
     @Override
-    public List<GadgetService> getServicesOfType(@NonNull Class<?> gadgetServiceClass) {
+    public List<GadgetService> getServicesOfType(@NonNull final Class<?> gadgetServiceClass) {
         final ArrayList<GadgetService> resultList = new ArrayList<>();
         synchronized (mGadgetServiceList) {
             for (final GadgetService service : mGadgetServiceList) {
@@ -101,21 +101,23 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
         Implementation of {@link BleConnectorCallback} interface
      */
     @Override
-    public void onConnectionStateChanged(boolean connected) {
+    public void onConnectionStateChanged(final boolean connected) {
         mConnected = connected;
 
         if (connected) {
             mGadgetServiceList.addAll(mGadgetServiceFactory.createServicesFor(this, mAddress,
                     mBleConnector.getServices(this)));
-            notifyServicesOnConnectionStateChanged(connected);
+        }
 
+        notifyServicesOnConnectionStateChanged(connected);
+
+        if (connected) {
             synchronized (mListeners) {
                 for (GadgetListener listener : mListeners) {
                     listener.onGadgetConnected(this);
                 }
             }
         } else {
-            notifyServicesOnConnectionStateChanged(connected);
             mGadgetServiceList.clear();
             synchronized (mListeners) {
                 for (GadgetListener listener : mListeners) {
@@ -125,7 +127,7 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
         }
     }
 
-    private void notifyServicesOnConnectionStateChanged(boolean connected) {
+    private void notifyServicesOnConnectionStateChanged(final boolean connected) {
         synchronized (mGadgetServiceList) {
             for (GadgetService service : mGadgetServiceList) {
                 if (service instanceof BleConnectorCallback) {
@@ -147,7 +149,7 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
     }
 
     @Override
-    public void onDataWritten(String characteristicUuid) {
+    public void onDataWritten(final String characteristicUuid) {
         synchronized (mGadgetServiceList) {
             for (GadgetService service : mGadgetServiceList) {
                 if (service instanceof BleConnectorCallback) {
@@ -157,11 +159,24 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
         }
     }
 
-    /*
-        Implementation of {@link ParentGadget} interface
-     */
     @Override
-    public void onGadgetValuesReceived(@NonNull GadgetService service, @NonNull GadgetValue[] values) {
+    public void onFail(final String characteristicUuid, final byte[] data,
+                       final boolean isWriteFailure) {
+        synchronized (mGadgetServiceList) {
+            for (GadgetService service : mGadgetServiceList) {
+                if (service instanceof BleConnectorCallback) {
+                    ((BleConnectorCallback) service).onFail(characteristicUuid, data, isWriteFailure);
+                }
+            }
+        }
+    }
+
+    /*
+            Implementation of {@link ServiceListener} interface
+         */
+    @Override
+    public void onGadgetValuesReceived(@NonNull final GadgetService service,
+                                       @NonNull final GadgetValue[] values) {
         synchronized (mListeners) {
             for (GadgetListener listener : mListeners) {
                 listener.onGadgetValuesReceived(this, service, values);
@@ -170,10 +185,39 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
     }
 
     @Override
-    public void onGadgetDownloadDataReceived(@NonNull GadgetDownloadService service, @NonNull GadgetValue[] values, int progress) {
+    public void onGadgetDownloadDataReceived(@NonNull final GadgetDownloadService service,
+                                             @NonNull final GadgetValue[] values,
+                                             final int progress) {
         synchronized (mListeners) {
             for (GadgetListener listener : mListeners) {
                 listener.onGadgetDownloadDataReceived(this, service, values, progress);
+            }
+        }
+    }
+
+    @Override
+    public void onDownloadFailed(@NonNull final GadgetDownloadService service) {
+        synchronized (mListeners) {
+            for (GadgetListener listener : mListeners) {
+                listener.onDownloadFailed(this, service);
+            }
+        }
+    }
+
+    @Override
+    public void onSetGadgetLoggingEnabledFailed(@NonNull final GadgetDownloadService service) {
+        synchronized (mListeners) {
+            for (GadgetListener listener : mListeners) {
+                listener.onSetGadgetLoggingEnabledFailed(this, service);
+            }
+        }
+    }
+
+    @Override
+    public void onSetLoggerIntervalFailed(@NonNull final GadgetDownloadService service) {
+        synchronized (mListeners) {
+            for (GadgetListener listener : mListeners) {
+                listener.onSetLoggerIntervalFailed(this, service);
             }
         }
     }
@@ -182,7 +226,7 @@ public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListene
         Others
      */
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) return true;
         if (!(o instanceof SmartGadget)) return false;
 

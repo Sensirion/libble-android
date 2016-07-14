@@ -4,13 +4,10 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.support.annotation.NonNull;
 
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 public abstract class SmartGadgetHistoryService implements GadgetDownloadService, BleConnectorCallback {
-    private static final String TAG = SmartGadgetHistoryService.class.getSimpleName();
-
     protected static final String UNKNOWN_UNIT = "";
     protected static final String LOGGER_INTERVAL_UNIT = "ms";
 
@@ -26,8 +23,11 @@ public abstract class SmartGadgetHistoryService implements GadgetDownloadService
     protected int mNrOfElementsDownloaded;
     protected int mNrOfElementsToDownload;
 
-    protected GadgetValue[] mLastValue;
+    protected GadgetValue[] mLastValues;
 
+    /**
+     * {@inheritDoc}
+     */
     public SmartGadgetHistoryService(@NonNull final ServiceListener serviceListener,
                                      @NonNull final BleConnector bleConnector,
                                      @NonNull final String deviceAddress,
@@ -37,7 +37,7 @@ public abstract class SmartGadgetHistoryService implements GadgetDownloadService
         mDeviceAddress = deviceAddress;
 
         mDownloadProgress = -1;
-        mLastValue = new GadgetValue[]{new SmartGadgetValue(new Date(), -1, LOGGER_INTERVAL_UNIT)};
+        mLastValues = new GadgetValue[0];
 
         mSupportedUuids = new HashSet<>();
         Collections.addAll(mSupportedUuids, supportedUuids);
@@ -47,39 +47,65 @@ public abstract class SmartGadgetHistoryService implements GadgetDownloadService
         Implementation of {@link GadgetDownloadService}
      */
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean download() {
-        if (isDownloading()) return false;
-        return initiateDownloadProtocol();
+        return !isDownloading() && initiateDownloadProtocol();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public abstract boolean isDownloading();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getDownloadProgress() {
         return mDownloadProgress;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public GadgetValue[] getLastValues() {
-        return mLastValue;
+        return mLastValues;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public abstract boolean isGadgetLoggingStateEditable();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isGadgetLoggingEnabled() {
         return mLoggerStateEnabled;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public abstract void setGadgetLoggingEnabled(final boolean enabled);
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public abstract boolean setLoggerInterval(final int loggerIntervalMs);
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public abstract void requestValueUpdate();
 

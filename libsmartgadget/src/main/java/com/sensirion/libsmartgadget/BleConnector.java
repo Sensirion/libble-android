@@ -18,13 +18,10 @@ interface BleConnector {
     List<BluetoothGattService> getServices(SmartGadget gadget);
 
     @NonNull
-    public Map<String, BluetoothGattCharacteristic> getCharacteristics(@NonNull final String deviceAddress,
-                                                                       final List<String> uuids);
+    Map<String, BluetoothGattCharacteristic> getCharacteristics(@NonNull final String deviceAddress,
+                                                                final List<String> uuids);
 
     void readCharacteristic(@NonNull final String deviceAddress, final String characteristicUuid);
-
-    void readCharacteristic(@NonNull final String deviceAddress,
-                            final BluetoothGattCharacteristic characteristic);
 
     void writeCharacteristic(@NonNull final String deviceAddress,
                              final BluetoothGattCharacteristic characteristic);

@@ -31,6 +31,9 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
     private long mNewestSampleTimeMs;
     private long mOldestSampleTimeMs;
 
+    /**
+     * {@inheritDoc}
+     */
     public SHT3xHistoryService(@NonNull final ServiceListener serviceListener,
                                @NonNull final BleConnector bleConnector,
                                @NonNull final String deviceAddress) {
@@ -52,11 +55,17 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
         Implementation of {@link GadgetDownloadService}
      */
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isGadgetLoggingStateEditable() {
         return false; // Device logging is always enabled.
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setGadgetLoggingEnabled(final boolean enabled) {
         if (isGadgetLoggingEnabled() != enabled) {
@@ -64,16 +73,33 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean setLoggerInterval(final int loggerIntervalMs) {
         return super.writeValueToCharacteristic(LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID, loggerIntervalMs, BluetoothGattCharacteristic.FORMAT_SINT32, 0);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isDownloading() {
+        return !mDownloadState.equals(DownloadState.IDLE);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getLoggerInterval() {
         return mLoggerIntervalMs;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void requestValueUpdate() {
         readLoggerInterval();
@@ -84,13 +110,35 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
     /*
         Implementation of {@link BleConnectorCallback}
      */
-    @Override
-    public boolean isDownloading() {
-        return !mDownloadState.equals(DownloadState.IDLE);
-    }
 
     @Override
-    protected void handleDataReceived(String characteristicUuid, byte[] rawData) {
+    public void onFail(final String characteristicUuid, final byte[] data,
+                       final boolean isWriteFailure) {
+        if (!isUuidSupported(characteristicUuid)) {
+            return;
+        }
+
+        if (isDownloading()) {
+            onDownloadFailed();
+            return;
+        }
+
+        if (isWriteFailure) {
+            switch (characteristicUuid) {
+                case LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID:
+                    mServiceListener.onSetLoggerIntervalFailed(this);
+                    break;
+            }
+        }
+        // ignore read failures if not currently downloading
+    }
+
+    /*
+        Private helper methods
+     */
+
+    @Override
+    protected void handleDataReceived(final String characteristicUuid, final byte[] rawData) {
         if (isDownloadedData(characteristicUuid, rawData)) {
             Log.d(TAG, "Received downloaded data in raw form");
             handleDownloadedData(characteristicUuid, rawData);
@@ -100,7 +148,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
         switch (characteristicUuid) {
             case LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID:
                 mLoggerIntervalMs = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
-                mLastValue[0] = new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT);
+                mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT)};
                 continueDownloadProtocol();
                 break;
             case NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID:
@@ -115,7 +163,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
     }
 
     @Override
-    protected void handleDataWritten(String characteristicUuid) {
+    protected void handleDataWritten(final String characteristicUuid) {
         switch (characteristicUuid) {
             case LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID:
                 readLoggerInterval();
@@ -126,9 +174,6 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
         }
     }
 
-    /*
-        Private helper methods
-     */
     @Override
     protected boolean initiateDownloadProtocol() {
         final BluetoothGattCharacteristic syncCharacteristic =
@@ -166,6 +211,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
 
                 if (mNrOfElementsToDownload == 0) {
                     onDownloadComplete();
+                    return;
                 }
 
                 final BluetoothGattCharacteristic startDownloadCharacteristic =
@@ -178,8 +224,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
                     mBleConnector.setCharacteristicNotification(mDeviceAddress, startDownloadCharacteristic, null, true);
                     mBleConnector.writeCharacteristic(mDeviceAddress, startDownloadCharacteristic);
                 } else {
-                    // TODO: Report Error!
-                    mDownloadState = DownloadState.IDLE;
+                    onDownloadFailed();
                 }
                 break;
             case IDLE:
@@ -268,6 +313,12 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
     private void onDownloadComplete() {
         mDownloadProgress = 100;
         mDownloadState = DownloadState.IDLE;
+    }
+
+    private void onDownloadFailed() {
+        mDownloadState = DownloadState.IDLE;
+        mDownloadProgress = -1;
+        mServiceListener.onDownloadFailed(this);
     }
 
     enum DownloadState {

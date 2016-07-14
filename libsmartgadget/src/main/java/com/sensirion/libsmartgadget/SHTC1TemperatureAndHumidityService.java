@@ -7,12 +7,14 @@ import java.nio.ByteOrder;
 import java.util.Date;
 
 public class SHTC1TemperatureAndHumidityService extends SmartGadgetNotificationService {
-    private static final String TAG = SHTC1TemperatureAndHumidityService.class.getSimpleName();
     public static final String SERVICE_UUID = "0000aa20-0000-1000-8000-00805f9b34fb";
     private static final String RHT_CHARACTERISTIC_UUID = "0000aa21-0000-1000-8000-00805f9b34fb";
     public static final String UNIT_T = "°C";
     public static final String UNIT_RH = "%";
 
+    /**
+     * {@inheritDoc}
+     */
     public SHTC1TemperatureAndHumidityService(@NonNull ServiceListener serviceListener,
                                               @NonNull BleConnector bleConnector,
                                               @NonNull String deviceAddress) {

@@ -1,5 +1,7 @@
 package com.sensirion.libsmartgadget;
 
+import android.support.annotation.NonNull;
+
 import java.util.Date;
 
 public interface GadgetValue {
@@ -9,6 +11,7 @@ public interface GadgetValue {
      *
      * @return the time when this value was created.
      */
+    @NonNull
     Date getTimestamp();
 
     /**
@@ -16,6 +19,7 @@ public interface GadgetValue {
      *
      * @return the value received from the gadget.
      */
+    @NonNull
     Number getValue();
 
     /**
@@ -23,6 +27,7 @@ public interface GadgetValue {
      *
      * @return the string representing the values's unit.
      */
+    @NonNull
     String getUnit();
 
 }

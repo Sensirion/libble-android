@@ -16,11 +16,6 @@ import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT32;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT8;
 
-// TODO implement error handling and receiving failed actions in each service and taking appropriate
-// TODO     actions.
-
-// TODO important to handle error happening here, specially ACTION_FAILED events which occurred
-// TODO     quite often!
 public class SHTC1HistoryService extends SmartGadgetHistoryService {
     private static final String TAG = SHTC1HistoryService.class.getSimpleName();
 
@@ -47,6 +42,9 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
     private int mEndPointer;
     private int mLoggingEnabledTimestamp;
 
+    /**
+     * {@inheritDoc}
+     */
     public SHTC1HistoryService(@NonNull final ServiceListener serviceListener,
                                @NonNull final BleConnector bleConnector,
                                @NonNull final String deviceAddress) {
@@ -67,16 +65,25 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
         Implementation of {@link GadgetDownloadService}
      */
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isDownloading() {
         return !mDownloadState.equals(DownloadState.IDLE);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isGadgetLoggingStateEditable() {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setGadgetLoggingEnabled(final boolean enabled) {
         if (enabled) {
@@ -85,17 +92,26 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
         writeValueToCharacteristic(LOGGING_STATE_CHARACTERISTIC_UUID, (byte) ((enabled) ? 1 : 0), FORMAT_UINT8, 0);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean setLoggerInterval(final int loggerIntervalMs) {
         final int loggerIntervalS = loggerIntervalMs / 1000;
         return writeValueToCharacteristic(LOGGING_INTERVAL_S_CHARACTERISTIC_UUID, loggerIntervalS, FORMAT_UINT16, 0);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getLoggerInterval() {
         return mLoggerIntervalMs;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void requestValueUpdate() {
         readLoggerInterval();
@@ -111,11 +127,42 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
      */
 
     @Override
+    public void onFail(final String characteristicUuid, final byte[] data,
+                       final boolean isWriteFailure) {
+        if (!isUuidSupported(characteristicUuid)) {
+            return;
+        }
+
+        if (isDownloading()) {
+            mDownloadState = DownloadState.IDLE;
+            mDownloadProgress = -1;
+            mServiceListener.onDownloadFailed(this);
+            return;
+        }
+
+        if (isWriteFailure) {
+            switch (characteristicUuid) {
+                case LOGGING_INTERVAL_S_CHARACTERISTIC_UUID:
+                    mServiceListener.onSetLoggerIntervalFailed(this);
+                    break;
+                case LOGGING_STATE_CHARACTERISTIC_UUID:
+                    mServiceListener.onSetGadgetLoggingEnabledFailed(this);
+                    break;
+            }
+        }
+        // ignore read failures if not currently downloading
+    }
+
+    /*
+        Private Methods
+     */
+
+    @Override
     protected void handleDataReceived(final String characteristicUuid, final byte[] rawData) {
         switch (characteristicUuid) {
             case LOGGING_INTERVAL_S_CHARACTERISTIC_UUID:
                 mLoggerIntervalMs = 1000 * LittleEndianExtractor.extractLittleEndianShortFromCharacteristicValue(rawData);
-                mLastValue[0] = new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT);
+                mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT)};
                 break;
             case LOGGING_STATE_CHARACTERISTIC_UUID:
                 mLoggerStateEnabled = ((int) rawData[0] > 0);
@@ -177,9 +224,6 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
         }, SHTC1_SPECIFIC_READ_AFTER_WRITE_DELAY_MS);
     }
 
-    /*
-        Private Methods
-     */
     @Override
     protected boolean initiateDownloadProtocol() {
         mDownloadState = DownloadState.INIT;
@@ -247,14 +291,20 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
 
             final float temperature = ((float) humidityAndTemperature[0]) / 100f;
             final float humidity = ((float) humidityAndTemperature[1]) / 100f;
-            final long timestamp = mLoggingEnabledTimestamp * 1000l + (mStartPointer + mNrOfElementsDownloaded) * (long) mLoggerIntervalMs;
+            final long timestamp = mLoggingEnabledTimestamp * 1000L + (mStartPointer + mNrOfElementsDownloaded) * (long) mLoggerIntervalMs;
 
-            // TODO: The altTimestamp would enable us to do log downloads without the requirement
-            // TODO:    to write the log enabled timestamp to user data. But it would require us to
-            // TODO:    only be able to download data if logging is enabled. Hence, downloading
-            // TODO:    would only be possible once, and on a disconnect, the data would be lost.
-            final long altTimestamp = mDownloadStartTimestamp.getTime() - (mLoggerIntervalMs * (mNrOfElementsToDownload - mNrOfElementsDownloaded));
-            Log.i(TAG, "DOWNLOADING DATA: timestamp comparison: legecy: " + timestamp + " vs. alternative: " + altTimestamp);
+            // NOTE:
+            // The altTimestamp would enable us to do log downloads without the requirement
+            //  to write the log enabled timestamp to user data. But it would require us to
+            //  only be able to download data if logging is enabled. Hence, downloading
+            //  would only be possible once, and on a disconnect, the data would be lost.
+            //
+            // Example:
+            //
+            // final long altTimestamp = mDownloadStartTimestamp.getTime() - (mLoggerIntervalMs *
+            //      (mNrOfElementsToDownload - mNrOfElementsDownloaded));
+            // Log.i(TAG, "DOWNLOADING DATA: timestamp comparison: legecy: " + timestamp +
+            //      " vs. alternative: " + altTimestamp);
 
             downloadedValues.add(new SmartGadgetValue(new Date(timestamp), temperature, SHTC1TemperatureAndHumidityService.UNIT_T));
             downloadedValues.add(new SmartGadgetValue(new Date(timestamp), humidity, SHTC1TemperatureAndHumidityService.UNIT_RH));
@@ -295,9 +345,8 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
         mBleConnector.readCharacteristic(mDeviceAddress, START_POINTER_CHARACTERISTIC_UUID);
     }
 
-    // TODO shouldn't we make use of the return value, like if it fails?
     private void writeStartPointer() {
-        writeValueToCharacteristic(START_POINTER_CHARACTERISTIC_UUID, calculateMinimumStartPoint(), FORMAT_UINT32, 0);
+        writeValueToCharacteristic(START_POINTER_CHARACTERISTIC_UUID, calculateSmallestPossibleStartPointer(), FORMAT_UINT32, 0);
     }
 
     private void readEndPointer() {
@@ -316,16 +365,17 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
      * The User data is used to store the time stamp when logging was enabled. This enables us to
      * recreate the timestamps of downloaded samples by multiplying the current pointer with the
      * logger interval, giving us the timestamp of the first downloaded sample.
-     * The C1 gadget sets the current pointer to 0 when re-enabling the logger state. Hence the, as
-     * we here disable the logging before downloading the data, we can only download the data once.
-     * When it fails, the data is lost.
+     * The C1 gadget sets the current pointer to 0 when re-enabling the logger state. Hence, we can
+     * only download the data once, as we disable the logging before downloading the data and then
+     * re-enable it.
+     * When it fails, the data is lost. We'd need to not re-enable the download on failed downloads
      */
-    // TODO: This fails too much ... on fail, check if uuid == user_data_uuid, and then retry!
     private void writeLoggingStartTimestamp() {
-        writeValueToCharacteristic(USER_DATA_CHARACTERISTIC_UUID, (int) (System.currentTimeMillis() / 1000l), FORMAT_UINT32, 0);
+        writeValueToCharacteristic(USER_DATA_CHARACTERISTIC_UUID,
+                (int) (System.currentTimeMillis() / 1000L), FORMAT_UINT32, 0);
     }
 
-    private int calculateMinimumStartPoint() {
+    private int calculateSmallestPossibleStartPointer() {
         if (mCurrentPointer > GADGET_RING_BUFFER_SIZE) {
             return mCurrentPointer - GADGET_RING_BUFFER_SIZE;
         }

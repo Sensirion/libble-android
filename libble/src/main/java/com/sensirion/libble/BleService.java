@@ -49,6 +49,8 @@ public class BleService extends Service implements ActionFailureCallback {
             "com.sensirion.libble.ACTION_DID_WRITE_CHARACTERISTIC";
     public static final String ACTION_DID_FAIL =
             "com.sensirion.libble.ACTION_DID_FAIL";
+    public final static String EXTRA_IS_WRITE_FAILURE =
+            "com.sensirion.libble.EXTRA_IS_WRITE_FAILURE";
     public final static String EXTRA_DATA =
             "com.sensirion.libble.EXTRA_DATA";
     public final static String EXTRA_DEVICE_ADDRESS =
@@ -420,15 +422,15 @@ public class BleService extends Service implements ActionFailureCallback {
         if (action instanceof ActionReadCharacteristic) {
             final ActionReadCharacteristic actionRead = (ActionReadCharacteristic) action;
             final BluetoothGattCharacteristic characteristic = actionRead.getCharacteristic();
-            broadcastUpdate(action.getDeviceAddress(), ACTION_DID_FAIL, characteristic);
+            broadcastFailure(action.getDeviceAddress(), characteristic, false);
         } else if (action instanceof ActionWriteCharacteristic) {
             final ActionWriteCharacteristic actionWrite = (ActionWriteCharacteristic) action;
             final BluetoothGattCharacteristic characteristic = actionWrite.getCharacteristic();
-            broadcastUpdate(action.getDeviceAddress(), ACTION_DID_FAIL, characteristic);
+            broadcastFailure(action.getDeviceAddress(), characteristic, true);
         } else if (action instanceof ActionWriteDescriptor) {
-            final ActionWriteDescriptor actionRead = (ActionWriteDescriptor) action;
-            final BluetoothGattDescriptor descriptor = actionRead.getGattDescriptor();
-            broadcastUpdate(action.getDeviceAddress(), ACTION_DID_FAIL, descriptor);
+            final ActionWriteDescriptor actionWrite = (ActionWriteDescriptor) action;
+            final BluetoothGattDescriptor descriptor = actionWrite.getGattDescriptor();
+            broadcastFailure(action.getDeviceAddress(), descriptor.getCharacteristic(), true);
         }
     }
 
@@ -465,6 +467,14 @@ public class BleService extends Service implements ActionFailureCallback {
         intent.putExtra(EXTRA_CHARACTERISTIC_UUID, descriptor.getCharacteristic().getUuid().toString());
         intent.putExtra(EXTRA_DESCRIPTOR_UUID, descriptor.getUuid().toString());
         intent.putExtra(EXTRA_DATA, descriptor.getValue());
+        sendBroadcast(intent);
+    }
+
+    private void broadcastFailure(final String deviceAddress, final BluetoothGattCharacteristic characteristic, final boolean isWriteFailure) {
+        final Intent intent = createBaseIntent(deviceAddress, ACTION_DID_FAIL);
+        intent.putExtra(EXTRA_CHARACTERISTIC_UUID, characteristic.getUuid().toString());
+        intent.putExtra(EXTRA_DATA, characteristic.getValue());
+        intent.putExtra(EXTRA_IS_WRITE_FAILURE, isWriteFailure);
         sendBroadcast(intent);
     }
 
@@ -538,7 +548,7 @@ public class BleService extends Service implements ActionFailureCallback {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(deviceAddress, ACTION_DATA_AVAILABLE, characteristic);
             } else {
-                broadcastUpdate(deviceAddress, ACTION_DID_FAIL, characteristic);
+                broadcastFailure(deviceAddress, characteristic, false);
             }
         }
 
@@ -551,7 +561,7 @@ public class BleService extends Service implements ActionFailureCallback {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(deviceAddress, ACTION_DID_WRITE_CHARACTERISTIC, characteristic);
             } else {
-                broadcastUpdate(deviceAddress, ACTION_DID_FAIL, characteristic);
+                broadcastFailure(deviceAddress, characteristic, true);
             }
         }
 

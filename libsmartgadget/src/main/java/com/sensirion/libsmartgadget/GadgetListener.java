@@ -42,4 +42,29 @@ public interface GadgetListener {
     void onGadgetDownloadDataReceived(@NonNull Gadget gadget, @NonNull GadgetDownloadService service,
                                       @NonNull GadgetValue[] values, int progress);
 
+
+    /**
+     * Callback when the logging state change has failed.
+     *
+     * @param gadget  The gadget on which the service is running.
+     * @param service The service used to change the logging feature state.
+     */
+    void onSetGadgetLoggingEnabledFailed(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
+
+    /**
+     * Called when the setting of the logger interval has failed.
+     *
+     * @param gadget  The gadget on which the download service is running.
+     * @param service The service providing the interval change feature.
+     */
+    void onSetLoggerIntervalFailed(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
+
+    /**
+     * Callback when the download has failed.
+     *
+     * @param gadget  The gadget from which data was downloaded.
+     * @param service The service used to download the data.
+     */
+    void onDownloadFailed(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
+
 }
