@@ -147,16 +147,16 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
 
         switch (characteristicUuid) {
             case LOGGER_INTERVAL_MS_CHARACTERISTIC_UUID:
-                mLoggerIntervalMs = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                mLoggerIntervalMs = LittleEndianExtractor.extractInteger(rawData);
                 mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT)};
                 continueDownloadProtocol();
                 break;
             case NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID:
-                mNewestSampleTimeMs = LittleEndianExtractor.extractLittleEndianLongFromCharacteristicValue(rawData);
+                mNewestSampleTimeMs = LittleEndianExtractor.extractLong(rawData);
                 continueDownloadProtocol();
                 break;
             case READ_BACK_TO_TIME_MS_CHARACTERISTIC_UUID:
-                mOldestSampleTimeMs = LittleEndianExtractor.extractLittleEndianLongFromCharacteristicValue(rawData);
+                mOldestSampleTimeMs = LittleEndianExtractor.extractLong(rawData);
                 continueDownloadProtocol();
                 break;
         }
@@ -183,7 +183,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
         if (syncCharacteristic == null) return false;
 
         mDownloadState = DownloadState.SYNC;
-        final byte[] timestampLittleEndianBuffer = LittleEndianExtractor.extractLittleEndianByteArrayFromLong(System.currentTimeMillis());
+        final byte[] timestampLittleEndianBuffer = LittleEndianExtractor.convertToByteArray(System.currentTimeMillis());
         syncCharacteristic.setValue(timestampLittleEndianBuffer);
         mBleConnector.writeCharacteristic(mDeviceAddress, syncCharacteristic);
         mDownloadProgress = 0;
@@ -269,7 +269,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
         final List<GadgetValue> downloadedValues = new ArrayList<>();
         for (int offset = DATA_POINT_SIZE; offset < rawData.length; offset += DATA_POINT_SIZE) {
             final long timestamp = mNewestSampleTimeMs - (mLoggerIntervalMs * ((((offset / DATA_POINT_SIZE) - 1) + sequenceNr)));
-            final float downloadedValue = LittleEndianExtractor.extractLittleEndianFloatFromCharacteristicValue(rawData, offset);
+            final float downloadedValue = LittleEndianExtractor.extractFloat(rawData, offset);
             downloadedValues.add(new SmartGadgetValue(new Date(timestamp), downloadedValue, unit));
         }
         return downloadedValues;

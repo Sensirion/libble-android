@@ -156,7 +156,7 @@ public abstract class SmartGadgetNotificationService implements GadgetNotificati
     }
 
     protected void handleLiveValue(final byte[] rawData) {
-        final float value = LittleEndianExtractor.extractLittleEndianFloatFromCharacteristicValue(rawData, 0);
+        final float value = LittleEndianExtractor.extractFloat(rawData, 0);
         mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), value, mUnit)};
         mServiceListener.onGadgetValuesReceived(this, mLastValues);
     }

@@ -161,7 +161,7 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
     protected void handleDataReceived(final String characteristicUuid, final byte[] rawData) {
         switch (characteristicUuid) {
             case LOGGING_INTERVAL_S_CHARACTERISTIC_UUID:
-                mLoggerIntervalMs = 1000 * LittleEndianExtractor.extractLittleEndianShortFromCharacteristicValue(rawData);
+                mLoggerIntervalMs = 1000 * LittleEndianExtractor.extractShort(rawData);
                 mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT)};
                 break;
             case LOGGING_STATE_CHARACTERISTIC_UUID:
@@ -170,22 +170,22 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
                 continueDownloadProtocol();
                 break;
             case CURRENT_POINTER_CHARACTERISTIC_UUID:
-                mCurrentPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                mCurrentPointer = LittleEndianExtractor.extractInteger(rawData);
                 Log.d(TAG, "Received CURRENT_POINTER_CHARACTERISTIC_UUID data: " + mCurrentPointer);
                 continueDownloadProtocol();
                 break;
             case START_POINTER_CHARACTERISTIC_UUID:
-                mStartPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                mStartPointer = LittleEndianExtractor.extractInteger(rawData);
                 Log.d(TAG, "Received START_POINTER_CHARACTERISTIC_UUID data: " + mStartPointer);
                 continueDownloadProtocol();
                 break;
             case END_POINTER_CHARACTERISTIC_UUID:
-                mEndPointer = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                mEndPointer = LittleEndianExtractor.extractInteger(rawData);
                 Log.d(TAG, "Received END_POINTER_CHARACTERISTIC_UUID data: " + mEndPointer);
                 continueDownloadProtocol();
                 break;
             case USER_DATA_CHARACTERISTIC_UUID:
-                mLoggingEnabledTimestamp = LittleEndianExtractor.extractLittleEndianIntegerFromCharacteristicValue(rawData);
+                mLoggingEnabledTimestamp = LittleEndianExtractor.extractInteger(rawData);
                 Log.d(TAG, "Received USER_DATA_CHARACTERISTIC_UUID data: " + mLoggingEnabledTimestamp);
                 break;
             case LOGGED_DATA_CHARACTERISTIC_UUID:
