@@ -1,10 +1,12 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.support.annotation.NonNull;
 
+import com.sensirion.libsmartgadget.GadgetValue;
+
 import java.util.Date;
 
-public class SmartGadgetValue implements GadgetValue {
+class SmartGadgetValue implements GadgetValue {
     private final Date mTimestamp;
     private final Number mValue;
     private final String mUnit;

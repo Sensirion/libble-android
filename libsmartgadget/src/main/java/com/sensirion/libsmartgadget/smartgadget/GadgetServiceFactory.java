@@ -1,8 +1,10 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.bluetooth.BluetoothGattService;
 import android.support.annotation.NonNull;
 import android.util.Log;
+
+import com.sensirion.libsmartgadget.GadgetService;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -10,7 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GadgetServiceFactory {
+class GadgetServiceFactory {
     private static final String TAG = GadgetServiceFactory.class.getSimpleName();
     private final BleConnector mBleConnector;
     private final Map<String, Class<? extends GadgetService>> mGadgetServiceRepository;

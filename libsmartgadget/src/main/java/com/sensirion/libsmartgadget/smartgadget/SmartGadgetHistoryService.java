@@ -1,13 +1,16 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.support.annotation.NonNull;
+
+import com.sensirion.libsmartgadget.GadgetDownloadService;
+import com.sensirion.libsmartgadget.GadgetValue;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-public abstract class SmartGadgetHistoryService implements GadgetDownloadService, BleConnectorCallback {
+abstract class SmartGadgetHistoryService implements GadgetDownloadService, BleConnectorCallback {
     protected static final String UNKNOWN_UNIT = "";
     protected static final String LOGGER_INTERVAL_UNIT = "ms";
 

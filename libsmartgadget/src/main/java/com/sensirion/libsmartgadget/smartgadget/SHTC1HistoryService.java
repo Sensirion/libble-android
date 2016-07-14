@@ -1,9 +1,10 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.sensirion.libsmartgadget.GadgetValue;
 import com.sensirion.libsmartgadget.utils.LittleEndianExtractor;
 
 import java.nio.ByteBuffer;

@@ -1,6 +1,10 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.support.annotation.NonNull;
+
+import com.sensirion.libsmartgadget.GadgetDownloadService;
+import com.sensirion.libsmartgadget.GadgetService;
+import com.sensirion.libsmartgadget.GadgetValue;
 
 interface ServiceListener {
     void onGadgetValuesReceived(@NonNull GadgetService service, @NonNull GadgetValue[] values);

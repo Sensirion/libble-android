@@ -1,6 +1,8 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.support.annotation.NonNull;
+
+import com.sensirion.libsmartgadget.GadgetValue;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

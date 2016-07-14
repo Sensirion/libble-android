@@ -1,10 +1,12 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.sensirion.libsmartgadget.GadgetNotificationService;
+import com.sensirion.libsmartgadget.GadgetValue;
 import com.sensirion.libsmartgadget.utils.LittleEndianExtractor;
 
 import java.util.Collections;
@@ -14,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public abstract class SmartGadgetNotificationService implements GadgetNotificationService, BleConnectorCallback {
+abstract class SmartGadgetNotificationService implements GadgetNotificationService, BleConnectorCallback {
     private static final String TAG = SmartGadgetNotificationService.class.getSimpleName();
     protected static final String NOTIFICATION_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
 

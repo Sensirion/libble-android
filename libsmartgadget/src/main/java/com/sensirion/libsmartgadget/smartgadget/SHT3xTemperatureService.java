@@ -1,4 +1,4 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.support.annotation.NonNull;
 

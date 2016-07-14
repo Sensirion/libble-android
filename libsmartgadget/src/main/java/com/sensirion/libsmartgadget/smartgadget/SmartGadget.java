@@ -1,6 +1,12 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.support.annotation.NonNull;
+
+import com.sensirion.libsmartgadget.Gadget;
+import com.sensirion.libsmartgadget.GadgetDownloadService;
+import com.sensirion.libsmartgadget.GadgetListener;
+import com.sensirion.libsmartgadget.GadgetService;
+import com.sensirion.libsmartgadget.GadgetValue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,7 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class SmartGadget implements Gadget, BleConnectorCallback, ServiceListener {
+class SmartGadget implements Gadget, BleConnectorCallback, ServiceListener {
     private final BleConnector mBleConnector;
     private final GadgetServiceFactory mGadgetServiceFactory;
     private final String mName;

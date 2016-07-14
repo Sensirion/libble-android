@@ -1,26 +1,7 @@
 package com.sensirion.libsmartgadget;
 
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
-import android.bluetooth.le.ScanResult;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
-import android.os.IBinder;
 import android.support.annotation.NonNull;
-import android.util.Log;
-
-import com.sensirion.libble.BleScanCallback;
-import com.sensirion.libble.BleService;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * The GadgetManager is the main interface to interact with Sensirion Smart Gadgets. It provides
@@ -29,26 +10,7 @@ import java.util.Map;
  * via {@link GadgetManagerCallback#onGadgetDiscovered(Gadget, int)} can be used to establish a
  * connection.
  */
-public class GadgetManager extends BroadcastReceiver implements BleConnector {
-    private static final String TAG = GadgetManager.class.getSimpleName();
-    private final GadgetManagerCallback mGadgetManagerListener;
-    private LibBleConnection mLibBleConnection;
-    private BleService mBleService;
-    private GadgetServiceFactory mGadgetServiceFactory;
-    private GadgetDiscoveryListener mLocalDiscoveryListener;
-
-    private Map<String, BleConnectorCallback> mGadgetsOfInterest;
-
-    /**
-     * Constructor
-     *
-     * @param callback the callback instance to be registered for state change notifications.
-     */
-    public GadgetManager(@NonNull final GadgetManagerCallback callback) {
-        mGadgetManagerListener = callback;
-        mGadgetsOfInterest = new HashMap<>();
-    }
-
+public interface GadgetManager {
     /**
      * Initialize the communication stack and register a {@link GadgetManagerCallback}.
      * You must call this method at least once to initialize the library. You will get notified
@@ -57,24 +19,7 @@ public class GadgetManager extends BroadcastReceiver implements BleConnector {
      *
      * @param applicationContext the application context instance.
      */
-    public void initialize(@NonNull final Context applicationContext) {
-        if (mLocalDiscoveryListener != null) {
-            Log.e(TAG, "GadgetManager already initialized");
-            return;
-        }
-
-        applicationContext.registerReceiver(this, createLibBleIntentFilter());
-        mGadgetServiceFactory = new GadgetServiceFactory(this);
-        mLocalDiscoveryListener = new GadgetDiscoveryListener();
-        mLibBleConnection = new LibBleConnection();
-
-        // Launch libble
-        final Intent bindLibBle = new Intent(applicationContext, BleService.class);
-        if (!applicationContext.bindService(bindLibBle, mLibBleConnection, Context.BIND_AUTO_CREATE)) {
-            release(applicationContext);
-            mGadgetManagerListener.onGadgetManagerInitializationFailed();
-        }
-    }
+    void initialize(@NonNull final Context applicationContext);
 
     /**
      * Call this method if you don't plan to use the library anymore. This makes sure all resources
@@ -82,28 +27,14 @@ public class GadgetManager extends BroadcastReceiver implements BleConnector {
      *
      * @param applicationContext the application context instance.
      */
-    public void release(@NonNull final Context applicationContext) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return;
-        }
-
-        applicationContext.unbindService(mLibBleConnection);
-        applicationContext.unregisterReceiver(this);
-        mGadgetServiceFactory = null;
-        mLocalDiscoveryListener = null;
-        mBleService = null;
-        // don't erase the callback to notify the failed state if necessary.
-    }
+    void release(@NonNull final Context applicationContext);
 
     /**
      * Check if the library is ready and was successfully initialized.
      *
      * @return true if the library is ready to be used.
      */
-    public boolean isReady() {
-        return mBleService != null;
-    }
+    boolean isReady();
 
     /**
      * Starts a scan for Sensirion Smart Gadgets.
@@ -112,215 +43,10 @@ public class GadgetManager extends BroadcastReceiver implements BleConnector {
      *                   for too long to prevent a large battery drain.
      * @return true if the scan was successfully initiated.
      */
-    public boolean startGadgetDiscovery(final long durationMs) { // TODO: ADD FILTERING CAPABILITIES
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return false;
-        }
-
-        return mBleService.startScan(mLocalDiscoveryListener, durationMs, null);
-    }
+    boolean startGadgetDiscovery(final long durationMs); // TODO: ADD FILTERING CAPABILITIES
 
     /**
      * Stops an ongoing scan for Smart Gadgets. Nothing happens if there is no scan running.
      */
-    public void stopGadgetDiscovery() { // TODO: ADD FILTERING CAPABILITIES
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return;
-        }
-
-        mBleService.stopScan(mLocalDiscoveryListener);
-    }
-
-    // TODO make such methods not callable by library users
-    /*
-        Implementation of {@link BleConnector}
-     */
-    @Override
-    public boolean connect(final SmartGadget gadget) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return false;
-        }
-        mGadgetsOfInterest.put(gadget.getAddress(), gadget);
-        return mBleService.connect(gadget.getAddress());
-    }
-
-    @Override
-    public boolean disconnect(final SmartGadget gadget) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return false;
-        }
-        mBleService.disconnect(gadget.getAddress());
-        return true; // TODO: think about removing the boolean return value for this method
-    }
-
-    @NonNull
-    @Override
-    public List<BluetoothGattService> getServices(final SmartGadget gadget) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return new ArrayList<>();
-        }
-        return mBleService.getSupportedGattServices(gadget.getAddress());
-    }
-
-    @NonNull
-    @Override
-    public Map<String, BluetoothGattCharacteristic> getCharacteristics(@NonNull String deviceAddress, List<String> uuids) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return new HashMap<>();
-        }
-        return mBleService.getCharacteristics(deviceAddress, uuids);
-    }
-
-    @Override
-    public void readCharacteristic(@NonNull String deviceAddress, String characteristicUuid) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return;
-        }
-        mBleService.readCharacteristic(deviceAddress, characteristicUuid);
-    }
-
-    @Override
-    public void writeCharacteristic(@NonNull String deviceAddress, BluetoothGattCharacteristic characteristic) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return;
-        }
-        mBleService.writeCharacteristic(deviceAddress, characteristic);
-    }
-
-    @Override
-    public void setCharacteristicNotification(@NonNull String deviceAddress, BluetoothGattCharacteristic characteristic, BluetoothGattDescriptor descriptor, boolean enabled) {
-        if (!isReady()) {
-            Log.w(TAG, "GadgetManager not initialized");
-            return;
-        }
-        mBleService.setCharacteristicNotification(deviceAddress, characteristic, descriptor, enabled);
-    }
-
-    /*
-        Implementation of the Broadcast receiver logic to receive libble callbacks
-     */
-    @Override
-    public void onReceive(final Context context, final Intent intent) {
-        final String action = intent.getAction();
-        final String deviceAddress = intent.getStringExtra(BleService.EXTRA_DEVICE_ADDRESS);
-        if (action == null || deviceAddress == null) {
-            Log.e(TAG, "Invalid intent received from libble");
-            return;
-        }
-        final BleConnectorCallback gadget = mGadgetsOfInterest.get(deviceAddress);
-        if (gadget == null) {
-            Log.e(TAG, "Intent received for unknown gadget");
-            return;
-        }
-
-        final String characteristicUuid = intent.getStringExtra(BleService.EXTRA_CHARACTERISTIC_UUID);
-        switch (action) {
-            case BleService.ACTION_GATT_CONNECTED:
-                // Wait for service discovery
-                break;
-            case BleService.ACTION_GATT_SERVICES_DISCOVERED:
-                gadget.onConnectionStateChanged(true);
-                break;
-            case BleService.ACTION_GATT_DISCONNECTED:
-                mGadgetsOfInterest.remove(deviceAddress);
-                gadget.onConnectionStateChanged(false);
-                break;
-            case BleService.ACTION_DATA_AVAILABLE:
-                final byte[] rawData = intent.getByteArrayExtra(BleService.EXTRA_DATA);
-                Log.i("TEST", "ACTION_DATA_AVAILABLE for " + deviceAddress + " and uuid " + characteristicUuid);
-                gadget.onDataReceived(characteristicUuid, rawData);
-                break;
-            case BleService.ACTION_DID_WRITE_CHARACTERISTIC:
-                Log.i("TEST", "ACTION_DID_WRITE_CHARACTERISTIC for " + deviceAddress + " and uuid " + characteristicUuid);
-                gadget.onDataWritten(characteristicUuid);
-                break;
-            case BleService.ACTION_DID_FAIL:
-                final boolean wasWriting = intent.getBooleanExtra(BleService.EXTRA_IS_WRITE_FAILURE, false);
-                final byte[] data = intent.getByteArrayExtra(BleService.EXTRA_DATA);
-                Log.i("TEST", "ACTION_DID_FAIL " + ((wasWriting) ? "writing" : "reading") + " for " + deviceAddress + " and uuid " + characteristicUuid);
-                gadget.onFail(characteristicUuid, data, wasWriting);
-                break;
-        }
-    }
-
-    private static IntentFilter createLibBleIntentFilter() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BleService.ACTION_GATT_CONNECTED);
-        intentFilter.addAction(BleService.ACTION_GATT_DISCONNECTED);
-        intentFilter.addAction(BleService.ACTION_GATT_SERVICES_DISCOVERED);
-        intentFilter.addAction(BleService.ACTION_DATA_AVAILABLE);
-        intentFilter.addAction(BleService.ACTION_DID_WRITE_CHARACTERISTIC);
-        intentFilter.addAction(BleService.ACTION_DID_FAIL);
-        return intentFilter;
-    }
-
-    /*
-        LibBle Service Connection
-    */
-    private class LibBleConnection implements ServiceConnection {
-
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            mBleService = ((BleService.LocalBinder) iBinder).getService();
-            if (!mBleService.initialize()) {
-                Log.e(TAG, "Unable to initialize libble and the Bluetooth stack - will terminate");
-                release(mBleService);
-                mGadgetManagerListener.onGadgetManagerInitializationFailed();
-                return;
-            }
-
-            mGadgetManagerListener.onGadgetManagerInitialized();
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            Log.i(TAG, "libble disconnected");
-            mBleService = null;
-        }
-    }
-
-    /*
-        Scan Callback Proxy
-     */
-    private class GadgetDiscoveryListener extends BleScanCallback {
-        @Override
-        public void onScanResult(int callbackType, ScanResult result) {
-            notifyScanResult(result);
-        }
-
-        @Override
-        public void onBatchScanResults(List<ScanResult> results) {
-            for (ScanResult result : results) {
-                notifyScanResult(result);
-            }
-        }
-
-        @Override
-        public void onScanFailed(int errorCode) {
-            Log.e(TAG, "Scanning for BLE devices failed with error code " + errorCode);
-            mGadgetManagerListener.onGadgetDiscoveryFailed();
-        }
-
-        @Override
-        public void onScanStopped() {
-            mGadgetManagerListener.onGadgetDiscoveryFinished();
-        }
-
-        void notifyScanResult(final ScanResult result) {
-            final SmartGadget smartGadget = new SmartGadget(GadgetManager.this,
-                    mGadgetServiceFactory, result.getDevice().getName(),
-                    result.getDevice().getAddress());
-            mGadgetManagerListener.onGadgetDiscovered(smartGadget, result.getRssi());
-        }
-    }
-
-
+    void stopGadgetDiscovery(); // TODO: ADD FILTERING CAPABILITIES
 }

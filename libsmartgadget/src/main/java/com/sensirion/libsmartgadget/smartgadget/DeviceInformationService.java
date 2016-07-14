@@ -1,6 +1,9 @@
-package com.sensirion.libsmartgadget;
+package com.sensirion.libsmartgadget.smartgadget;
 
 import android.support.annotation.NonNull;
+
+import com.sensirion.libsmartgadget.GadgetService;
+import com.sensirion.libsmartgadget.GadgetValue;
 
 import java.util.HashSet;
 import java.util.Set;
