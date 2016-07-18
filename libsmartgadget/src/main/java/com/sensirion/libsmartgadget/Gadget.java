@@ -65,6 +65,23 @@ public interface Gadget {
     void removeListener(@NonNull GadgetListener callback);
 
     /**
+     * Makes the gadget subscribe to all services of type {@link GadgetNotificationService}.
+     */
+    void subscribeAll();
+
+    /**
+     * Makes the gadget unsubscribe from all services of type {@link GadgetNotificationService}
+     * it is subscribed to.
+     */
+    void unsubscribeAll();
+
+    /**
+     * Makes the gadget initiate an asynchronous internal values update of all its services of type
+     * {@link GadgetService}.
+     */
+    void refresh();
+
+    /**
      * Returns all services supported by this gadget.
      *
      * @return A list of all supported GadgetServices.
@@ -80,7 +97,7 @@ public interface Gadget {
      * @param gadgetServiceClass The class representing the desired service of a gadget.
      * @return true if the service is supported by the gadget, else false is returned.
      */
-    boolean supportsServiceOfType(@NonNull Class<?> gadgetServiceClass);
+    boolean supportsServiceOfType(@NonNull Class<? extends GadgetService> gadgetServiceClass);
 
     /**
      * Returns all services that are instances of the given class. You can use
@@ -93,5 +110,5 @@ public interface Gadget {
      * @return A list of the GadgetServices described by the provided parameter.
      */
     @NonNull
-    List<GadgetService> getServicesOfType(@NonNull Class<?> gadgetServiceClass);
+    List<GadgetService> getServicesOfType(@NonNull Class<? extends GadgetService> gadgetServiceClass);
 }

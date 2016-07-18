@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import com.sensirion.libsmartgadget.Gadget;
 import com.sensirion.libsmartgadget.GadgetDownloadService;
 import com.sensirion.libsmartgadget.GadgetListener;
+import com.sensirion.libsmartgadget.GadgetNotificationService;
 import com.sensirion.libsmartgadget.GadgetService;
 import com.sensirion.libsmartgadget.GadgetValue;
 
@@ -76,6 +77,33 @@ class SmartGadget implements Gadget, BleConnectorCallback, ServiceListener {
         mListeners.remove(callback);
     }
 
+    @Override
+    public void subscribeAll() {
+        synchronized (mGadgetServiceList) {
+            for (GadgetService service : getServicesOfType(GadgetNotificationService.class)) {
+                ((GadgetNotificationService) service).subscribe();
+            }
+        }
+    }
+
+    @Override
+    public void unsubscribeAll() {
+        synchronized (mGadgetServiceList) {
+            for (GadgetService service : getServicesOfType(GadgetNotificationService.class)) {
+                ((GadgetNotificationService) service).unsubscribe();
+            }
+        }
+    }
+
+    @Override
+    public void refresh() {
+        synchronized (mGadgetServiceList) {
+            for (GadgetService service : getServicesOfType(GadgetNotificationService.class)) {
+                ((GadgetNotificationService) service).requestValueUpdate();
+            }
+        }
+    }
+
     @NonNull
     @Override
     public List<GadgetService> getServices() {
@@ -85,13 +113,13 @@ class SmartGadget implements Gadget, BleConnectorCallback, ServiceListener {
     }
 
     @Override
-    public boolean supportsServiceOfType(@NonNull final Class<?> gadgetServiceClass) {
+    public boolean supportsServiceOfType(@NonNull final Class<? extends GadgetService> gadgetServiceClass) {
         return !getServicesOfType(gadgetServiceClass).isEmpty();
     }
 
     @NonNull
     @Override
-    public List<GadgetService> getServicesOfType(@NonNull final Class<?> gadgetServiceClass) {
+    public List<GadgetService> getServicesOfType(@NonNull final Class<? extends GadgetService> gadgetServiceClass) {
         final ArrayList<GadgetService> resultList = new ArrayList<>();
         synchronized (mGadgetServiceList) {
             for (final GadgetService service : mGadgetServiceList) {
