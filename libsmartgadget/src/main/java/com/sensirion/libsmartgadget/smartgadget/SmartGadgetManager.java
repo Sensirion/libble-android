@@ -103,20 +103,19 @@ class SmartGadgetManager extends BroadcastReceiver implements GadgetManager, Ble
      * {@inheritDoc}
      */
     @Override
-    public boolean startGadgetDiscovery(final long durationMs) { // TODO: ADD FILTERING CAPABILITIES
+    public boolean startGadgetDiscovery(final long durationMs, final String[] advertisedNameFilter) {
         if (!isReady()) {
             Log.w(TAG, "GadgetManager not initialized");
             return false;
         }
-
-        return mBleService.startScan(mLocalDiscoveryListener, durationMs, null);
+        return mBleService.startScan(mLocalDiscoveryListener, durationMs, advertisedNameFilter);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void stopGadgetDiscovery() { // TODO: ADD FILTERING CAPABILITIES
+    public void stopGadgetDiscovery() {
         if (!isReady()) {
             Log.w(TAG, "GadgetManager not initialized");
             return;
