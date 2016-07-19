@@ -138,13 +138,12 @@ class SmartGadgetManager extends BroadcastReceiver implements GadgetManager, Ble
     }
 
     @Override
-    public boolean disconnect(final SmartGadget gadget) {
+    public void disconnect(final SmartGadget gadget) {
         if (!isReady()) {
             Log.w(TAG, "GadgetManager not initialized");
-            return false;
+            return;
         }
         mBleService.disconnect(gadget.getAddress());
-        return true; // TODO: think about removing the boolean return value for this method
     }
 
     @NonNull

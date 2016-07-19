@@ -58,8 +58,8 @@ class SmartGadget implements Gadget, BleConnectorCallback, ServiceListener {
     }
 
     @Override
-    public boolean disconnect() {
-        return mBleConnector.disconnect(this);
+    public void disconnect() {
+        mBleConnector.disconnect(this);
     }
 
     @Override

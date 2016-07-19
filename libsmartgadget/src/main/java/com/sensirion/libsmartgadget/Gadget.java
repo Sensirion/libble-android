@@ -36,12 +36,8 @@ public interface Gadget {
 
     /**
      * Disconnects the given Gadget.
-     *
-     * @return true if the disconnect call was dispatched. The confirmation if the disconnect was
-     * successful will be delivered to the registered {@link GadgetListener} instances via
-     * {@link GadgetListener#onGadgetDisconnected(Gadget)}.
      */
-    boolean disconnect();
+    void disconnect();
 
     /**
      * Check the connection state of the Gadget.

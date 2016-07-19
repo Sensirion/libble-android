@@ -12,7 +12,7 @@ interface BleConnector {
 
     boolean connect(SmartGadget gadget);
 
-    boolean disconnect(SmartGadget gadget);
+    void disconnect(SmartGadget gadget);
 
     @NonNull
     List<BluetoothGattService> getServices(SmartGadget gadget);
