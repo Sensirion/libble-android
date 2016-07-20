@@ -2,6 +2,9 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven'
 apply from: '../../gradle-helpers/utils.gradle'
 
+version = "0.0.1"
+def code = 1
+
 android {
     compileSdkVersion 23
     buildToolsVersion "23.0.2"
@@ -9,6 +12,8 @@ android {
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 23
+        versionCode code
+        versionName version
     }
     buildTypes {
         release {

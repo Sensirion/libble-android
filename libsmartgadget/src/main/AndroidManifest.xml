@@ -1,7 +1,5 @@
 <manifest package="com.sensirion.libsmartgadget"
-          xmlns:android="http://schemas.android.com/apk/res/android"
-          android:versionCode="1"
-          android:versionName="0.0.1">
+          xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
         android:allowBackup="true"
