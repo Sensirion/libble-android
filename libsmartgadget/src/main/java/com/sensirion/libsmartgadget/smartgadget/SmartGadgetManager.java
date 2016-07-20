@@ -224,17 +224,15 @@ class SmartGadgetManager extends BroadcastReceiver implements GadgetManager, Ble
                 break;
             case BleService.ACTION_DATA_AVAILABLE:
                 final byte[] rawData = intent.getByteArrayExtra(BleService.EXTRA_DATA);
-                Log.i("TEST", "ACTION_DATA_AVAILABLE for " + deviceAddress + " and uuid " + characteristicUuid);
                 gadget.onDataReceived(characteristicUuid, rawData);
                 break;
             case BleService.ACTION_DID_WRITE_CHARACTERISTIC:
-                Log.i("TEST", "ACTION_DID_WRITE_CHARACTERISTIC for " + deviceAddress + " and uuid " + characteristicUuid);
                 gadget.onDataWritten(characteristicUuid);
                 break;
             case BleService.ACTION_DID_FAIL:
                 final boolean wasWriting = intent.getBooleanExtra(BleService.EXTRA_IS_WRITE_FAILURE, false);
                 final byte[] data = intent.getByteArrayExtra(BleService.EXTRA_DATA);
-                Log.i("TEST", "ACTION_DID_FAIL " + ((wasWriting) ? "writing" : "reading") + " for " + deviceAddress + " and uuid " + characteristicUuid);
+                Log.w(TAG, "ACTION_DID_FAIL " + ((wasWriting) ? "writing" : "reading") + " for " + deviceAddress + " and uuid " + characteristicUuid);
                 gadget.onFail(characteristicUuid, data, wasWriting);
                 break;
         }
