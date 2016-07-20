@@ -1,10 +1,12 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.sensirion.libsmartgadget">
+<manifest package="com.sensirion.libsmartgadget"
+          xmlns:android="http://schemas.android.com/apk/res/android"
+          android:versionCode="1"
+          android:versionName="0.0.1">
 
-    <application android:allowBackup="true"
+    <application
+        android:allowBackup="true"
         android:label="@string/app_name"
-        android:supportsRtl="true"
->
+        android:supportsRtl="true">
 
     </application>
 

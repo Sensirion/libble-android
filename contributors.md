@@ -1,19 +1,17 @@
 Authors:
 ===
 
-- [@xavier-fernandez](https://github.com/xavier-fernandez)
-- [@AZOM](https://github.com/AZOM)
-
+- [@MBjoern](https://github.com/MBjoern)
 
 Special thanks to:
 ===
-
+- [@xavier-fernandez](https://github.com/xavier-fernandez)
+- [@AZOM](https://github.com/AZOM)
 - [@erikvido](https://github.com/erikvido)
 - [@dhasenfratz](https://github.com/dhasenfratz)
 - [@silvanfischer](https://github.com/silvanfischer)
 - [@psachs](https://github.com/psachs)
 - [@abrauchli](https://github.com/abrauchli)
-- [@tpcz](https://github.com/tpcz)
 - [@honggoff](https://github.com/honggoff)
 - [@hishamm](https://github.com/hishamm)
 - [@StevenRudenko](https://github.com/StevenRudenko) for his [BleSensorTag](https://github.com/StevenRudenko/BleSensorTag) contributions

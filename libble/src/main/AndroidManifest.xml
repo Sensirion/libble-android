@@ -1,5 +1,7 @@
 <manifest package="com.sensirion.libble"
-          xmlns:android="http://schemas.android.com/apk/res/android">
+          xmlns:android="http://schemas.android.com/apk/res/android"
+          android:versionCode="28"
+          android:versionName="1.2.1">
 
     <uses-feature
         android:name="android.hardware.bluetooth_le"

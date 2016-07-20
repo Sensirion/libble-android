@@ -1,8 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
-
-version = "1.2.1-SNAPSHOT"
-def code = 27
+apply from: '../../gradle-helpers/utils.gradle'
 
 android {
     compileSdkVersion 23
@@ -14,13 +12,10 @@ android {
         archivesBaseName = 'libble'
         minSdkVersion 21
         targetSdkVersion 23
-        versionCode code
-        versionName version
     }
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
     libraryVariants.all { variant ->
