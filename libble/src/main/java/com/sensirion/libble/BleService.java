@@ -59,6 +59,7 @@ public class BleService extends Service implements ActionFailureCallback {
             "com.sensirion.libble.EXTRA_CHARACTERISTIC_UUID";
     public static final String EXTRA_DESCRIPTOR_UUID =
             "com.sensirion.libble.EXTRA_CHARACTERISTIC_UUID";
+    private static final int MIN_SCAN_DURATION_MS = 1000;
 
     private final static String TAG = BleService.class.getSimpleName();
 
@@ -140,7 +141,7 @@ public class BleService extends Service implements ActionFailureCallback {
             return false;
         }
 
-        if (durationMs < 1000) {
+        if (durationMs < MIN_SCAN_DURATION_MS) {
             Log.w(TAG, "The scan duration must be longer than 1 second");
             return false;
         }

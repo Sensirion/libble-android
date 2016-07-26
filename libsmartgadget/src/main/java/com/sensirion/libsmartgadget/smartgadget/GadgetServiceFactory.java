@@ -72,5 +72,7 @@ class GadgetServiceFactory {
         // C1 Gadget
         mGadgetServiceRepository.put(SHTC1TemperatureAndHumidityService.SERVICE_UUID, SHTC1TemperatureAndHumidityService.class);
         mGadgetServiceRepository.put(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
+        // TI Sensor Tag
+        mGadgetServiceRepository.put(SensorTagTemperatureAndHumidityService.SERVICE_UUID, SensorTagTemperatureAndHumidityService.class);
     }
 }

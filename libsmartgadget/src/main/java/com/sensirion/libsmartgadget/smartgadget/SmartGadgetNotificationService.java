@@ -103,7 +103,7 @@ abstract class SmartGadgetNotificationService implements GadgetNotificationServi
     }
 
     /*
-        Implementation of {@link BleConnectorCallback}
+     * Implementation of {@link BleConnectorCallback}
      */
     @Override
     public void onDataReceived(final String characteristicUuid, final byte[] rawData) {
@@ -141,8 +141,8 @@ abstract class SmartGadgetNotificationService implements GadgetNotificationServi
     }
 
     /*
-        Private Helper Methods
-    */
+     *  Private Helper Methods
+     */
 
     private synchronized void subscribeNotifications(@NonNull final String deviceAddress,
                                                      @NonNull final BluetoothGattCharacteristic characteristic,
