@@ -88,7 +88,7 @@ public interface Gadget {
     /**
      * Checks if the Gadget provides at least one service of the given class. You can use
      * {@link GadgetNotificationService} or {@link GadgetDownloadService} or any other Service
-     * interface to check for basic functionalities of the Gadget's Services.
+     * interface to check for basic functionality of the Gadget's Services.
      *
      * @param gadgetServiceClass The class representing the desired service of a gadget.
      * @return true if the service is supported by the gadget, else false is returned.
@@ -98,7 +98,7 @@ public interface Gadget {
     /**
      * Returns all services that are instances of the given class. You can use
      * {@link GadgetNotificationService} or {@link GadgetDownloadService} or any other Service
-     * interface to check for basic functionalities of the Gadget's Services. All services are
+     * interface to check for basic functionality of the Gadget's Services. All services are
      * returned If {@link GadgetService} is provided (then use {@link Gadget#getServices()}
      * instead).
      *

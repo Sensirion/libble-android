@@ -99,7 +99,7 @@ class SmartGadget implements Gadget, BleConnectorCallback, ServiceListener {
     public void refresh() {
         synchronized (mGadgetServiceList) {
             for (GadgetService service : getServicesOfType(GadgetNotificationService.class)) {
-                ((GadgetNotificationService) service).requestValueUpdate();
+                service.requestValueUpdate();
             }
         }
     }
