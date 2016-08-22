@@ -277,7 +277,7 @@ class SmartGadgetManager extends BroadcastReceiver implements GadgetManager, Ble
     /*
         Scan Callback Proxy
      */
-    class GadgetDiscoveryListener extends BleScanCallback {
+    private class GadgetDiscoveryListener extends BleScanCallback {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             notifyScanResult(result);
