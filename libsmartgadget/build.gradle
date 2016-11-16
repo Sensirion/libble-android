@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven'
 apply from: '../../gradle-helpers/utils.gradle'
 
-version = "1.0.2-SNAPSHOT"
+version = "1.1.0"
 def code = 4
 
 android {
