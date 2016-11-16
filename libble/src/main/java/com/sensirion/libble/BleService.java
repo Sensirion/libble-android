@@ -20,6 +20,7 @@ import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.ParcelUuid;
 import android.support.annotation.NonNull;
 
 import com.sensirion.libble.action.ActionFailureCallback;
@@ -126,16 +127,17 @@ public class BleService extends Service implements ActionFailureCallback {
     /**
      * Starts a BLE Scan. Discovered devices are reported via the delivered callback.
      *
-     * @param callback         An instance of the BleScanCallback, used to receive scan results.
-     * @param durationMs       The duration in milliseconds, how long the scan should last. This parameter
-     *                         must be greater or equal to 1000 ms.
-     * @param deviceNameFilter A array of device names to filter for. Only BLE devices with these
-     *                         names are reported to the callback.
+     * @param callback                    An instance of the BleScanCallback, used to receive scan results.
+     * @param durationMs                  The duration in milliseconds, how long the scan should last. This parameter
+     *                                    must be greater or equal to 1000 ms.
+     * @param deviceNameFilter            A array of device names to filter for. Only BLE devices with these
+     *                                    names are reported to the callback.
+     * @param advertisedServiceUuidFilter An Array of advertised service UUIDs to also deliver results for.
      * @return true if a scan was triggered and false, if it was not possible to trigger a scan or
      * if there is already an ongoing scan running.
      */
     public boolean startScan(@NonNull final BleScanCallback callback, final long durationMs,
-                             final String[] deviceNameFilter) {
+                             final String[] deviceNameFilter, final String[] advertisedServiceUuidFilter) {
         if (mBluetoothAdapter == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
             return false;
@@ -160,7 +162,7 @@ public class BleService extends Service implements ActionFailureCallback {
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                 .build();
 
-        final List<ScanFilter> filters = getScanFilters(deviceNameFilter);
+        final List<ScanFilter> filters = getScanFilters(deviceNameFilter, advertisedServiceUuidFilter);
 
         // Stops scanning after a pre-defined scan period.
         mStopScanningRunnable = new Runnable() {
@@ -437,12 +439,21 @@ public class BleService extends Service implements ActionFailureCallback {
 
     // Private Helpers
     @NonNull
-    private List<ScanFilter> getScanFilters(final String[] deviceNameFilter) {
+    private List<ScanFilter> getScanFilters(final String[] deviceNameFilter,
+                                            final String[] serviceUuidFilter) {
         final List<ScanFilter> filters = new ArrayList<>();
         if (deviceNameFilter != null) {
             for (final String deviceName : deviceNameFilter) {
                 final ScanFilter scanFilter = new ScanFilter.Builder()
                         .setDeviceName(deviceName)
+                        .build();
+                filters.add(scanFilter);
+            }
+        }
+        if (serviceUuidFilter != null) {
+            for (final String uuidSString : serviceUuidFilter) {
+                final ScanFilter scanFilter = new ScanFilter.Builder()
+                        .setServiceUuid(ParcelUuid.fromString(uuidSString))
                         .build();
                 filters.add(scanFilter);
             }

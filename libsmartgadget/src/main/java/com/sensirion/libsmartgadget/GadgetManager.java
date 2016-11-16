@@ -39,13 +39,15 @@ public interface GadgetManager {
     /**
      * Starts a scan for Sensirion Smart Gadgets.
      *
-     * @param durationMs           The duration how long the library should scan for. Make sure not to scan
-     *                             for too long to prevent a large battery drain.
-     * @param advertisedNameFilter An Array of advertised gadget names to only deliver results for.
-     *                             Provide null or an empty array to discover all gadgets in range.
+     * @param durationMs                  The duration how long the library should scan for. Make sure not to scan
+     *                                    for too long to prevent a large battery drain.
+     * @param advertisedNameFilter        An Array of advertised gadget names to only deliver results for.
+     *                                    Provide null or an empty array to discover all gadgets in range.
+     * @param advertisedServiceUuidFilter An Array of advertised service UUIDs to also deliver results for.
      * @return true if the scan was successfully initiated.
      */
-    boolean startGadgetDiscovery(final long durationMs, final String[] advertisedNameFilter);
+    boolean startGadgetDiscovery(final long durationMs, final String[] advertisedNameFilter,
+                                 String[] advertisedServiceUuidFilter);
 
     /**
      * Stops an ongoing scan for Smart Gadgets. Nothing happens if there is no scan running.
