@@ -2,8 +2,8 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven'
 apply from: '../../gradle-helpers/utils.gradle'
 
-version = "1.1.1-SNAPSHOT"
-def code = 5
+version = "1.1.1"
+def code = 6
 
 android {
     compileSdkVersion 23
