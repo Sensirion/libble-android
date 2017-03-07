@@ -8,7 +8,7 @@ import android.support.annotation.NonNull;
 import java.util.List;
 import java.util.Map;
 
-interface BleConnector {
+public interface BleConnector {
 
     boolean connect(SmartGadget gadget);
 

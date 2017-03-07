@@ -47,6 +47,11 @@ class GadgetServiceFactory {
         return serviceList;
     }
 
+    public void registerSmartGadgetService(@NonNull final String serviceUuid,
+                                           @NonNull final Class<? extends GadgetService> serviceClass) {
+        mGadgetServiceRepository.put(serviceUuid, serviceClass);
+    }
+
     private GadgetService createServicesFor(@NonNull final ServiceListener serviceListener,
                                             @NonNull final String deviceAddress,
                                             @NonNull final BleConnector bleConnector,
@@ -63,16 +68,16 @@ class GadgetServiceFactory {
 
     private void registerSmartGadgetServices() {
         // Generic
-        mGadgetServiceRepository.put(BatteryService.SERVICE_UUID, BatteryService.class);
-        mGadgetServiceRepository.put(DeviceInformationService.SERVICE_UUID, DeviceInformationService.class);
+        registerSmartGadgetService(BatteryService.SERVICE_UUID, BatteryService.class);
+        registerSmartGadgetService(DeviceInformationService.SERVICE_UUID, DeviceInformationService.class);
         // 3x Gadget
-        mGadgetServiceRepository.put(SHT3xTemperatureService.SERVICE_UUID, SHT3xTemperatureService.class);
-        mGadgetServiceRepository.put(SHT3xHumidityService.SERVICE_UUID, SHT3xHumidityService.class);
-        mGadgetServiceRepository.put(SHT3xHistoryService.SERVICE_UUID, SHT3xHistoryService.class);
+        registerSmartGadgetService(SHT3xTemperatureService.SERVICE_UUID, SHT3xTemperatureService.class);
+        registerSmartGadgetService(SHT3xHumidityService.SERVICE_UUID, SHT3xHumidityService.class);
+        registerSmartGadgetService(SHT3xHistoryService.SERVICE_UUID, SHT3xHistoryService.class);
         // C1 Gadget
-        mGadgetServiceRepository.put(SHTC1TemperatureAndHumidityService.SERVICE_UUID, SHTC1TemperatureAndHumidityService.class);
-        mGadgetServiceRepository.put(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
+        registerSmartGadgetService(SHTC1TemperatureAndHumidityService.SERVICE_UUID, SHTC1TemperatureAndHumidityService.class);
+        registerSmartGadgetService(SHTC1HistoryService.SERVICE_UUID, SHTC1HistoryService.class);
         // TI Sensor Tag
-        mGadgetServiceRepository.put(SensorTagTemperatureAndHumidityService.SERVICE_UUID, SensorTagTemperatureAndHumidityService.class);
+        registerSmartGadgetService(SensorTagTemperatureAndHumidityService.SERVICE_UUID, SensorTagTemperatureAndHumidityService.class);
     }
 }

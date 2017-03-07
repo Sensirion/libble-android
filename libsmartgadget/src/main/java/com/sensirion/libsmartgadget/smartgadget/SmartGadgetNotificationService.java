@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-abstract class SmartGadgetNotificationService implements GadgetNotificationService, BleConnectorCallback {
+public abstract class SmartGadgetNotificationService implements GadgetNotificationService, BleConnectorCallback {
     private static final String TAG = SmartGadgetNotificationService.class.getSimpleName();
     protected static final String NOTIFICATION_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb";
 

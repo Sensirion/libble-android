@@ -22,6 +22,16 @@ public interface GadgetManager {
     void initialize(@NonNull final Context applicationContext);
 
     /**
+     * After the GadgetManager has been initialized, you can register/add your own GadgetServices
+     * and let the library handle the detection and decoding using your GadgetService class.
+     *
+     * @param serviceUuid  The UUID of the service to be added.
+     * @param serviceClass The Class of your GadgetService.
+     */
+    void registerCustomGadgetService(@NonNull final String serviceUuid,
+                                     @NonNull final Class<? extends GadgetService> serviceClass);
+
+    /**
      * Call this method if you don't plan to use the library anymore. This makes sure all resources
      * of the library are properly freed.
      *

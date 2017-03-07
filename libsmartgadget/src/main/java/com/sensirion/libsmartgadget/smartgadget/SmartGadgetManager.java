@@ -19,6 +19,7 @@ import com.sensirion.libble.BleService;
 import com.sensirion.libsmartgadget.Gadget;
 import com.sensirion.libsmartgadget.GadgetManager;
 import com.sensirion.libsmartgadget.GadgetManagerCallback;
+import com.sensirion.libsmartgadget.GadgetService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,6 +72,20 @@ class SmartGadgetManager extends BroadcastReceiver implements GadgetManager, Ble
             release(applicationContext);
             mGadgetManagerListener.onGadgetManagerInitializationFailed();
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void registerCustomGadgetService(@NonNull final String serviceUuid,
+                                            @NonNull final Class<? extends GadgetService> serviceClass) {
+        if (!isReady()) {
+            Log.w(TAG, "GadgetManager not initialized");
+            return;
+        }
+
+        mGadgetServiceFactory.registerSmartGadgetService(serviceUuid, serviceClass);
     }
 
     /**

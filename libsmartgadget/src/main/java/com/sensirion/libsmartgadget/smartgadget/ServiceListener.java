@@ -6,7 +6,7 @@ import com.sensirion.libsmartgadget.GadgetDownloadService;
 import com.sensirion.libsmartgadget.GadgetService;
 import com.sensirion.libsmartgadget.GadgetValue;
 
-interface ServiceListener {
+public interface ServiceListener {
     void onGadgetValuesReceived(@NonNull GadgetService service, @NonNull GadgetValue[] values);
 
     void onGadgetDownloadDataReceived(@NonNull GadgetDownloadService service, @NonNull GadgetValue[] values, int progress);
