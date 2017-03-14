@@ -163,7 +163,7 @@ public abstract class SmartGadgetNotificationService implements GadgetNotificati
         mServiceListener.onGadgetValuesReceived(this, mLastValues);
     }
 
-    private boolean isUuidSupported(final String characteristicUuid) {
+    protected boolean isUuidSupported(final String characteristicUuid) {
         return mSupportedUuids.contains(characteristicUuid);
     }
 
