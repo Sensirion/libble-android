@@ -1,6 +1,6 @@
 package com.sensirion.libsmartgadget.smartgadget;
 
-interface BleConnectorCallback {
+public interface BleConnectorCallback {
     void onConnectionStateChanged(boolean connected);
 
     void onDataReceived(final String characteristicUuid, final byte[] rawData);

@@ -6,7 +6,7 @@ import com.sensirion.libsmartgadget.GadgetValue;
 
 import java.util.Date;
 
-class SmartGadgetValue implements GadgetValue {
+public class SmartGadgetValue implements GadgetValue {
     private final Date mTimestamp;
     private final Number mValue;
     private final String mUnit;
