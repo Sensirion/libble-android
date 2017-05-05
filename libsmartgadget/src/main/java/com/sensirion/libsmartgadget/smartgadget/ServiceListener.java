@@ -17,4 +17,6 @@ public interface ServiceListener {
 
     void onSetLoggerIntervalFailed(@NonNull GadgetDownloadService service);
 
+    void onSetLoggerIntervalSuccess();
+
 }

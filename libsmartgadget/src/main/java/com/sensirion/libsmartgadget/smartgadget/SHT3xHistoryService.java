@@ -151,6 +151,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
                 mLoggerIntervalMs = LittleEndianExtractor.extractInteger(rawData);
                 mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT)};
                 continueDownloadProtocol();
+                mServiceListener.onSetLoggerIntervalSuccess();
                 break;
             case NEWEST_SAMPLE_TIME_MS_CHARACTERISTIC_UUID:
                 mNewestSampleTimeMs = LittleEndianExtractor.extractLong(rawData);

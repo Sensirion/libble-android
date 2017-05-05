@@ -248,6 +248,15 @@ class SmartGadget implements Gadget, BleConnectorCallback, ServiceListener {
     }
 
     @Override
+    public void onSetLoggerIntervalSuccess(){
+        synchronized (mListeners) {
+            for (GadgetListener listener : mListeners) {
+                listener.onSetLoggerIntervalSuccess(this);
+            }
+        }
+    }
+
+    @Override
     public void onSetLoggerIntervalFailed(@NonNull final GadgetDownloadService service) {
         synchronized (mListeners) {
             for (GadgetListener listener : mListeners) {

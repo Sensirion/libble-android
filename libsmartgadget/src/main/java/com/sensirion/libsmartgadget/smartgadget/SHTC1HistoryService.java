@@ -164,6 +164,7 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
             case LOGGING_INTERVAL_S_CHARACTERISTIC_UUID:
                 mLoggerIntervalMs = 1000 * LittleEndianExtractor.extractShort(rawData);
                 mLastValues = new GadgetValue[]{new SmartGadgetValue(new Date(), mLoggerIntervalMs, LOGGER_INTERVAL_UNIT)};
+                mServiceListener.onSetLoggerIntervalSuccess();
                 break;
             case LOGGING_STATE_CHARACTERISTIC_UUID:
                 mLoggerStateEnabled = ((int) rawData[0] > 0);

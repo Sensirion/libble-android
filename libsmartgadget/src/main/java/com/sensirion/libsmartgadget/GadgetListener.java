@@ -60,6 +60,13 @@ public interface GadgetListener {
     void onSetLoggerIntervalFailed(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
 
     /**
+     * Called when the logger interval was updated
+     *
+     * @param gadget   The gadget on which the logger interval was changed.
+     */
+    void onSetLoggerIntervalSuccess(@NonNull Gadget gadget);
+
+    /**
      * Callback when the download has failed.
      *
      * @param gadget  The gadget from which data was downloaded.
