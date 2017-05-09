@@ -60,7 +60,7 @@ public interface GadgetListener {
     void onSetLoggerIntervalFailed(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
 
     /**
-     * Called when the logger interval was updated
+     * Called when the logger interval was updated.
      *
      * @param gadget   The gadget on which the logger interval was changed.
      */
@@ -73,5 +73,21 @@ public interface GadgetListener {
      * @param service The service used to download the data.
      */
     void onDownloadFailed(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
+
+    /**
+     * Callback when the download is completed.
+     *
+     * @param gadget  The gadget from which data was downloaded.
+     * @param service The service used to download the data.
+     */
+    void onDownloadCompleted(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
+
+    /**
+     * Callback when there is no data available for download.
+     *
+     * @param gadget  The gadget from which data download was tried.
+     * @param service The service trying to download the data.
+     */
+    void onDownloadNoData(@NonNull Gadget gadget, @NonNull GadgetDownloadService service);
 
 }

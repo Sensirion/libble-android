@@ -13,6 +13,10 @@ public interface ServiceListener {
 
     void onDownloadFailed(@NonNull GadgetDownloadService service);
 
+    void onDownloadCompleted(@NonNull GadgetDownloadService service);
+
+    void onDownloadNoData(@NonNull GadgetDownloadService service);
+
     void onSetGadgetLoggingEnabledFailed(@NonNull GadgetDownloadService service);
 
     void onSetLoggerIntervalFailed(@NonNull GadgetDownloadService service);

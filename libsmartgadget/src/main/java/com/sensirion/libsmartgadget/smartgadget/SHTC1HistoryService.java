@@ -256,7 +256,7 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
                 mNrOfElementsToDownload = calculateValuesToDownload();
                 if (mNrOfElementsToDownload <= 0) {
                     Log.d(TAG, "No data to download");
-                    onDownloadComplete();
+                    onNoDataAvailable();
                     return;
                 }
                 // Start downloading... this reads the first download packet.
@@ -335,6 +335,14 @@ public class SHTC1HistoryService extends SmartGadgetHistoryService {
         mDownloadProgress = 100;
         mDownloadState = DownloadState.IDLE;
         setGadgetLoggingEnabled(mLoggerStateBeforeDownload);
+        mServiceListener.onDownloadCompleted(this);
+    }
+
+    private void onNoDataAvailable() {
+        mDownloadProgress = 0;
+        mDownloadState = DownloadState.IDLE;
+        setGadgetLoggingEnabled(mLoggerStateBeforeDownload);
+        mServiceListener.onDownloadNoData(this);
     }
 
     private void readLoggerInterval() {

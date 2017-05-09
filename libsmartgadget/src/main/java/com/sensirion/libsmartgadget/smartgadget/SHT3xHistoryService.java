@@ -212,7 +212,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
                 mNrOfElementsToDownload = (int) Math.floor((mNewestSampleTimeMs - mOldestSampleTimeMs) / mLoggerIntervalMs);
 
                 if (mNrOfElementsToDownload == 0) {
-                    onDownloadComplete();
+                    onNoDataAvailable();
                     return;
                 }
 
@@ -261,6 +261,10 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
         mServiceListener.onGadgetDownloadDataReceived(this,
                 downloadedValues.toArray(new GadgetValue[downloadedValues.size()]),
                 mDownloadProgress);
+
+        if (mNrOfElementsDownloaded >= mNrOfElementsToDownload) {
+            onDownloadComplete();
+        }
     }
 
     @NonNull
@@ -293,7 +297,7 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
 
         mDownloadProgress = (int) Math.ceil(100 * (mNrOfElementsDownloaded / (float) mNrOfElementsToDownload));
         if (mNrOfElementsDownloaded >= mNrOfElementsToDownload) {
-            onDownloadComplete();
+            mDownloadProgress = 100;
         }
         return sequenceNr;
     }
@@ -315,6 +319,13 @@ public class SHT3xHistoryService extends SmartGadgetHistoryService {
     private void onDownloadComplete() {
         mDownloadProgress = 100;
         mDownloadState = DownloadState.IDLE;
+        mServiceListener.onDownloadCompleted(this);
+    }
+
+    private void onNoDataAvailable() {
+        mDownloadProgress = 0;
+        mDownloadState = DownloadState.IDLE;
+        mServiceListener.onDownloadNoData(this);
     }
 
     private void onDownloadFailed() {
