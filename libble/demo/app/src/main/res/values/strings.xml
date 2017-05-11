@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">LibBLE Demo App</string>
+    <string name="title_discovered">Discovered Devices</string>
+    <string name="title_connected">Connected Devices</string>
+    <string name="button_initial">Initializing…</string>
+
+    <!-- Service -->
+    <string name="button_service_connected">Start Discovery</string>
+    <string name="button_service_disconnected">Service disconnected!</string>
+
+    <!-- Scan -->
+    <string name="button_scan_started">Scanning…</string>
+    <string name="button_scan_failed">Scan failed with error code %d</string>
+    <string name="button_scan_stopped">Scan finished</string>
+    <string name="clear_devices">Clear lists and disconnect all</string>
+
+    <string name="empty_discovered_list">No devices discovered</string>
+    <string name="empty_connected_list">No devices connected</string>
+
+    <string name="footer_info">\u00A9 2017 Sensirion AG. All rights reserved.</string>
+
+    <string name="connection_failed">Connection to device %s failed</string>
+    <string name="connection_success">Connected to device %s</string>
+    <string name="connection_lost">Lost connection to device %s</string>
+
+    <string name="device_button_connect">Connect</string>
+    <string name="device_button_connecting">Connecting…</string>
+    <string name="device_button_disconnecting">Disconnecting…</string>
+    <string name="device_button_connection_failed">Failed!</string>
+    <string name="device_button_disconnect">Disconnect</string>
+</resources>

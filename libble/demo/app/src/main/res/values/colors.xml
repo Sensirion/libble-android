@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sensirion_green">#FF81C12D</color>
+    <color name="sensirion_grey_light">#FFE9E4E0</color>
+    <color name="sensirion_grey_dark">#FFBCB0A7</color>
+    <color name="sensirion_green_darkened">#6ba124</color>
+</resources>
