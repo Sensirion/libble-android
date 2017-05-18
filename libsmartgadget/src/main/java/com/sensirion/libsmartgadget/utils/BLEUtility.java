@@ -15,6 +15,8 @@ import android.util.Log;
 public final class BLEUtility {
     private static final String TAG = BLEUtility.class.getSimpleName();
 
+    private static final String LOCATION_PERMISSION = Manifest.permission.ACCESS_COARSE_LOCATION;
+
     private BLEUtility() {
     }
 
@@ -53,12 +55,21 @@ public final class BLEUtility {
      */
     public static void requestScanningPermission(@NonNull final Activity requestingActivity,
                                                  final int requestCode) {
-        final String permission = Manifest.permission.ACCESS_FINE_LOCATION;
-        if (ContextCompat.checkSelfPermission(requestingActivity, permission) != PackageManager.PERMISSION_GRANTED) {
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(requestingActivity, permission)) {
-                ActivityCompat.requestPermissions(requestingActivity, new String[]{permission}, requestCode);
+        if (!hasScanningPermission(requestingActivity)) {
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(requestingActivity, LOCATION_PERMISSION)) {
+                ActivityCompat.requestPermissions(requestingActivity, new String[]{LOCATION_PERMISSION}, requestCode);
             }
         }
+    }
+
+    /**
+     * Checks if a context has scanning permission
+     *
+     * @param context The context of which the user wants to know if it has scanning permission
+     * @return        <code>true</code> if the context has scanning permission - <code>false</code> otherwise.
+     */
+    public static boolean hasScanningPermission(@NonNull final Context context) {
+        return ContextCompat.checkSelfPermission(context, LOCATION_PERMISSION) == PackageManager.PERMISSION_GRANTED;
     }
 
     /**
@@ -67,9 +78,7 @@ public final class BLEUtility {
      * @param context {@link android.content.Context} of the requesting activity.
      */
     public static void requestEnableBluetooth(@NonNull final Context context) {
-        if (isBLEEnabled(context)) {
-            return;
-        } else {
+        if (!isBLEEnabled(context)) {
             final Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             context.startActivity(enableBluetoothIntent);
         }
