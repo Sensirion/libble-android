@@ -1,0 +1,41 @@
+<resources>
+    <string name="app_name">LibSmartgadget Demo App</string>
+
+    <string name="error_bluetooth_not_supported">Bluetooth not supported on this device!</string>
+
+    <string name="scan_btn_initial">Not ready…</string>
+    <string name="scan_btn_start">Start Scan</string>
+    <string name="scan_btn_stop">Stop Scan</string>
+    <string name="scan_btn_scanning">Scanning…</string>
+    <string name="scan_btn_finished">Scan Finished</string>
+    <string name="scan_btn_init_failed">Initialization Failed</string>
+    <string name="scan_btn_failed">Scan Failed</string>
+
+    <string name="clear_btn">Clear Devices</string>
+
+    <string name="title_connected">Connected Smartgadgets</string>
+    <string name="title_discovered">Discovered Smartgadgets</string>
+
+    <string name="footer_info">\u00A9 2017 Sensirion AG. All rights reserved.</string>
+
+    <string name="label_interval_1s">1 second</string>
+    <string name="label_interval_10s">10 seconds</string>
+    <string name="label_interval_1min">1 minute</string>
+    <string name="label_interval_5min">5 minutes</string>
+    <string name="label_interval_10min">10 minutes</string>
+    <string name="label_interval_1h">1 hour</string>
+    <string name="label_interval_3h">3 hours</string>
+
+    <string-array name="array_interval_choices">
+        <item>@string/label_interval_1s</item>
+        <item>@string/label_interval_10s</item>
+        <item>@string/label_interval_1min</item>
+        <item>@string/label_interval_5min</item>
+        <item>@string/label_interval_10min</item>
+        <item>@string/label_interval_1h</item>
+        <item>@string/label_interval_3h</item>
+    </string-array>
+
+    <string name="toggle_off">Off</string>
+    <string name="toggle_on">On</string>
+</resources>

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:isScrollContainer="false">
+
+    <LinearLayout
+        android:id="@+id/gadget_name_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginTop="10dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/gadget_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="30sp" />
+
+        <TextView
+            android:id="@+id/gadget_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="25sp" />
+
+        <RelativeLayout
+            android:id="@+id/battery_level_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/background">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:gravity="center_vertical"
+                android:paddingLeft="10dp"
+                android:text="Battery"
+                android:textSize="25sp" />
+
+            <TextView
+                android:id="@+id/battery_level"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="10dp"
+                android:layout_marginStart="8dp"
+                android:textSize="24sp" />
+
+            <ProgressBar
+                android:id="@+id/battery_bar"
+                style="@style/Base.Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="28dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="10dp"
+                android:layout_marginStart="120dp"
+                android:layout_toStartOf="@id/battery_level"
+                android:clickable="false"
+                android:max="100"
+                android:paddingStart="0dp"
+                android:progress="0"
+                android:progressDrawable="@drawable/battery_level" />
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/logging_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/background">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:gravity="center_vertical"
+                android:paddingLeft="10dp"
+                android:text="Logging"
+                android:textSize="25sp" />
+
+            <Switch
+                android:id="@+id/toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_gravity="end"
+                android:layout_marginEnd="10dp"
+                android:checked="true"
+                android:enabled="false"
+                android:textOff="@string/toggle_off"
+                android:textOn="@string/toggle_on"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:showText="true"
+                android:thumb="@drawable/toggle_selector"
+                android:track="@drawable/toggle_path"/>
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/logging_interval_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/background">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:gravity="center_vertical"
+                android:paddingLeft="10dp"
+                android:text="Logging Interval"
+                android:textSize="25sp" />
+
+            <Button
+                android:id="@+id/logging_interval"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_gravity="end"
+                android:layout_marginEnd="10dp"
+                android:layout_marginStart="8dp"
+                android:background="@color/sensirion_grey_light"
+                android:textColor="@color/button_states"
+                android:textSize="20sp"
+                android:visibility="visible"
+                style="?android:attr/borderlessButtonStyle"/>
+
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/download_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/background">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="60dp"
+                android:gravity="center_vertical"
+                android:paddingLeft="10dp"
+                android:text="Logged Data"
+                android:textSize="25sp" />
+
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                style="@style/Base.Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="10dp"
+                android:clickable="false"
+                android:max="100"
+                android:paddingStart="10dp"
+                android:progress="100"
+                android:progressDrawable="@drawable/progress" />
+
+            <TextView
+                android:id="@+id/progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="8dp"
+                android:textColor="@color/button_states"
+                android:textSize="25sp" />
+
+        </RelativeLayout>
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/manage_device_button_disconnect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_gravity="center"
+        android:background="@color/red"
+        android:onClick="onDisconnectClick"
+        android:text="Disconnect"
+        android:textColor="@android:color/white"
+        android:textSize="14sp" />
+
+</RelativeLayout>

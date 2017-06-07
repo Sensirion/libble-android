@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.libsmartgadgetdemo.MainActivity">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btn_scan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/margin"
+            android:enabled="false"
+            android:onClick="onScanButtonClick"
+            android:text="@string/scan_btn_initial"/>
+
+        <Button
+            android:id="@+id/btn_clear"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/btn_scan"
+            android:layout_margin="@dimen/margin"
+            android:onClick="onClearButtonClick"
+            android:text="@string/clear_btn"/>
+
+        <TextView
+            android:id="@+id/title_connected_devices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/btn_clear"
+            android:layout_margin="@dimen/margin"
+            android:textSize="@dimen/big_font_size"
+            android:text="@string/title_connected"/>
+
+        <ListView
+            android:id="@+id/connected_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/title_connected_devices"
+            android:layout_margin="@dimen/margin"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/title_discovered_devices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/connected_list"
+            android:layout_margin="@dimen/margin"
+            android:textSize="@dimen/big_font_size"
+            android:text="@string/title_discovered"/>
+
+        <ListView
+            android:id="@+id/device_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/title_discovered_devices"
+            android:layout_margin="@dimen/margin"
+            android:orientation="vertical" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/device_list"
+            android:layout_margin="@dimen/margin"
+            android:gravity="center"
+            android:text="@string/footer_info"/>
+
+    </RelativeLayout>
+
+</ScrollView>
